@@ -19,5 +19,13 @@ Overview:
  * `L3_Lib.thy` and `L3.ML` slightly modified from upstream ARM model to include monad syntax.
 
 
+Build
+-----
+
+You can run the theories in [Isabelle/HOL][1] with the following command:
+
+    isabelle build -vD .
+
+
 [1]: http://isabelle.in.tum.de
 [2]: https://www.cl.cam.ac.uk/~acjf3/l3/isabelle/
