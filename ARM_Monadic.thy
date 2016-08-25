@@ -4446,27 +4446,33 @@ where
      asid  <- read_state ASID;
      ttbr0 <- read_state TTBR0;
      tlb   <- read_state TLB;
-     case lookup tlb asid va of
-       Hit entry \<Rightarrow> return (va_to_pa va entry)
-     | Miss \<Rightarrow> let entry = pt_walk asid mem ttbr0 va in
-         if is_fault entry
-         then raise'exception (PAGE_FAULT ''more info'')
-         else do {
-           update_state (\<lambda>s. s\<lparr> TLB := tlb \<union> {entry} \<rparr>);
-           return (va_to_pa va entry)
-         }
-     | Incon \<Rightarrow> raise'exception (IMPLEMENTATION_DEFINED ''set on fire'')
-   }"
+          case lookup tlb asid va of
+            Hit entry \<Rightarrow> if is_fault entry
+              then raise'exception (PAGE_FAULT ''more info'')
+                else return (va_to_pa va entry)
+          | Miss \<Rightarrow> let entry = pt_walk asid mem ttbr0 va in
+              if is_fault entry
+                then raise'exception (PAGE_FAULT ''more info'')
+                  else do {
+                    update_state (\<lambda>s. s\<lparr> TLB := tlb \<union> {entry} \<rparr>);
+                    return (va_to_pa va entry)
+                  }
+          | Incon \<Rightarrow> raise'exception (IMPLEMENTATION_DEFINED ''set on fire'')
+   }" 
 
+(* mem1 is reading from memory *)
+(* Here pa can be undefined either because of PAGE_FAULT or IMPLEMENTATION_DEFINED (incon) *)
+(* state can be changed either because of TLB update, or raise'exception *)
 definition
   mem1 :: "32 word \<Rightarrow> state \<Rightarrow> bool list \<times> state"
 where
   "mem1 \<equiv> \<lambda>va. do {
-     mem \<leftarrow> read_state MEM;
+     mem \<leftarrow> read_state MEM;  
      pa \<leftarrow> mmu_translate va;
-     v \<leftarrow> return (mem pa);
+     let v = mem pa;  (*arent these two *)
+     v \<leftarrow> return (mem pa);  (* same? *) 
      return (nat_to_bitstring (nat (uint v)))
-  }"
+  }"                           
 
 
 ML \<open>

@@ -607,7 +607,7 @@ lemma entry_set_def2:
   by (auto simp: entry_set_def entry_range_asid_tags_def)
 
 
-(*-------------- TLB inclusion ---------------------*)
+(*---------------------------------------------------*)
 
 instantiation lookup_type :: order
 begin
@@ -620,6 +620,7 @@ begin
   instance
      by intro_classes (auto simp add: less_lookup_type less_eq_lookup_type)
 end
+
 
 lemma Incon_top [iff]: "e \<le> Incon"
   by (simp add: less_eq_lookup_type)
@@ -676,7 +677,8 @@ where
       ((ucast (mem pa + 2) ::32 word) << 8)   OR
       (ucast  (mem pa + 3)  ::32 word) " 
 
-(* This definition currently yields page faults for Large Pages and Super Sections *)
+(* This definition currently yields page faults for Small Pages and Super Sections 
+    N = 0, only TTBR0 is used for translation, translation table size is 16B *)
 definition 
   pt_walk :: "8 word \<Rightarrow> mem_type \<Rightarrow> ttbr0 \<Rightarrow> va \<Rightarrow> tlb_entry"
 where
@@ -690,7 +692,7 @@ where
        pt_ba = pde1 AND 0xFFFFFC00;
        st_ind = v AND 0x000FF000;
        pg_ind = v AND 0x00000FFF;
-       pa_l2 = pt_ba OR st_ind >> 10;
+       pa_l2 = pt_ba OR (st_ind >> 10);
        pde2 = word_fetch mem pa_l2;
        sm_ba = pde2 AND 0xFFFFF000;
        sm_ind = v AND 0x00000FFF;
@@ -701,11 +703,11 @@ where
        sec_pa = sec_ba OR sec_ind;
        sm_pa = sm_ba OR sm_ind
   in
-    if (pde1 AND 0x2 = 0x2 \<and> \<not> pde1 !! 18) then
+    if (pde1 AND 0x3 = 0x2 \<and> \<not> pde1 !! 18) then
        EntrySection asid sec_ba_v (Some sec_ba_p) 0
-  else if (pde1 !! 1 \<and> pde2 !! 1) then
+  else if (pde1 AND 0x3 = 0x1 \<and> pde2 !! 1) then
        EntrySmall asid sm_ba_v (Some sm_ba_p) 0
-    else if (pde1 !! 1 \<and> \<not> pde2 !! 1) then
+    else if (pde1 AND 0x3 = 0x1 \<and> \<not> pde2 !! 1) then
        EntrySmall asid sm_ba_v None 0
     else
        EntrySection asid sec_ba_v None 0"
@@ -714,7 +716,7 @@ definition
   pt_lookup :: "8 word \<Rightarrow> mem_type \<Rightarrow> ttbr0 \<Rightarrow> va \<Rightarrow> 32 word option"
 where
   "pt_lookup asid mem ttbr0 v \<equiv>
-  let entry = pt_walk asid mem ttbr0 v
-  in if is_fault entry then None else Some (va_to_pa v entry)"
+    let entry = pt_walk asid mem ttbr0 v
+      in if is_fault entry then None else Some (va_to_pa v entry)"
 
 end
