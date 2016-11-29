@@ -8,14 +8,14 @@
 
 theory TLB
 imports 
-  "~~/src/HOL/Word/Word"
+  "~~/src/HOL/Word/Word" PageTable_seL4_m L3_Lib
 begin
 
-type_synonym vbasm = "20 word"
-type_synonym pbasm = "20 word"
+type_synonym vSm = "20 word"
+type_synonym pSm = "20 word"
 
-type_synonym vbase = "12 word"
-type_synonym pbase = "12 word"
+type_synonym vSe = "12 word"
+type_synonym pSe = "12 word"
 
 type_synonym asid  = "8 word" 
 type_synonym fl     = "8 word"
@@ -24,8 +24,8 @@ type_synonym va    = "32 word"
  
 
 datatype tlb_entry = 
-    EntrySmall   "asid" "vbasm" "pbasm option" "fl"
-  | EntrySection "asid" "vbase" "pbase option" "fl"
+    EntrySmall   asid vSm "pSm option" fl
+  | EntrySection asid vSe "pSe option" fl
 
 type_synonym tlb = "tlb_entry set"
 
@@ -89,15 +89,15 @@ where
 (* Selective invalidation of a virtual address for an ASID *)
 
 definition 
-  a_va_selective_invalidation :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> tlb" 
+  a_va_sel_invalidate :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> tlb" 
 where 
-  "a_va_selective_invalidation t a v \<equiv> case lookup t a v of Hit x \<Rightarrow> t - {x}
+  "a_va_sel_invalidate t a v \<equiv> case lookup t a v of Hit x \<Rightarrow> t - {x}
                                                           | Miss  \<Rightarrow> t 
                                                           | Incon \<Rightarrow> t - entry_set t a v"
 
 theorem is_present_selective:
-  "\<not>(is_a_va_present (a_va_selective_invalidation t a v) a v)"
-  unfolding a_va_selective_invalidation_def
+  "\<not>(is_a_va_present (a_va_sel_invalidate t a v) a v)"
+  unfolding a_va_sel_invalidate_def
             lookup_def is_a_va_present_def entry_set_def a_va_set_def
   by (fastforce split: split_if_asm)
 
@@ -107,7 +107,7 @@ theorem is_present_selective:
 definition 
   a_va_block_invalidation :: "tlb \<Rightarrow> asid \<Rightarrow> va set \<Rightarrow> tlb" 
 where 
-  "a_va_block_invalidation t a V \<equiv> \<Inter>x\<in>V. a_va_selective_invalidation t a x"
+  "a_va_block_invalidation t a V \<equiv> \<Inter>x\<in>V. a_va_sel_invalidate t a x"
 
 
 definition 
@@ -134,8 +134,8 @@ theorem lookup_hit_case:
   by (force split: split_if_asm)
 
 theorem member_selective_invalidation:  
-  "x \<in> a_va_selective_invalidation t a v \<Longrightarrow> (a,v) \<notin>  entry_range_asid_tags x"
-  unfolding a_va_selective_invalidation_def
+  "x \<in> a_va_sel_invalidate t a v \<Longrightarrow> (a,v) \<notin>  entry_range_asid_tags x"
+  unfolding a_va_sel_invalidate_def
   apply (simp split: lookup_type.splits)
   apply (drule lookup_miss_case)
   unfolding is_a_va_present_def a_va_set_def
@@ -487,16 +487,16 @@ theorem lookup_asid_inv_hit:
   unfolding asid_invalidation_def lookup_def
   apply (simp split: split_if_asm)
   apply safe
-  unfolding entry_set_def asid_entry_set_def a_va_set_def 
-  apply simp
-  apply force
+    unfolding entry_set_def asid_entry_set_def a_va_set_def
+    apply simp
+   apply force
   apply simp
   apply (rule_tac x="x" in exI)
   apply safe
-  apply force
-  apply force
-  prefer 2
-  apply force
+     apply force
+    apply force
+   prefer 2
+   apply force
   apply simp
   apply (drule entry_range_single_element)
   apply safe
@@ -561,15 +561,15 @@ where
 (*  -------- selective invalidation -------- *)
 
 definition 
-  va_selective_invalidation :: "tlb \<Rightarrow> va \<Rightarrow> tlb" 
+  va_sel_invalidation :: "tlb \<Rightarrow> va \<Rightarrow> tlb" 
 where 
-  "va_selective_invalidation t v \<equiv> t - va_entry_set t v"
+  "va_sel_invalidation t v \<equiv> t - va_entry_set t v"
 
 
 
 theorem is_presect_va_invlaidation:
-  "\<not>is_va_present (va_selective_invalidation t v) v"
-  unfolding is_va_present_def va_selective_invalidation_def
+  "\<not>is_va_present (va_sel_invalidation t v) v"
+  unfolding is_va_present_def va_sel_invalidation_def
     va_entry_set_def va_set_def
     by simp
 
@@ -579,10 +579,10 @@ theorem  entry_set_va_set:
   by auto
 
 theorem entry_set_empty_va_inv:
-  "entry_set (va_selective_invalidation t v) a v = {}"
+  "entry_set (va_sel_invalidation t v) a v = {}"
   apply (simp add: entry_set_va_set)
   apply safe
-  apply (unfold va_selective_invalidation_def a_va_set_def)[1]
+  apply (unfold va_sel_invalidation_def a_va_set_def)[1]
   apply clarsimp
   apply (subgoal_tac "x \<in> entry_set t a v" )
   prefer 2
@@ -596,7 +596,7 @@ theorem entry_set_empty_va_inv:
 
 
 theorem lookup_va_invalid:
-  "lookup (va_selective_invalidation t v) a v = Miss"
+  "lookup (va_sel_invalidation t v) a v = Miss"
   apply (unfold lookup_def)
   apply (simp split: split_if)
   by (clarsimp simp: entry_set_empty_va_inv)
@@ -649,74 +649,86 @@ lemma tlb_mono:
 
 (*   Page Tables   *)
 
-type_synonym mem_type = "32 word \<Rightarrow> 8 word"
+type_synonym mem_type = "32 word \<Rightarrow> 8 word option"
 
-type_synonym ttbr0 = "32 word"
+type_synonym ttbr0 = paddr
 
-definition 
-  ttbr0_mask :: "ttbr0 \<Rightarrow> 32 word"
-where
-  "ttbr0_mask tr = tr AND 0xffffc000" 
+
+(* works well only for descriptors *)
 
 definition 
-  ti_l1 :: "32 word \<Rightarrow> 32 word"
-where
-  "ti_l1 v = (v AND 0xfff00000) >> 18" 
-
-definition 
-  pa_l1 :: "ttbr0 \<Rightarrow> va \<Rightarrow> 32 word"
-where
-  "pa_l1 tr va = ttbr0_mask tr OR ti_l1 va"
-
-definition 
-  word_fetch :: "mem_type \<Rightarrow> 32 word \<Rightarrow> 32 word"
+  word_fetch :: "mem_type \<Rightarrow> 32 word \<Rightarrow> 32 word option"
 where
   "word_fetch  mem pa \<equiv> 
-      ((ucast (mem pa)     ::32 word) << 24)  OR
-      ((ucast (mem pa + 1) ::32 word) << 16)  OR
-      ((ucast (mem pa + 2) ::32 word) << 8)   OR
-      (ucast  (mem pa + 3)  ::32 word) " 
+      case mem pa of 
+            None   \<Rightarrow> None 
+          | Some _ \<Rightarrow>
+            Some (((ucast (the (mem pa))       ::32 word) << 24)  OR
+                  ((ucast (the (mem (pa + 1))) ::32 word) << 16)  OR
+                  ((ucast (the (mem (pa + 2))) ::32 word) << 8)   OR
+                  (ucast  (the (mem (pa + 3))) ::32 word)) " 
+
 
 (* This definition currently yields page faults for Small Pages and Super Sections 
     N = 0, only TTBR0 is used for translation, translation table size is 16B *)
-definition 
-  pt_walk :: "8 word \<Rightarrow> mem_type \<Rightarrow> ttbr0 \<Rightarrow> va \<Rightarrow> tlb_entry"
-where
-  "pt_walk asid mem tr v \<equiv> 
-   let ttbr0_mask = tr AND 0xFFFFC000;
-       ti_l1 = (v AND 0xFFF00000) >> 18;
-       pa_l1 = ttbr0_mask OR ti_l1;
-       pde1 = word_fetch mem pa_l1; 
-       sec_ba = pde1 AND 0xFFF00000;
-       sec_ind = v AND 0x000FFFFF;
-       pt_ba = pde1 AND 0xFFFFFC00;
-       st_ind = v AND 0x000FF000;
-       pg_ind = v AND 0x00000FFF;
-       pa_l2 = pt_ba OR (st_ind >> 10);
-       pde2 = word_fetch mem pa_l2;
-       sm_ba = pde2 AND 0xFFFFF000;
-       sm_ind = v AND 0x00000FFF;
-       sec_ba_v = ucast (v >> 20) :: 12 word;
-       sec_ba_p = ucast (sec_ba >> 20) :: 12 word;
-       sm_ba_v = ucast (v >> 12) :: 20 word;
-       sm_ba_p = ucast (sm_ba >> 12) :: 20 word;
-       sec_pa = sec_ba OR sec_ind;
-       sm_pa = sm_ba OR sm_ind
-  in
-    if (pde1 AND 0x3 = 0x2 \<and> \<not> pde1 !! 18) then
-       EntrySection asid sec_ba_v (Some sec_ba_p) 0
-  else if (pde1 AND 0x3 = 0x1 \<and> pde2 !! 1) then
-       EntrySmall asid sm_ba_v (Some sm_ba_p) 0
-    else if (pde1 AND 0x3 = 0x1 \<and> \<not> pde2 !! 1) then
-       EntrySmall asid sm_ba_v None 0
-    else
-       EntrySection asid sec_ba_v None 0"
+(* update here for the number of bits instead if shifting *)
 
 definition 
+ pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
+where
+  "pt_walk asid heap ttbr0 v \<equiv>
+      case get_pde heap ttbr0 v
+       of None                 \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some InvalidPDE       \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some ReservedPDE      \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some (SectionPDE p a) \<Rightarrow> 
+          EntrySection asid (ucast (addr_val v >> 20) :: 12 word) 
+                            (Some  ((word_extract 31 20 (addr_val p)):: 12 word))  0
+       | Some (PageTablePDE p) \<Rightarrow> 
+               (case get_pte heap p v 
+                 of None                     \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
+                 |  Some InvalidPTE          \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
+                 |  Some (SmallPagePTE p1 a) \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) 
+                                            (Some  ((word_extract 31 12 (addr_val p)):: 20 word)) 0)"
+
+
+(*definition 
+  pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
+where
+  "pt_walk asid heap ttbr0 v \<equiv>
+      case get_pde heap ttbr0 v
+       of None                 \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some InvalidPDE       \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some ReservedPDE      \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some (SectionPDE p a) \<Rightarrow> 
+          EntrySection asid (ucast (addr_val v >> 20) :: 12 word) 
+                            (Some (ucast (addr_val p >> 20) :: 12 word))  0
+       | Some (PageTablePDE p) \<Rightarrow> 
+               (case get_pte heap p v 
+                 of None                     \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
+                 |  Some InvalidPTE          \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
+                 |  Some (SmallPagePTE p1 a) \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) 
+                                            (Some (ucast (addr_val p1 >> 12) :: 20 word)) 0)"
+*)
+value pt_walk
+(* nice definition but it looses information about the entrysmall none case
+    incomplete too (may be) *)
+definition 
+  pt_walk1 :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
+where
+  "pt_walk1 asid heap ttbr0 v \<equiv>
+      case lookup_pde heap ttbr0 v
+       of None            \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some (p, pt, a)  \<Rightarrow> if pt = ArmSection 
+                              then EntrySection asid (ucast (addr_val v >> 20) :: 12 word) (Some (ucast (addr_val p >> 20) :: 12 word))  0 
+                                else EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) (Some (ucast (addr_val p >> 12) :: 20 word)) 0"
+         
+
+(*definition 
   pt_lookup :: "8 word \<Rightarrow> mem_type \<Rightarrow> ttbr0 \<Rightarrow> va \<Rightarrow> 32 word option"
 where
   "pt_lookup asid mem ttbr0 v \<equiv>
     let entry = pt_walk asid mem ttbr0 v
       in if is_fault entry then None else Some (va_to_pa v entry)"
-
+*)
 end

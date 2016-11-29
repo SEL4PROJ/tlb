@@ -3,7 +3,6 @@
 
 L3 operations.
 *)
-
 theory L3_Lib
 imports "$ISABELLE_HOME/src/HOL/Word/Word"
         "$ISABELLE_HOME/src/HOL/Library/Code_Target_Numeral"
