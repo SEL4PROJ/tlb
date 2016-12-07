@@ -32,7 +32,7 @@ fun bind :: "('state \<Rightarrow> ('a \<times> 'state)) \<Rightarrow>
 
 (* use do syntax for this state monad *)
 adhoc_overloading
-  Monad_Syntax.bind bind 
+  Monad_Syntax.bind bind
 
 fun read_state :: "('state \<Rightarrow> 'a) \<Rightarrow> 'state \<Rightarrow> 'a \<times> 'state" where
   "read_state f = (\<lambda>s. (f s, s))"

@@ -19821,7 +19821,7 @@ end
 definition
 "Run"
   :: "instruction \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
-where        
+where
 "Run \<equiv> \<lambda>v0. case v0 of Branch (BranchExchange v2) \<Rightarrow> dfn'BranchExchange v2 | Branch (BranchLinkExchangeImmediate v3) \<Rightarrow> dfn'BranchLinkExchangeImmediate v3
             | Branch (BranchLinkExchangeRegister v4) \<Rightarrow> dfn'BranchLinkExchangeRegister v4 | Branch (BranchTarget v5) \<Rightarrow> dfn'BranchTarget v5
             | Branch (CheckArray v6) \<Rightarrow> dfn'CheckArray v6 | Branch (CompareBranch v7) \<Rightarrow> dfn'CompareBranch v7 | Branch (HandlerBranchLink v8) \<Rightarrow> dfn'HandlerBranchLink v8
@@ -42098,8 +42098,6 @@ val () = def
          @{context})))
 end
 \<close>
-
-
 
 ML \<open>
 local 
