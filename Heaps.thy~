@@ -52,7 +52,7 @@ where
   "Align \<equiv> \<lambda>(w, n). word_of_int (int (n * (nat (uint w) div n)))"
 
 definition
-  Align1 :: "vaddr \<times> nat \<Rightarrow> vaddr"
+  Align1 :: "paddr \<times> nat \<Rightarrow> paddr"
 where
   "Align1 \<equiv> \<lambda>(w, n). Addr (word_of_int (int (n * (nat (uint (addr_val w)) div n))))"
 
@@ -62,14 +62,14 @@ where
   "Aligned \<equiv> \<lambda>(w, n). w = Align (w, n)"
 
 definition
-  Aligned1 :: "vaddr \<times> nat \<Rightarrow> bool"
+  Aligned1 :: "paddr \<times> nat \<Rightarrow> bool"
 where
   "Aligned1 \<equiv> \<lambda>(w, n). w = Align1 (w, n)"
 
 
 
 definition
-  MemA_with_priv :: "vaddr \<times> nat \<times> bool \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> 'a::len word \<times> 'b::mem_op state_scheme"
+  MemA_with_priv :: "paddr \<times> nat \<times> bool \<Rightarrow> 'b state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
 where
   "MemA_with_priv \<equiv>
 \<lambda>(address, size, privileged).
@@ -94,7 +94,7 @@ where
        v \<leftarrow> read_state fst;
        v \<leftarrow> do {
            v \<leftarrow> return (v, size);
-           trim_state (mmu_read_size v)
+           trim_state (mem_read1 v)
          };
        extend_state v (do {
                          v \<leftarrow> read_state (\<lambda>s. CPSR (snd (snd s)));
@@ -120,7 +120,7 @@ where
 
 
 definition
-  write'MemA_with_priv:: "'a::len word \<times> vaddr \<times> nat \<times> bool \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  write'MemA_with_priv:: "'a::len word \<times> paddr \<times> nat \<times> bool \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
   "write'MemA_with_priv \<equiv>
    \<lambda>(value, address, size, privileged).
@@ -149,23 +149,23 @@ where
             };
           v \<leftarrow> read_state fst;
           x \<leftarrow> return (v, size);
-          trim_state (mmu_write_size (end_value, x))
+          trim_state (write'mem1 (end_value, x))
         })"
 
 definition
-  MemA_unpriv :: "vaddr \<times> nat \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
+  MemA_unpriv :: "paddr \<times> nat \<Rightarrow> 'b state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
 where
   "MemA_unpriv \<equiv> \<lambda>(address, size). MemA_with_priv (address, size, False)"
 
 
 definition
-  write'MemA_unpriv :: "'a::len word \<times> vaddr \<times> nat \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  write'MemA_unpriv :: "'a::len word \<times> paddr \<times> nat \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
   "write'MemA_unpriv \<equiv> \<lambda>(value, address, size). write'MemA_with_priv (value, address, size, False)"
 
 
 definition
-  "MemA":: "vaddr \<times> nat \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
+  "MemA":: "paddr \<times> nat \<Rightarrow> 'b state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
 where
   "MemA \<equiv> \<lambda>(address, size). do {
              v \<leftarrow> CurrentModeIsNotUser ();
@@ -179,7 +179,7 @@ where
 
 
 definition
-  "write'MemA" :: "'a::len word \<times> vaddr \<times> nat \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  "write'MemA" :: "'a::len word \<times> paddr \<times> nat \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "write'MemA \<equiv> \<lambda>(value, address, size). do {
                    v \<leftarrow> CurrentModeIsNotUser ();
@@ -192,7 +192,7 @@ where
 
 
 definition
-  MemU_with_priv :: "vaddr \<times> nat \<times> bool \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
+  MemU_with_priv :: "paddr \<times> nat \<times> bool \<Rightarrow> 'b state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
 where
 "MemU_with_priv \<equiv>
 \<lambda>(address, size, privileged).
@@ -261,7 +261,7 @@ where
 
 
 definition
-  write'MemU_with_priv  :: "'a::len word \<times> vaddr \<times> nat \<times> bool \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  write'MemU_with_priv  :: "'a::len word \<times> paddr \<times> nat \<times> bool \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "write'MemU_with_priv \<equiv>
 \<lambda>(value, address, size, privileged). do {
@@ -307,7 +307,7 @@ where
    }"
 
 definition
-  MemU_unpriv :: "vaddr \<times> nat \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
+  MemU_unpriv :: "paddr \<times> nat \<Rightarrow> 'b state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
 where
   "MemU_unpriv \<equiv> \<lambda>(address, size). MemU_with_priv (address, size, False)"
 
@@ -315,14 +315,14 @@ where
 
 
 definition
-  write'MemU_unpriv :: "'a::len word \<times> vaddr \<times> nat \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  write'MemU_unpriv :: "'a::len word \<times> paddr \<times> nat \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
   "write'MemU_unpriv \<equiv> \<lambda>(value, address, size). write'MemU_with_priv (value, address, size, False)"
 
 
 
 definition
- MemU :: "vaddr \<times> nat \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
+ MemU :: "paddr \<times> nat \<Rightarrow> 'b state_scheme \<Rightarrow> 'a::len word \<times> 'b state_scheme"
 where
 "MemU \<equiv> \<lambda>(address, size). do {
              v \<leftarrow> CurrentModeIsNotUser ();
@@ -336,7 +336,7 @@ where
 
 
 definition
-  write'MemU :: "'a::len word \<times> vaddr \<times> nat \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  write'MemU :: "'a::len word \<times> paddr \<times> nat \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
   "write'MemU \<equiv> \<lambda>(value, address, size). do {
                    v \<leftarrow> CurrentModeIsNotUser ();
@@ -10719,7 +10719,7 @@ end
 \<close>
 
 definition
-  dfn'vldr :: "bool \<times> bool \<times> 5 word \<times> 4 word \<times> 32 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  dfn'vldr :: "bool \<times> bool \<times> 5 word \<times> 4 word \<times> 32 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
   "dfn'vldr \<equiv> \<lambda>(single_reg, add, d, n, imm32). do {
                  base \<leftarrow> if n = 15 then do {
@@ -10747,7 +10747,7 @@ where
 
 
 definition
-  dfn'vstr :: "bool \<times> bool \<times> 5 word \<times> 4 word \<times> 32 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  dfn'vstr :: "bool \<times> bool \<times> 5 word \<times> 4 word \<times> 32 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'vstr \<equiv> \<lambda>(single_reg, add, d, n, imm32). do {
                  address \<leftarrow> if add then do {
@@ -10990,7 +10990,7 @@ end
 
 
 definition
-  dfn'TableBranchByte :: "bool \<times> 4 word \<times> 4 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  dfn'TableBranchByte :: "bool \<times> 4 word \<times> 4 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
   "dfn'TableBranchByte \<equiv> \<lambda>(is_tbh, m, n). do {
                             b \<leftarrow> NullCheckIfThumbEE n;
@@ -16036,7 +16036,7 @@ end
 
 
 definition
-  dfn'LoadWord :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  dfn'LoadWord :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
   "dfn'LoadWord \<equiv>
 \<lambda>(add, index, wback, t, n, m). do {
@@ -16083,7 +16083,7 @@ where
 
 definition
 "dfn'LoadLiteral"
-  :: "bool \<times> 4 word \<times> 32 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> 4 word \<times> 32 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadLiteral \<equiv>
 \<lambda>(add, t, imm32). do {
@@ -16118,7 +16118,7 @@ where
 
 definition
   "dfn'LoadUnprivileged"
-  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
   "dfn'LoadUnprivileged \<equiv>
 \<lambda>(add, postindex, t, n, m). do {
@@ -16162,7 +16162,7 @@ where
 
 definition
  "dfn'LoadByte"
-  :: "bool \<times> bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadByte \<equiv> \<lambda>(unsigned, add, index, wback, t, n, m). do {
                      b \<leftarrow> NullCheckIfThumbEE n;
@@ -16201,7 +16201,7 @@ where
 
 definition
   "dfn'LoadByteLiteral"
-  :: "bool \<times> bool \<times> 4 word \<times> 32 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> 4 word \<times> 32 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadByteLiteral \<equiv> \<lambda>(unsigned::bool, add::bool, t::4 word, imm32::32 word). do {
                             b::bool \<leftarrow> NullCheckIfThumbEE (15::4 word);
@@ -16230,7 +16230,7 @@ where
 
 definition
   "dfn'LoadByteUnprivileged"
-  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
   "dfn'LoadByteUnprivileged \<equiv>
 \<lambda>(add::bool, postindex::bool, t::4 word, n::4 word, m::offset1). do {
@@ -16267,7 +16267,7 @@ where
 
 definition
   "dfn'LoadSignedByteUnprivileged"
-  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset2 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset2 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
   "dfn'LoadSignedByteUnprivileged \<equiv> \<lambda>(add::bool, postindex::bool, t::4 word, n::4 word, m::offset2). do {
                                        b::bool \<leftarrow> NullCheckIfThumbEE n;
@@ -16287,7 +16287,7 @@ where
                                      }"
 definition
  "dfn'LoadHalf"
-  :: "bool \<times> bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadHalf \<equiv>
 \<lambda>(unsigned::bool, add::bool, index::bool, wback::bool, t::4 word, n::4 word, m::offset1). do {
@@ -16330,7 +16330,7 @@ where
 
 definition
   "dfn'LoadHalfLiteral"
-  :: "bool \<times> bool \<times> 4 word \<times> 32 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> 4 word \<times> 32 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadHalfLiteral \<equiv> \<lambda>(unsigned::bool, add::bool, t::4 word, imm32::32 word). do {
                             b::bool \<leftarrow> NullCheckIfThumbEE (15::4 word);
@@ -16359,7 +16359,7 @@ where
 
 definition
   "dfn'LoadHalfUnprivileged"
-  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset2 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset2 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadHalfUnprivileged \<equiv> \<lambda>(unsigned::bool, add::bool, postindex::bool, t::4 word, n::4 word, m::offset2). do {
                                  b::bool \<leftarrow> NullCheckIfThumbEE n;
@@ -16385,7 +16385,7 @@ where
 
 definition
   "dfn'LoadMultiple"
-  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 16 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 16 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadMultiple \<equiv>
 \<lambda>(increment::bool, index::bool, wback::bool, n::4 word, registers::16 word). do {
@@ -16443,7 +16443,7 @@ where
 
 definition
  "dfn'LoadMultipleExceptionReturn"
-  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 15 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 15 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadMultipleExceptionReturn \<equiv>
 \<lambda>(increment::bool, wordhigher::bool, wback::bool, n::4 word, registers::15 word). do {
@@ -16511,7 +16511,7 @@ return (v, word_of_int (int i))
 
 definition
  "dfn'LoadMultipleUserRegisters"
-  :: "bool \<times> bool \<times> 4 word \<times> 15 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> 4 word \<times> 15 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadMultipleUserRegisters \<equiv>
 \<lambda>(increment::bool, wordhigher::bool, n::4 word, registers::15 word). do {
@@ -16560,7 +16560,7 @@ where
 
 definition
 "dfn'LoadDual"
-  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> offset2 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> offset2 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadDual \<equiv> \<lambda>(add::bool, index::bool, wback::bool, t::4 word, t2::4 word, n::4 word, m::offset2). do {
                      b::bool \<leftarrow> NullCheckIfThumbEE n;
@@ -16582,7 +16582,7 @@ where
 
 definition
   "dfn'LoadDualLiteral"
-  :: "bool \<times> 4 word \<times> 4 word \<times> 32 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> 4 word \<times> 4 word \<times> 32 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadDualLiteral \<equiv> \<lambda>(add, t, t2, imm32). do {
                             b \<leftarrow> NullCheckIfThumbEE 15;
@@ -16615,7 +16615,7 @@ where
 
 definition
   "dfn'LoadExclusive"
-  :: "4 word \<times> 4 word \<times> 32 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "4 word \<times> 4 word \<times> 32 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadExclusive \<equiv> \<lambda>(t::4 word, n::4 word, imm32::32 word). do {
                           b::bool \<leftarrow> NullCheckIfThumbEE n;
@@ -16632,7 +16632,7 @@ where
 
 definition
 "dfn'LoadExclusiveByte"
-  :: "4 word \<times> 4 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "4 word \<times> 4 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadExclusiveByte \<equiv> \<lambda>(t::4 word, n::4 word). do {
                               b::bool \<leftarrow> NullCheckIfThumbEE n;
@@ -16651,7 +16651,7 @@ where
 
 definition
   "dfn'LoadExclusiveHalf"
-  :: "4 word \<times> 4 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "4 word \<times> 4 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadExclusiveHalf \<equiv> \<lambda>(t::4 word, n::4 word). do {
                               b::bool \<leftarrow> NullCheckIfThumbEE n;
@@ -16671,7 +16671,7 @@ where
 
 definition
   "dfn'LoadExclusiveDoubleword"
-  :: "4 word \<times> 4 word \<times> 4 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "4 word \<times> 4 word \<times> 4 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'LoadExclusiveDoubleword \<equiv>
 \<lambda>(t::4 word, t2::4 word, n::4 word). do {
@@ -16698,7 +16698,7 @@ where
 
 definition
  "dfn'StoreWord"
-  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreWord \<equiv> \<lambda>(add, index, wback, t, n, m). do {
                       b \<leftarrow> NullCheckIfThumbEE n;
@@ -16739,7 +16739,7 @@ where
 
 definition
   "dfn'StoreUnprivileged"
-  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreUnprivileged \<equiv> \<lambda>(add, postindex, t, n, m). do {
                               b \<leftarrow> NullCheckIfThumbEE n;
@@ -16780,7 +16780,7 @@ where
 
 definition
  "dfn'StoreByte"
-  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreByte \<equiv> \<lambda>(add, index, wback, t, n, m). do {
                       b \<leftarrow> NullCheckIfThumbEE n;
@@ -16819,7 +16819,7 @@ where
 
 definition
  "dfn'StoreByteUnprivileged"
-  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreByteUnprivileged \<equiv> \<lambda>(add, postindex, t, n, m). do {
                                   b \<leftarrow> NullCheckIfThumbEE n;
@@ -16857,7 +16857,7 @@ where
 
 definition
   "dfn'StoreHalf"
-  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreHalf \<equiv> \<lambda>(add, index, wback, t, n, m). do {
                       b \<leftarrow> NullCheckIfThumbEE n;
@@ -16900,7 +16900,7 @@ where
 
 definition
   "dfn'StoreHalfUnprivileged"
-  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset2 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset2 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreHalfUnprivileged \<equiv> \<lambda>(add, postindex, t, n, m). do {
                                   b \<leftarrow> NullCheckIfThumbEE n;
@@ -16930,7 +16930,7 @@ where
 
 definition
  "dfn'StoreMultiple"
-  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 16 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 16 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreMultiple \<equiv>
 \<lambda>(increment, index, wback, n, registers). do {
@@ -16988,7 +16988,7 @@ where
 
 definition
 "dfn'StoreMultipleUserRegisters"
-  :: "bool \<times> bool \<times> 4 word \<times> 16 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> 4 word \<times> 16 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreMultipleUserRegisters \<equiv> \<lambda>(increment, wordhigher, n, registers). do {
                                        v \<leftarrow> CurrentModeIsHyp ();
@@ -17041,7 +17041,7 @@ where
 
 definition
  "dfn'StoreDual"
-  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> offset2 \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> offset2 \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 
 where
 "dfn'StoreDual \<equiv> \<lambda>(add, index, wback, t, t2, n, m). do {
@@ -17070,7 +17070,7 @@ where
 
 definition
 "dfn'StoreExclusive"
-  :: "4 word \<times> 4 word \<times> 4 word \<times> 32 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "4 word \<times> 4 word \<times> 4 word \<times> 32 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreExclusive \<equiv> \<lambda>(d, t, n, imm32). do {
                            b \<leftarrow> NullCheckIfThumbEE n;
@@ -17095,7 +17095,7 @@ write'R (0, d)
 
 definition
 "dfn'StoreExclusiveByte"
-  :: "4 word \<times> 4 word \<times> 4 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "4 word \<times> 4 word \<times> 4 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreExclusiveByte \<equiv> \<lambda>(d, t, n). do {
                                b \<leftarrow> NullCheckIfThumbEE n;
@@ -17120,7 +17120,7 @@ where
 
 definition
 "dfn'StoreExclusiveHalf"
-  :: "4 word \<times> 4 word \<times> 4 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "4 word \<times> 4 word \<times> 4 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreExclusiveHalf \<equiv> \<lambda>(d, t, n). do {
                                b \<leftarrow> NullCheckIfThumbEE n;
@@ -17147,7 +17147,7 @@ where
 
 definition
 "dfn'StoreExclusiveDoubleword"
-  :: "4 word \<times> 4 word \<times> 4 word \<times> 4 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "4 word \<times> 4 word \<times> 4 word \<times> 4 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreExclusiveDoubleword \<equiv> \<lambda>(d, t, t2, n). do {
                                      b \<leftarrow> NullCheckIfThumbEE n;
@@ -17191,7 +17191,7 @@ end
 
 definition
 "dfn'Swap"
-  :: "bool \<times> 4 word \<times> 4 word \<times> 4 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> 4 word \<times> 4 word \<times> 4 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'Swap \<equiv> \<lambda>(b, t, t2, n). do {
                  Rn \<leftarrow> R n;
@@ -19378,7 +19378,7 @@ end
 
 definition
 "dfn'ReturnFromException"
-  :: "bool \<times> bool \<times> bool \<times> 4 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 4 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'ReturnFromException \<equiv>
 \<lambda>(increment, wordhigher, wback, n). do {
@@ -19579,7 +19579,7 @@ end
 
 definition
 "dfn'StoreReturnState"
-  :: "bool \<times> bool \<times> bool \<times> 5 word \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+  :: "bool \<times> bool \<times> bool \<times> 5 word \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where
 "dfn'StoreReturnState \<equiv>
 \<lambda>(increment, wordhigher, wback, mode). do {
@@ -19820,8 +19820,8 @@ end
 
 definition
 "Run"
-  :: "instruction \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
-where        
+  :: "instruction \<Rightarrow> 'b state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
+where
 "Run \<equiv> \<lambda>v0. case v0 of Branch (BranchExchange v2) \<Rightarrow> dfn'BranchExchange v2 | Branch (BranchLinkExchangeImmediate v3) \<Rightarrow> dfn'BranchLinkExchangeImmediate v3
             | Branch (BranchLinkExchangeRegister v4) \<Rightarrow> dfn'BranchLinkExchangeRegister v4 | Branch (BranchTarget v5) \<Rightarrow> dfn'BranchTarget v5
             | Branch (CheckArray v6) \<Rightarrow> dfn'CheckArray v6 | Branch (CompareBranch v7) \<Rightarrow> dfn'CompareBranch v7 | Branch (HandlerBranchLink v8) \<Rightarrow> dfn'HandlerBranchLink v8
@@ -19887,7 +19887,7 @@ where
 
 definition
 "Fetch"
-  :: "'b::mem_op state_scheme \<Rightarrow> MachineCode \<times> 'b state_scheme"
+  :: "'b state_scheme \<Rightarrow> MachineCode \<times> 'b state_scheme"
 where
 "Fetch \<equiv> do {
   iset \<leftarrow> CurrentInstrSet ();
@@ -42099,28 +42099,26 @@ val () = def
 end
 \<close>
 
-
-
 ML \<open>
 local 
 open L3 
 in
 val () = def
   ("Next",
-   mb(const("Fetch",@{typ "'b::mem_op state_scheme \<Rightarrow> (MachineCode \<times> 'b state_scheme)"},@{theory}),
+   mb(const("Fetch",@{typ "'b state_scheme \<Rightarrow> (MachineCode \<times> 'b state_scheme)"},@{theory}),
       close
         (var("v",@{typ MachineCode}),
          mb(mb(call
-                 ("Decode",@{typ "'b::mem_op state_scheme \<Rightarrow> (instruction \<times> 'b state_scheme)"},
+                 ("Decode",@{typ "'b state_scheme \<Rightarrow> (instruction \<times> 'b state_scheme)"},
                   var("v",@{typ MachineCode}),@{theory}),
                close
                  (var("v",@{typ instruction}),
                   call
-                    ("Run",@{typ "'b::mem_op state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},
+                    ("Run",@{typ "'b state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},
                      var("v",@{typ instruction}),@{theory}))),
             close
               (var_a HOLogic.unitT,
-               call("ITAdvance",@{typ "'b::mem_op state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},lu,@{theory ARM_Monadic}))))))
+               call("ITAdvance",@{typ "'b state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},lu,@{theory ARM_Monadic}))))))
 end
 \<close>
 
