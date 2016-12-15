@@ -8,8 +8,8 @@
 theory Misc
 imports
   "~~/src/HOL/Main"
-  "$HOME/verification/l4v/lib/Lib"
-  "$HOME/verification/l4v/lib/Word_Lib/Word_Enum"
+  "/Users/hira/verification/l4v/lib/Lib"
+  "/Users/hira/verification/l4v/lib/Word_Lib/Word_Enum"
 
 begin
 

@@ -2014,64 +2014,569 @@ theorem entry_range_single_elementI:
 
 
 
-lemma 
-  "\<lbrakk>(ucast (ucast ((x::32 word) >> 12):: 20 word) << 12) \<le> va ; 
-    (va:: 32 word) \<le> (ucast (ucast (x >> 12):: 20 word) << 12) + 0x00000FFF \<rbrakk> \<Longrightarrow>
-     (ucast (x >> 12)::20 word) = (ucast (va >> 12)::20 word)"
-  apply (cases "x = va") 
-  apply (simp only : assms) 
+
+lemma va_offset_add:
+  " (va::32 word) : {ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12  .. 
+    (ucast (ucast (x >> 12):: 20 word) << 12) + mask 12 } \<Longrightarrow>
+      \<exists>a.  (0 \<le> a \<and> a \<le> mask 12) \<and>
+  va = (ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12)  + a"
+  apply (rule_tac x = "va - (ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12) " in exI)
+  apply (clarsimp simp: mask_def)
+  apply uint_arith
+done
   
-oops
 
-lemma
-  fixes va :: "32 word" and x::"32 word"
-    assumes "word_extract 31 12 (x::32 word)  =  word_extract 31 12 (v::32 word) "
-    shows "(ucast (x >> 12)::20 word) = (ucast (va >> 12)::20 word)"
- using assms apply (clarsimp) 
+lemma va_offset_add_1:
+  " (va::32 word) : {ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20  .. 
+    (ucast (ucast (x >> 20):: 12 word) << 20) + mask 20 } \<Longrightarrow>
+      \<exists>a.  (0 \<le> a \<and> a \<le> mask 20) \<and>
+      va = (ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20)  + a"
+  apply (rule_tac x = "va - (ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20) " in exI)
+  apply (clarsimp simp: mask_def)
+  apply uint_arith
+done
+
+lemma shift_to_mask:
+  "x AND NOT mask 12 = (ucast (ucast ((x::32 word) >> 12):: 20 word)::32 word) << 12"
+  apply (rule word_eqI)
+  apply (simp add : word_ops_nth_size word_size)
+  apply (simp add : nth_shiftr nth_shiftl nth_ucast)
+  apply auto
+done
+
+
+lemma shift_to_mask_1:
+  "x AND NOT mask 20 = (ucast (ucast ((x::32 word) >> 20):: 12 word)::32 word) << 20"
+  apply (rule word_eqI)
+  apply (simp add : word_ops_nth_size word_size)
+  apply (simp add : nth_shiftr nth_shiftl nth_ucast)
+  apply auto
+done
+
+
+
+
+lemma nth_bits_false:
+  "\<lbrakk>(n::nat) < 20; (a::32 word) \<le> 0xFFF\<rbrakk> \<Longrightarrow> \<not>(a !! (n + 12))"
+  apply word_bitwise
+  apply clarsimp
+  apply (case_tac "n = 0")
+   apply clarsimp
+  apply (case_tac "n = 1")
+   apply clarsimp
+  apply (case_tac "n = 2")
+   apply clarsimp
+  apply (case_tac "n = 3")
+   apply clarsimp
+  apply (case_tac "n = 4")
+   apply clarsimp
+  apply (case_tac "n = 5")
+   apply clarsimp
+  apply (case_tac "n = 6")
+   apply clarsimp
+  apply (case_tac "n = 7")
+   apply clarsimp
+  apply (case_tac "n = 8")
+   apply clarsimp
+  apply (case_tac "n = 9")
+   apply clarsimp
+  apply (case_tac "n = 10")
+   apply clarsimp
+  apply (case_tac "n = 11")
+   apply clarsimp
+  apply (case_tac "n = 12")
+   apply clarsimp
+  apply (case_tac "n = 13")
+   apply clarsimp
+  apply (case_tac "n = 14")
+   apply clarsimp
+  apply (case_tac "n = 15")
+   apply clarsimp
+  apply (case_tac "n = 16")
+   apply clarsimp
+  apply (case_tac "n = 17")
+   apply clarsimp
+  apply (case_tac "n = 18")
+   apply clarsimp
+  apply (case_tac "n = 19")
+   apply clarsimp
+  apply (thin_tac "\<not> a !! P" for P)+
+  apply arith
+done
+
+
+
+lemma nth_bits_false_1:
+  "\<lbrakk>(n::nat) < 12; (a::32 word) \<le> 0xFFFFF\<rbrakk> \<Longrightarrow> \<not>(a !! (n + 20))"
+  apply word_bitwise
+  apply clarsimp
+  apply (case_tac "n = 0")
+   apply clarsimp
+  apply (case_tac "n = 1")
+   apply clarsimp
+  apply (case_tac "n = 2")
+   apply clarsimp
+  apply (case_tac "n = 3")
+   apply clarsimp
+  apply (case_tac "n = 4")
+   apply clarsimp
+  apply (case_tac "n = 5")
+   apply clarsimp
+  apply (case_tac "n = 6")
+   apply clarsimp
+  apply (case_tac "n = 7")
+   apply clarsimp
+  apply (case_tac "n = 8")
+   apply clarsimp
+  apply (case_tac "n = 9")
+   apply clarsimp
+  apply (case_tac "n = 10")
+   apply clarsimp
+  apply (case_tac "n = 11")
+   apply clarsimp
+  apply (thin_tac "\<not> a !! P" for P)+
+  apply arith
+done
+
+
+
+lemma nth_bits_offset_equal: "\<lbrakk>n < 20 ; (a::32 word) \<le> 0x00000FFF \<rbrakk> \<Longrightarrow> 
+        (((x::32 word) && 0xFFFFF000) || a) !!  (n + 12) = x !! (n + 12)"
+  apply clarsimp
+  apply (rule iffI)
+   apply (erule disjE)
+    apply clarsimp
+   apply (clarsimp simp: nth_bits_false)
+  apply clarsimp
+  apply (simp only: test_bit_int_def [symmetric])
+  apply (case_tac "n = 0")
+   apply clarsimp
+  apply (case_tac "n = 1")
+   apply clarsimp
+  apply (case_tac "n = 2")
+   apply clarsimp
+  apply (case_tac "n = 3")
+   apply clarsimp
+  apply (case_tac "n = 4")
+   apply clarsimp
+  apply (case_tac "n = 5")
+   apply clarsimp
+  apply (case_tac "n = 6")
+   apply clarsimp
+  apply (case_tac "n = 7")
+   apply clarsimp
+  apply (case_tac "n = 8")
+   apply clarsimp
+  apply (case_tac "n = 9")
+   apply clarsimp
+  apply (case_tac "n = 10")
+   apply clarsimp
+  apply (case_tac "n = 11")
+   apply clarsimp
+  apply (case_tac "n = 12")
+   apply clarsimp
+  apply (case_tac "n = 13")
+   apply clarsimp
+  apply (case_tac "n = 14")
+   apply clarsimp
+  apply (case_tac "n = 15")
+   apply clarsimp
+  apply (case_tac "n = 16")
+   apply clarsimp
+  apply (case_tac "n = 17")
+   apply clarsimp
+  apply (case_tac "n = 18")
+   apply clarsimp
+  apply (case_tac "n = 19")
+   apply clarsimp
+  by presburger
+
+   
+
+
+lemma nth_bits_offset_equal_1: "\<lbrakk>n < 12 ; (a::32 word) \<le> 0x000FFFFF \<rbrakk> \<Longrightarrow> 
+        (((x::32 word) && 0xFFF00000) || a) !!  (n + 20) = x !! (n + 20)"
+  apply clarsimp
+  apply (rule iffI)
+   apply (erule disjE)
+    apply clarsimp
+   apply (clarsimp simp: nth_bits_false_1)
+  apply clarsimp
+  apply (simp only: test_bit_int_def [symmetric])
+  apply (case_tac "n = 0")
+   apply clarsimp
+  apply (case_tac "n = 1")
+   apply clarsimp
+  apply (case_tac "n = 2")
+   apply clarsimp
+  apply (case_tac "n = 3")
+   apply clarsimp
+  apply (case_tac "n = 4")
+   apply clarsimp
+  apply (case_tac "n = 5")
+   apply clarsimp
+  apply (case_tac "n = 6")
+   apply clarsimp
+  apply (case_tac "n = 7")
+   apply clarsimp
+  apply (case_tac "n = 8")
+   apply clarsimp
+  apply (case_tac "n = 9")
+   apply clarsimp
+  apply (case_tac "n = 10")
+   apply clarsimp
+  apply (case_tac "n = 11")
+   apply clarsimp
+  by presburger
+
+   
+lemma add_to_or:
+  "(a::32 word) \<le> 0xFFF \<Longrightarrow>
+     ((x::32 word) && 0xFFFFF000) + a =  (x && 0xFFFFF000) || a"
+  apply word_bitwise
+  apply clarsimp
+  using xor3_simps carry_simps apply auto
+ done
+
+
+lemma add_to_or_1:
+  "(a::32 word) \<le> 0xFFFFF \<Longrightarrow>
+     ((x::32 word) && 0xFFF00000) + a =  (x && 0xFFF00000) || a"
+  apply word_bitwise
+  apply clarsimp
+  using xor3_simps carry_simps apply auto
+done
+
+
+lemma va_offset_higher_bits: 
+   " \<lbrakk>ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12 \<le> va ; 
+      va \<le> (ucast (ucast (x >> 12):: 20 word) << 12) + 0x00000FFF \<rbrakk> \<Longrightarrow>
+        (ucast (x >> 12)::20 word) = (ucast ((va:: 32 word) >> 12)::20 word)"
+  apply (subgoal_tac "(va::32 word) : {ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12  ..
+   (ucast (ucast (x >> 12):: 20 word) << 12) + mask 12 }")
+   prefer 2
+   apply (clarsimp simp: mask_def)
+  apply (frule va_offset_add)
+  apply simp
+  apply (erule exE)
+  apply (erule conjE)
+  apply (simp add: mask_def)
+  apply (subgoal_tac "(ucast ((((ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12)::32 word)  + a) >> 12):: 20 word) =
+                       (ucast (((ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12)::32 word)   >> 12):: 20 word) ")
+   apply clarsimp
+   apply (word_bitwise) [1]
+  apply (subgoal_tac "ucast ((ucast (ucast ((x::32 word) >> 12):: 20 word)::32 word) << 12 >> 12) =
+                      (ucast (x >> 12) :: 20 word)")
+   prefer 2
+   apply (word_bitwise) [1]
+  apply simp
+  apply (clarsimp simp: shift_to_mask [symmetric])
+  apply (rule word_eqI)
+  apply (simp only: nth_ucast)
+  apply clarsimp
+  apply (subgoal_tac "n < 20")
+   prefer 2
+   apply word_bitwise [1]
+  apply clarsimp
+  apply (clarsimp simp: nth_shiftr)
+  apply (clarsimp simp: mask_def)
+  apply (frule_tac a = a in nth_bits_offset_equal) apply clarsimp
+  apply (drule_tac x= x in add_to_or)
+  apply (simp only: )
+ done
+
+
+
+lemma va_offset_higher_bits_1: 
+   " \<lbrakk>ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20 \<le> va ; 
+      va \<le> (ucast (ucast (x >> 20):: 12 word) << 20) + 0x000FFFFF \<rbrakk> \<Longrightarrow>
+        (ucast (x >> 20):: 12 word) = (ucast ((va:: 32 word) >> 20)::12 word)"
+  apply (subgoal_tac "(va::32 word) : {ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20 ..
+                      (ucast (ucast (x >> 20):: 12 word) << 20) + mask 20 }")
+   prefer 2
+   apply (clarsimp simp: mask_def)
+  apply (frule va_offset_add_1)
+  apply simp
+  apply (erule exE)
+  apply (erule conjE)
+  apply (simp add: mask_def)
+  apply (subgoal_tac "(ucast ((((ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20)::32 word)  + a) >> 20):: 12 word) =
+                      (ucast (((ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20)::32 word)   >> 20):: 12 word) ")
+   apply clarsimp
+   apply (word_bitwise) [1]
+  apply (subgoal_tac "ucast ((ucast (ucast ((x::32 word) >> 20):: 12 word)::32 word) << 20 >> 20) =
+   (ucast (x >> 20) :: 12 word)")
+   prefer 2
+   apply (word_bitwise) [1]
+  apply simp
+  apply (clarsimp simp: shift_to_mask_1 [symmetric])
+  apply (rule word_eqI)
+  apply (simp only: nth_ucast)
+  apply clarsimp
+  apply (subgoal_tac "n < 12")
+   prefer 2
+   apply word_bitwise [1]
+  apply clarsimp
+  apply (clarsimp simp: nth_shiftr)
+  apply (clarsimp simp: mask_def)
+  apply (frule_tac a = a in nth_bits_offset_equal_1) apply clarsimp
+  apply (drule_tac x= x in add_to_or_1)
+  apply (simp only: )
+ done
+
+
+
+
+lemma nth_bits_offset: "\<lbrakk> n \<in> {12..31} ; (a::32 word) \<le> 0x00000FFF \<rbrakk> \<Longrightarrow> 
+        (x::32 word) !! n = (x && 0xFFFFF000 || a) !! n"
+  apply (rule iffI)
+   apply (case_tac "n = 12")
+    apply clarsimp
+   apply (case_tac "n = 13")
+    apply clarsimp
+   apply (case_tac "n = 14")
+    apply clarsimp
+   apply (case_tac "n = 15")
+    apply clarsimp
+   apply (case_tac "n = 16")
+    apply clarsimp
+   apply (case_tac "n = 17")
+    apply clarsimp
+   apply (case_tac "n = 18")
+    apply clarsimp
+   apply (case_tac "n = 19")
+    apply clarsimp
+   apply (case_tac "n = 20")
+    apply clarsimp
+   apply (case_tac "n = 21")
+    apply clarsimp
+   apply (case_tac "n = 22")
+    apply clarsimp
+   apply (case_tac "n = 23")
+    apply clarsimp
+   apply (case_tac "n = 24")
+    apply clarsimp
+   apply (case_tac "n = 25")
+    apply clarsimp
+   apply (case_tac "n = 26")
+    apply clarsimp
+   apply (case_tac "n = 27")
+    apply clarsimp
+   apply (case_tac "n = 28")
+    apply clarsimp
+   apply (case_tac "n = 29")
+    apply clarsimp
+   apply (case_tac "n = 30")
+    apply clarsimp
+   apply (case_tac "n = 31")
+    apply clarsimp
+   prefer 2
+   apply (case_tac "n = 12")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 13")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 14")
+    apply word_bitwise [1]  apply clarsimp
+   apply (case_tac "n = 15")
+    apply word_bitwise [1]  apply clarsimp
+   apply (case_tac "n = 16")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 17")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 18")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 19")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 20")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 21")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 22")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 23")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 24")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 25")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 26")
+    apply word_bitwise [1]  apply clarsimp
+   apply (case_tac "n = 27")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 28")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 29")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 30")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 31")
+    apply word_bitwise [1] apply clarsimp
+   apply clarsimp
+   apply arith
+  apply clarsimp
+  apply arith
+done
+
+
+
+
+lemma n_bit_shift:
+  "\<lbrakk> \<forall>n::nat. n \<in> {12 .. 31} \<longrightarrow>(a::32 word) !! n = (b::32 word) !! n  \<rbrakk>  \<Longrightarrow>  a >> 12 = b >> 12"
+  apply word_bitwise
+  by auto
  
-oops
 
-lemma 
-  fixes va :: "32 word" and x::"32 word"
-  assumes  "(ucast (ucast (x >> 12):: 20 word) << 12) \<le> va" and 
-      "va \<le> (ucast (ucast (x >> 12):: 20 word) << 12) + 0x00000FFF"
-  shows "(ucast (x >> 12)::20 word) = (ucast (va >> 12)::20 word)"
+
+lemma n_bit_shift_1:
+  "\<lbrakk> \<forall>n::nat. n \<in> {12 .. 31} \<longrightarrow>(a::32 word) !! n = (b::32 word) !! n  \<rbrakk>  \<Longrightarrow>  a >> 20 = b >> 20"
+  apply word_bitwise
+  by auto
+
+
+lemma n_bit_shift_2:
+  "\<lbrakk> \<forall>n::nat. n \<in> {20 .. 31} \<longrightarrow>(a::32 word) !! n = (b::32 word) !! n  \<rbrakk>  \<Longrightarrow>  a >> 20 = b >> 20"
+  apply word_bitwise
+  by auto
  
-oops
 
-
-
-lemma sorry1: 
-  fixes va :: "32 word" and x::"32 word"
-  assumes  "(ucast (ucast (x >> 12):: 20 word) << 12) \<le> va" and 
-      "va \<le> (ucast (ucast (x >> 12):: 20 word) << 12) + 0x00000FFF"
-  shows "(ucast (x >> 12)::20 word) = (ucast (va >> 12)::20 word)"
-  sorry
-
-lemma sorry2:
- "\<lbrakk>ucast (ucast (addr_val x >> 12)) << 12 \<le> va; va \<le> (ucast (ucast (addr_val x >> 12)) << 12) + 0xFFF\<rbrakk>
-          \<Longrightarrow> ((addr_val x >> 12) && mask 8 << 2) = 
+lemma offset_mask_eq:
+ "\<lbrakk>ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12 \<le> va ; 
+      va \<le> (ucast (ucast (x >> 12):: 20 word) << 12) + 0x00000FFF\<rbrakk>
+          \<Longrightarrow> (( x >> 12) && mask 8 << 2) = 
          ((va >> 12) && mask 8 << 2)"
-sorry
+  apply (subgoal_tac "(va::32 word) : {ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12  ..
+                      (ucast (ucast (x >> 12):: 20 word) << 12) + mask 12 }")
+   prefer 2
+   apply (clarsimp simp: mask_def)
+  apply (frule va_offset_add)
+  apply simp
+  apply (erule exE)
+  apply (erule conjE)
+  apply (simp add: mask_def)
+  apply (rule_tac f = "(\<lambda>x. x && 0xFF << 2)" in  arg_cong)
+  apply (clarsimp simp: shift_to_mask [symmetric])
+  apply (simp add: mask_def)
+  apply (rule n_bit_shift)
+  apply (rule allI)
+  apply (rule impI)
+  apply (frule_tac x= x in add_to_or)
+  apply (frule_tac x= x in nth_bits_offset)
+   apply (simp only:)+
+done
+ 
 
-lemma sorry3:
-  "\<lbrakk>ucast (ucast (addr_val x >> 12)) << 12 \<le> va; va \<le> (ucast (ucast (addr_val x >> 12)) << 12) + 0xFFF\<rbrakk>
-          \<Longrightarrow>((addr_val x >> 20) && mask 12 << 2) =
+
+
+lemma offset_mask_eq_1:
+  "\<lbrakk>ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12 \<le> va ; 
+      va \<le> (ucast (ucast (x >> 12):: 20 word) << 12) + 0x00000FFF\<rbrakk>
+          \<Longrightarrow>((x >> 20) && mask 12 << 2) =
                           ((va >> 20) && mask 12 << 2)"
-sorry
-(*declare [[show_types, show_consts, show_sorts]] *)
+  apply (subgoal_tac "(va::32 word) : {ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12  ..
+   (ucast (ucast (x >> 12):: 20 word) << 12) + mask 12 }")
+   prefer 2
+   apply (clarsimp simp: mask_def)
+  apply (frule va_offset_add)
+  apply simp
+  apply (erule exE)
+  apply (erule conjE)
+  apply (simp add: mask_def)
+  apply (rule_tac f = "(\<lambda>x. x && 0xFFF << 2)" in  arg_cong)
+  apply (clarsimp simp: shift_to_mask [symmetric])
+  apply (simp add: mask_def)
+  apply (rule n_bit_shift_1)
+  apply (rule allI)
+  apply (rule impI)
+  apply (frule_tac x= x in add_to_or)
+  apply (frule_tac x= x in nth_bits_offset)
+   apply (simp only:)+
+done
 
-lemma sorry4:
-  "\<lbrakk>ucast (ucast (addr_val x >> 20)) << 20 \<le> va; va \<le> (ucast (ucast (addr_val x >> 20)) << 20) + 0xFFFFF \<rbrakk>
-    \<Longrightarrow> ucast (addr_val x >> 20) = ucast (va >> 20)"
+lemma nth_bits_offset_1: "\<lbrakk> n \<in> {20..31} ; (a::32 word) \<le> 0x000FFFFF \<rbrakk> \<Longrightarrow> 
+        (x::32 word) !! n = (x && 0xFFF00000 || a) !! n"
+  apply (rule iffI)
+   apply (case_tac "n = 20")
+    apply clarsimp
+   apply (case_tac "n = 21")
+    apply clarsimp
+   apply (case_tac "n = 22")
+    apply clarsimp
+   apply (case_tac "n = 23")
+    apply clarsimp
+   apply (case_tac "n = 24")
+    apply clarsimp
+   apply (case_tac "n = 25")
+    apply clarsimp
+   apply (case_tac "n = 26")
+    apply clarsimp
+   apply (case_tac "n = 27")
+    apply clarsimp
+   apply (case_tac "n = 28")
+    apply clarsimp
+   apply (case_tac "n = 29")
+    apply clarsimp
+   apply (case_tac "n = 30")
+    apply clarsimp
+   apply (case_tac "n = 31")
+    apply clarsimp
+   prefer 2
+   apply (case_tac "n = 20")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 21")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 22")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 23")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 24")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 25")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 26")
+    apply word_bitwise [1]  apply clarsimp
+   apply (case_tac "n = 27")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 28")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 29")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 30")
+    apply word_bitwise [1] apply clarsimp
+   apply (case_tac "n = 31")
+    apply word_bitwise [1] apply clarsimp
+   apply clarsimp
+   apply arith
+  apply clarsimp
+  apply arith
+done
 
-sorry
 
-lemma  sorry5:
-  "\<lbrakk>ucast (ucast (addr_val x >> 20)) << 20 \<le> va; va \<le> (ucast (ucast (addr_val x >> 20)) << 20) + 0xFFFFF\<rbrakk>
-    \<Longrightarrow>   ((addr_val x >> 20) && mask 12 << 2) = ((va >> 20) && mask 12 << 2)"
 
-sorry
+lemma  shfit_mask_eq:
+  "\<lbrakk>ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20 \<le> va ; 
+      va \<le> (ucast (ucast (x >> 20):: 12 word) << 20) + 0x000FFFFF \<rbrakk>
+    \<Longrightarrow>   ((x >> 20) && mask 12 << 2) = ((va >> 20) && mask 12 << 2)"
+  apply (subgoal_tac "(va::32 word) : {ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20 ..
+   (ucast (ucast (x >> 20):: 12 word) << 20) + mask 20 }")
+   prefer 2
+   apply (clarsimp simp: mask_def)
+  apply (frule va_offset_add_1)
+  apply simp
+  apply (erule exE)
+  apply (erule conjE)
+  apply (simp add: mask_def)
+  apply (rule_tac f = "(\<lambda>x. x && 0xFFF << 2)" in  arg_cong)
+  apply (clarsimp simp: shift_to_mask_1 [symmetric])
+  apply (simp add: mask_def)
+  apply (rule n_bit_shift_2)
+  apply (rule allI)
+  apply (rule impI)
+  apply (frule_tac x= x in add_to_or_1)
+  apply (frule_tac x= x and a = a in nth_bits_offset_1)
+   apply (simp only:)+
+done
+
+
 
 lemma  va_entry_set_pt_palk_same:
   "(asid, va) \<in> entry_range_asid_tags (pt_walk asid mem ttbr0 x) \<Longrightarrow>
@@ -2087,35 +2592,35 @@ lemma  va_entry_set_pt_palk_same:
     apply (case_tac " get_pte mem x3 x " ; clarsimp)
      apply (subgoal_tac "get_pde mem ttbr0 x = get_pde mem ttbr0 (Addr va)" ; clarsimp)
       apply (subgoal_tac "get_pte mem x3 x = get_pte mem x3 (Addr va)" ; clarsimp)
-       using sorry1 apply blast
+       using va_offset_higher_bits apply blast
       apply (clarsimp simp:  get_pte_def vaddr_pt_index_def)
       apply (subgoal_tac "((addr_val x >> 12) && mask 8 << 2) =
                           ((va >> 12) && mask 8 << 2) ")
        prefer 2
-       using sorry2 apply blast
+       using offset_mask_eq apply blast
       apply force
      apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
      apply (subgoal_tac "((addr_val x >> 20) && mask 12 << 2) =
                          ((va >> 20) && mask 12 << 2) ")
       prefer 2
-      using sorry3 apply blast
+      using offset_mask_eq_1 apply blast
      apply force
     apply (case_tac a ; clarsimp)
     apply (subgoal_tac "get_pde mem ttbr0 x = get_pde mem ttbr0 (Addr va)" ; clarsimp)
      apply (subgoal_tac "get_pte mem x3 x = get_pte mem x3 (Addr va)" ; clarsimp)
-      using sorry1 apply blast
+      using va_offset_higher_bits apply blast
      apply (clarsimp simp: get_pte_def vaddr_pt_index_def)
      apply (case_tac "get_pde mem ttbr0 (Addr va)" ; clarsimp)
      apply (subgoal_tac "((addr_val x >> 12) && mask 8 << 2) =
                          ((va >> 12) && mask 8 << 2) ")
       prefer 2
-      using sorry2 apply blast
+      using offset_mask_eq apply blast
      apply force
     apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
     apply (subgoal_tac "((addr_val x >> 20) && mask 12 << 2) =
                         ((va >> 20) && mask 12 << 2) ")
      prefer 2
-     using sorry3 apply blast
+     using offset_mask_eq_1 apply blast
     apply force
    apply clarsimp
    apply (clarsimp simp: entry_range_asid_tags_def entry_range_def pt_walk_def)
@@ -2125,42 +2630,42 @@ lemma  va_entry_set_pt_palk_same:
    apply (subgoal_tac "get_pde mem ttbr0 x = get_pde mem ttbr0 (Addr va)" ; clarsimp)
     apply (subgoal_tac "get_pte mem x3 x = get_pte mem x3 (Addr va)" ; clarsimp)
      apply (case_tac aa ; clarsimp)
-     using sorry1 apply blast
+     using va_offset_higher_bits apply blast
     apply (case_tac aa ; clarsimp simp: get_pte_def vaddr_pt_index_def)
     apply (subgoal_tac "((addr_val x >> 12) && mask 8 << 2) =
                         ((va >> 12) && mask 8 << 2) ")
      prefer 2
-     using sorry2 apply blast
+     using offset_mask_eq apply blast
     apply force
    apply (case_tac aa ; clarsimp simp: get_pde_def vaddr_pd_index_def)
    apply (subgoal_tac "((addr_val x >> 20) && mask 12 << 2) =
                        ((va >> 20) && mask 12 << 2) ")
     prefer 2
-    using sorry3 apply blast
+    using offset_mask_eq_1 apply blast
    apply force
   apply (clarsimp)
   apply (case_tac "x23" ; clarsimp simp: entry_range_asid_tags_def entry_range_def pt_walk_def)
    apply (cases "get_pde mem ttbr0 x" ; clarsimp)
     apply (subgoal_tac "get_pde mem ttbr0 (Addr va) = get_pde mem ttbr0 x" ; clarsimp)
-     using sorry4 apply blast
+     using va_offset_higher_bits_1 apply blast
     apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
     apply (subgoal_tac "((addr_val x >> 20) && mask 12 << 2) = ((va >> 20) && mask 12 << 2)")
      apply force
-    using sorry5 apply blast
+    using shfit_mask_eq apply blast
    apply (case_tac a , clarsimp)
       apply (subgoal_tac "get_pde mem ttbr0 (Addr va) = get_pde mem ttbr0 x" ; clarsimp)
-       using sorry4 apply blast
+       using va_offset_higher_bits_1 apply blast
       apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
       apply (subgoal_tac "((addr_val x >> 20) && mask 12 << 2) = ((va >> 20) && mask 12 << 2)")
        apply force
-      using sorry5 apply blast
+      using shfit_mask_eq apply blast
      apply clarsimp
      apply (subgoal_tac "get_pde mem ttbr0 (Addr va) = get_pde mem ttbr0 x" ; clarsimp)
-      using sorry4 apply blast
+      using va_offset_higher_bits_1 apply blast
      apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
      apply (subgoal_tac "((addr_val x >> 20) && mask 12 << 2) = ((va >> 20) && mask 12 << 2)")
       apply force
-     using sorry5 apply blast
+     using shfit_mask_eq apply blast
     apply clarsimp
     apply (case_tac "get_pte mem x3 x" ; clarsimp)
     apply (case_tac a , clarsimp)
@@ -2171,11 +2676,11 @@ lemma  va_entry_set_pt_palk_same:
    apply (case_tac "get_pte mem x3 x" ; clarsimp)
    apply (case_tac aa ; clarsimp)
   apply (subgoal_tac "get_pde mem ttbr0 (Addr va) = get_pde mem ttbr0 x" ; clarsimp)
-   using sorry4 apply blast
+   using va_offset_higher_bits_1 apply blast
   apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
   apply (subgoal_tac "((addr_val x >> 20) && mask 12 << 2) = ((va >> 20) && mask 12 << 2)")
    apply force
-  using sorry5 apply blast
+  using shfit_mask_eq apply blast
  done
 
 

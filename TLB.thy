@@ -710,7 +710,7 @@ where
                  |  Some (SmallPagePTE p1 a) \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) 
                                             (Some (ucast (addr_val p1 >> 12) :: 20 word)) 0)"
 *)
-value pt_walk
+
 (* nice definition but it looses information about the entrysmall none case
     incomplete too (may be) *)
 definition 

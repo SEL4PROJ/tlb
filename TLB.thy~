@@ -683,7 +683,7 @@ where
        | Some ReservedPDE      \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
        | Some (SectionPDE p a) \<Rightarrow> 
           EntrySection asid (ucast (addr_val v >> 20) :: 12 word) 
-                            (Some  ((word_extract 31 20 (addr_val p)):: 12 word))  0
+                            (Some  ((word_extract 31 20 (addr_val p)):: 12 word))  (0::8 word)
        | Some (PageTablePDE p) \<Rightarrow> 
                (case get_pte heap p v 
                  of None                     \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0

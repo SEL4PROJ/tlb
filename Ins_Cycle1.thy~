@@ -813,7 +813,6 @@ lemma rubbish2:
   done
 
 
-(*  ----- IMPORTANT ---- *)
 
 
 lemma fetch_ins1:

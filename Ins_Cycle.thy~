@@ -5,7 +5,6 @@ imports MMU_ARM
 begin               
 
 
-
 definition 
  CP14' :: "CP14"
 where
@@ -16,32 +15,31 @@ definition
   HCR' :: "HCR"
 where 
   "HCR' \<equiv> \<lparr>
-  AMO =  True,
-  BSU =  (1::2 word),
-  DC =   True,
-  FB =   True,
-  FMO =  True,
-  IMO =  True,
-  PTW =  True,
-  SWIO = True ,
-  TAC =  True ,
-  TGE =  True ,
-  TID =  (1::4 word),
-  TIDCP =True,
-  TPC =  True,
-  TPU =  True,
-  TSC =  True,
-  TSW =  True,
-  TTLB = True,
-  TVM =  True,
-  TWE =  True,
-  TWI =  True,
-  VA =   True,
-  VF =   True,
-  VI =   True,
-  VM =   True,
-  hcr'rst  =  (1::4 word)   
-\<rparr>"
+   AMO =  True,
+   BSU =  (1::2 word),
+   DC =   True,
+   FB =   True,
+   FMO =  True,
+   IMO =  True,
+   PTW =  True,
+   SWIO = True ,
+   TAC =  True ,
+   TGE =  True ,
+   TID =  (1::4 word),
+   TIDCP =True,
+   TPC =  True,
+   TPU =  True,
+   TSC =  True,
+   TSW =  True,
+   TTLB = True,
+   TVM =  True,
+   TWE =  True,
+   TWI =  True,
+   VA =   True,
+   VF =   True,
+   VI =   True,
+   VM =   True,
+   hcr'rst  =  (1::4 word)   \<rparr>"
 
 definition 
   HSCTLR' :: "HSCTLR"
@@ -56,7 +54,7 @@ where
     M = True,
     TE = True,
     WXN = True,
-     hsctlr'rst = 1::23 word \<rparr> "
+    hsctlr'rst = 1::23 word \<rparr> "
 
 
 
@@ -72,116 +70,114 @@ definition
   NSACR' ::"NSACR"
 where
   "NSACR' \<equiv> \<lparr>
-  NSASEDIS = True,
-  NSD32DIS = True,
-  NSTRCDIS = True,
-  RFR = True,
-  cp = 1::14 word,
-  nsacr'rst = 1::14 word \<rparr>"
+    NSASEDIS = True,
+    NSD32DIS = True,
+    NSTRCDIS = True,
+    RFR = True,
+    cp = 1::14 word,
+    nsacr'rst = 1::14 word \<rparr>"
 
 definition 
   SCR' :: "SCR"
 where
   "SCR' \<equiv> \<lparr>
-  AW = True,
-  EA = True,
-  FIQ = True,
-  FW = True,
-  HCE = True,
-  IRQ = True,
-  NS = True,
-  SCD = True,
-  SIF = True,
-  nET = True,
-  scr'rst = 1::22 word  \<rparr>"
+    AW = True,
+    EA = True,
+    FIQ = True,
+    FW = True,
+    HCE = True,
+    IRQ = True,
+    NS = True,
+    SCD = True,
+    SIF = True,
+    nET = True,
+    scr'rst = 1::22 word  \<rparr>"
 
 definition
   SCTLR' :: "SCTLR"
 where
   "SCTLR' \<equiv> \<lparr>
-  ARM_Monadic.SCTLR.A = True,  (* from setting *)
-  B = True,
-  BR = True,
-  C = True,
-  DZ = True,
-  EE = True,
-  FI = True,
-  I = True,
-  IE = True,
-  M = True,
-  NMFI = True,
-  RR = True,
-  SW = True,
-  TE = True,
-  U = False,  (* from setting *)
-  V = False,  (* from setting *)
-  VE = True,
-  Z = True,
-  sctlr'rst = 1::14 word
-\<rparr> "
+    ARM_Monadic.SCTLR.A = True,  (* from setting *)
+    B = True,
+    BR = True,
+    C = True,
+    DZ = True,
+    EE = True,
+    FI = True,
+    I = True,
+    IE = True,
+    M = True,
+    NMFI = True,
+    RR = True,
+    SW = True,
+    TE = True,
+    U = False,  (* from setting *)
+    V = False,  (* from setting *)
+    VE = True,
+    Z = True,
+    sctlr'rst = 1::14 word \<rparr> "
 
 definition 
   CP15' :: "CP15"
 where
   "CP15' \<equiv> \<lparr>
-  HCR = HCR',
-  HSCTLR =HSCTLR',
-  HSR = HSR',
-  MVBAR = 1::32 word,
-  NSACR = NSACR',
-  SCR = SCR',
-  SCTLR = SCTLR',
-  VBAR = 1::32 word
-  \<rparr>"
+    HCR = HCR',
+    HSCTLR =HSCTLR',
+    HSR = HSR',
+    MVBAR = 1::32 word,
+    NSACR = NSACR',
+    SCR = SCR',
+    SCTLR = SCTLR',
+    VBAR = 1::32 word \<rparr>"
+
+
 
 definition
   CPSR' :: PSR 
 where
   "CPSR' \<equiv> \<lparr>
-  ARM_Monadic.PSR.A = True,
-  C = True,
-  E = False,   (* from setting *)
-  F = True,
-  GE = 1::4 word,
-  I = True,
-  IT = 0::8 word,  (* from setting *)
-  J = False,     (* from setting *)
-  M = 0x10::5 word,
-  N = True,
-  Q = True,
-  T = False,   (* from setting *)
-  V = True,
-  Z = True,
-  psr'rst = 1::4 word
-\<rparr>"
+    ARM_Monadic.PSR.A = True,
+    C = True,
+    E = False,   (* from setting *)
+    F = True,
+    GE = 1::4 word,
+    I = True,
+    IT = 0::8 word,  (* from setting *)
+    J = False,     (* from setting *)
+    M = 0x10::5 word,
+    N = True,
+    Q = True,
+    T = False,   (* from setting *)
+    V = True,
+    Z = True,
+    psr'rst = 1::4 word \<rparr>"
 
 definition
   FPSCR' :: FPSCR
 where
   "FPSCR' \<equiv> \<lparr>
-  AHP = True,
-  C = True,
-  DN = True,
-  DZC = True,
-  DZE = True,
-  FZ = True,
-  IDC = True,
-  IDE = True,
-  IOC = True,
-  IOE = True,
-  IXC = True,
-  IXE = True,
-  N = True,
-  OFC = True,
-  OFE = True,
-  QC = True,
-  RMode = 1::2 word,
-  UFC = True,
-  UFE = True,
-  V = True,
-  Z = True,
-  fpscr'rst = 1::10 word
-\<rparr>"
+    AHP = True,
+    C = True,
+    DN = True,
+    DZC = True,
+    DZE = True,
+    FZ = True,
+    IDC = True,
+    IDE = True,
+    IOC = True,
+    IOE = True,
+    IXC = True,
+    IXE = True,
+    N = True,
+    OFC = True,
+    OFE = True,
+    QC = True,
+    RMode = 1::2 word,
+    UFC = True,
+    UFE = True,
+    V = True,
+    Z = True,
+    fpscr'rst = 1::10 word \<rparr>"
 
 definition
   FP' :: FP
@@ -195,148 +191,141 @@ definition
   SPSR_abt' :: PSR 
 where
   "SPSR_abt' \<equiv> \<lparr>
-  ARM_Monadic.PSR.A = True,
-  C = True,
-  E = True,
-  F = True,
-  GE = 1::4 word,
-  I = True,
-  IT = 1::8 word,
-  J = True,
-  M = 1::5 word,
-  N = True,
-  Q = True,
-  T = True,
-  V = True,
-  Z = True,
-  psr'rst = 1::4 word
-\<rparr>"
+    ARM_Monadic.PSR.A = True,
+    C = True,
+    E = True,
+    F = True,
+    GE = 1::4 word,
+    I = True,
+    IT = 1::8 word,
+    J = True,
+    M = 1::5 word,
+    N = True,
+    Q = True,
+    T = True,
+    V = True,
+    Z = True,
+    psr'rst = 1::4 word \<rparr>"
 
 definition
   SPSR_fiq' :: PSR 
 where
   "SPSR_fiq' \<equiv> \<lparr>
-  ARM_Monadic.PSR.A = True,
-  C = True,
-  E = True,
-  F = True,
-  GE = 1::4 word,
-  I = True,
-  IT = 1::8 word,
-  J = True,
-  M = 1::5 word,
-  N = True,
-  Q = True,
-  T = True,
-  V = True,
-  Z = True,
-  psr'rst = 1::4 word
-\<rparr>"
+    ARM_Monadic.PSR.A = True,
+    C = True,
+    E = True,
+    F = True,
+    GE = 1::4 word,
+    I = True,
+    IT = 1::8 word,
+    J = True,
+    M = 1::5 word,
+    N = True,
+    Q = True,
+    T = True,
+    V = True,
+    Z = True,
+    psr'rst = 1::4 word \<rparr>"
 
 definition
   SPSR_hyp' :: PSR 
 where
   "SPSR_hyp' \<equiv> \<lparr>
-  ARM_Monadic.PSR.A = True,
-  C = True,
-  E = True,
-  F = True,
-  GE = 1::4 word,
-  I = True,
-  IT = 1::8 word,
-  J = True,
-  M = 1::5 word,
-  N = True,
-  Q = True,
-  T = True,
-  V = True,
-  Z = True,
-  psr'rst = 1::4 word
-\<rparr>"
+    ARM_Monadic.PSR.A = True,
+    C = True,
+    E = True,
+    F = True,
+    GE = 1::4 word,
+    I = True,
+    IT = 1::8 word,
+    J = True,
+    M = 1::5 word,
+    N = True,
+    Q = True,
+    T = True,
+    V = True,
+    Z = True,
+    psr'rst = 1::4 word \<rparr>"
 
 definition
   SPSR_irq' :: PSR 
 where
   "SPSR_irq' \<equiv> \<lparr>
-  ARM_Monadic.PSR.A = True,
-  C = True,
-  E = True,
-  F = True,
-  GE = 1::4 word,
-  I = True,
-  IT = 1::8 word,
-  J = True,
-  M = 1::5 word,
-  N = True,
-  Q = True,
-  T = True,
-  V = True,
-  Z = True,
-  psr'rst = 1::4 word
-\<rparr>"
+    ARM_Monadic.PSR.A = True,
+    C = True,
+    E = True,
+    F = True,
+    GE = 1::4 word,
+    I = True,
+    IT = 1::8 word,
+    J = True,
+    M = 1::5 word,
+    N = True,
+    Q = True,
+    T = True,
+    V = True,
+    Z = True,
+    psr'rst = 1::4 word \<rparr>"
 
 definition
   SPSR_mon' :: PSR 
 where
   "SPSR_mon' \<equiv> \<lparr>
-  ARM_Monadic.PSR.A = True,
-  C = True,
-  E = True,
-  F = True,
-  GE = 1::4 word,
-  I = True,
-  IT = 1::8 word,
-  J = True,
-  M = 1::5 word,
-  N = True,
-  Q = True,
-  T = True,
-  V = True,
-  Z = True,
-  psr'rst = 1::4 word
-\<rparr>"
+    ARM_Monadic.PSR.A = True,
+    C = True,
+    E = True,
+    F = True,
+    GE = 1::4 word,
+    I = True,
+    IT = 1::8 word,
+    J = True,
+    M = 1::5 word,
+    N = True,
+    Q = True,
+    T = True,
+    V = True,
+    Z = True,
+    psr'rst = 1::4 word \<rparr>"
 
 definition
   SPSR_svc' :: PSR 
 where
   "SPSR_svc' \<equiv> \<lparr>
-  ARM_Monadic.PSR.A = True,
-  C = True,
-  E = True,
-  F = True,
-  GE = 1::4 word,
-  I = True,
-  IT = 1::8 word,
-  J = True,
-  M = 1::5 word,
-  N = True,
-  Q = True,
-  T = True,
-  V = True,
-  Z = True,
-  psr'rst = 1::4 word
-\<rparr>"
+    ARM_Monadic.PSR.A = True,
+    C = True,
+    E = True,
+    F = True,
+    GE = 1::4 word,
+    I = True,
+    IT = 1::8 word,
+    J = True,
+    M = 1::5 word,
+    N = True,
+    Q = True,
+    T = True,
+    V = True,
+    Z = True,
+    psr'rst = 1::4 word \<rparr>"
 
 definition
   SPSR_und' :: PSR 
 where
   "SPSR_und' \<equiv> \<lparr>
-  ARM_Monadic.PSR.A = True,
-  C = True,
-  E = True,
-  F = True,
-  GE = 1::4 word,
-  I = True,
-  IT = 1::8 word,
-  J = True,
-  M = 1::5 word,
-  N = True,
-  Q = True,
-  T = True,
-  V = True,
-  Z = True,
-  psr'rst = 1::4 word
-\<rparr>"
+    ARM_Monadic.PSR.A = True,
+    C = True,
+    E = True,
+    F = True,
+    GE = 1::4 word,
+    I = True,
+    IT = 1::8 word,
+    J = True,
+    M = 1::5 word,
+    N = True,
+    Q = True,
+    T = True,
+    V = True,
+    Z = True,
+    psr'rst = 1::4 word \<rparr>"
 
 definition
   Reg_Bank :: "ARM_Monadic.RName \<Rightarrow> 32 word"
@@ -344,7 +333,7 @@ where
   "Reg_Bank Reg \<equiv> 
       case Reg of RName_0usr  \<Rightarrow> 1
            |      RName_1usr  \<Rightarrow> 1
-           |      RName_2usr  \<Rightarrow> 1
+           |      RName_2usr  \<Rightarrow> 0
            |      RName_3usr  \<Rightarrow> 1
            |      RName_4usr  \<Rightarrow> 1
            |      RName_5usr  \<Rightarrow> 1
@@ -386,6 +375,10 @@ where
    else if (addr_val x) = 1 then Some 0 
    else if (addr_val x) = 2 then Some 0 
    else if (addr_val x) = 3 then Some 0 
+   else if (addr_val x) = 4 then Some 1 
+   else if (addr_val x) = 5 then Some 1 
+   else if (addr_val x) = 6 then Some 1 
+   else if (addr_val x) = 7 then Some 1 
    else if (addr_val x) = 0xFC then Some 0x04 
    else if (addr_val x) = 0xFD then Some (0x10:: 8 word) 
    else if (addr_val x) = 0xFE then Some 0x92 
@@ -398,90 +391,79 @@ where
 definition 
   state' :: "state"
 where
-  "state' \<equiv> 
-    \<lparr> 
-  Architecture =         ARMv7_A ,
-  CP14 =                 CP14' ,
-  CP15  =                CP15' ,
-  CPSR  =                CPSR',
-  CurrentCondition  =    1:: 4 word  ,
-  ELR_hyp  =             1:: 32 word ,
-  Encoding  =            Encoding_ARM,
-  Extensions  =          {Extension_Virtualization}  ,
-  FP  =                  FP' ,
-  MEM  =                 MEM',
-  REG  =                 Reg_Bank,
-  SPSR_abt  =            SPSR_abt',
-  SPSR_fiq  =            SPSR_fiq' ,
-  SPSR_hyp  =            SPSR_hyp' ,
-  SPSR_irq  =            SPSR_irq' ,
-  SPSR_mon  =            SPSR_mon' ,
-  SPSR_svc  =            SPSR_svc',
-  SPSR_und  =            SPSR_und',
-  exception  =           NoException,
-  undefined  =           False,
-  (* additional MMU 'b state_scheme *)
-  TTBR0  =               (Addr 0)::paddr,
-  ASID  =                1::8 word
-  \<rparr>"
+  "state' \<equiv>  \<lparr> 
+    Architecture      =     ARMv7_A ,
+    CP14              =     CP14' ,
+    CP15              =     CP15' ,
+    CPSR              =     CPSR',
+    CurrentCondition  =     1:: 4 word  ,
+    ELR_hyp           =     1:: 32 word ,
+    Encoding          =     Encoding_ARM,
+    Extensions        =     {Extension_Virtualization}  ,
+    FP                =     FP' ,
+    MEM               =     MEM',
+    REG               =     Reg_Bank,
+    SPSR_abt          =     SPSR_abt',
+    SPSR_fiq          =     SPSR_fiq' ,
+    SPSR_hyp          =     SPSR_hyp' ,
+    SPSR_irq          =     SPSR_irq' ,
+    SPSR_mon          =     SPSR_mon' ,
+    SPSR_svc          =     SPSR_svc',
+    SPSR_und          =     SPSR_und',
+    exception         =     NoException,
+    undefined         =     False,
+    TTBR0             =     (Addr 0)::paddr,
+    ASID              =     1::8 word      \<rparr>"
 
 definition 
   tlb_state' :: "tlb_state"
 where
-  "tlb_state' \<equiv> 
-    \<lparr> 
-  Architecture =         ARMv7_A ,
-  CP14 =                 CP14' ,
-  CP15  =                CP15' ,
-  CPSR  =                CPSR',
-  CurrentCondition  =    1:: 4 word  ,
-  ELR_hyp  =             1:: 32 word ,
-  Encoding  =            Encoding_ARM,
-  Extensions  =          {Extension_Virtualization}  ,
-  FP  =                  FP' ,
-  MEM  =                 MEM',
-  REG  =                 Reg_Bank,
-  SPSR_abt  =            SPSR_abt',
-  SPSR_fiq  =            SPSR_fiq' ,
-  SPSR_hyp  =            SPSR_hyp' ,
-  SPSR_irq  =            SPSR_irq' ,
-  SPSR_mon  =            SPSR_mon' ,
-  SPSR_svc  =            SPSR_svc',
-  SPSR_und  =            SPSR_und',
-  exception  =           NoException,
-  undefined  =           False,
-  (* additional MMU 'b state_scheme *)
-  TTBR0  =               (Addr 0)::paddr,
-  ASID  =                1::8 word,
-  tlb_set = {} 
-  \<rparr>"
+  "tlb_state' \<equiv>  \<lparr> 
+    Architecture      =     ARMv7_A ,
+    CP14              =     CP14' ,
+    CP15              =     CP15' ,
+    CPSR              =     CPSR',
+    CurrentCondition  =     1:: 4 word  ,
+    ELR_hyp           =     1:: 32 word ,
+    Encoding          =     Encoding_ARM,
+    Extensions        =     {Extension_Virtualization}  ,
+    FP                =     FP' ,
+    MEM               =     MEM',
+    REG               =     Reg_Bank,
+    SPSR_abt          =     SPSR_abt',
+    SPSR_fiq          =     SPSR_fiq' ,
+    SPSR_hyp          =     SPSR_hyp' ,
+    SPSR_irq          =     SPSR_irq' ,
+    SPSR_mon          =     SPSR_mon' ,
+    SPSR_svc          =     SPSR_svc',
+    SPSR_und          =     SPSR_und',
+    exception         =     NoException,
+    undefined         =     False,
+    TTBR0             =     (Addr 0)::paddr,
+    ASID              =     1::8 word ,
+    tlb_set           =     {}   \<rparr>"
 
-lemma
-  "CurrentInstrSet () tlb_state' = (InstrSet_ARM , tlb_state')"
-  apply (clarsimp simp: CurrentInstrSet_def ISETSTATE_def word_cat_def)
-  by (clarsimp simp: tlb_state'_def CPSR'_def)
 
 
 lemma get_pde_section_MEM':
   "get_pde MEM' (Addr 0) (Addr 0xFC) = Some (SectionPDE (Addr 0) 
       \<lparr>arm_p_APX = 0, arm_p_AP = 0, arm_p_TEX = 0, arm_p_S = 0, arm_p_XN = 0, arm_p_C = 0, arm_p_B = 0, arm_p_nG = 0\<rparr>)"
-  apply (clarsimp simp: get_pde_def decode_heap_pde_def
-                        vaddr_pd_index_def)
+  apply (clarsimp simp: get_pde_def decode_heap_pde_def vaddr_pd_index_def)
   apply (rule_tac x = 2 in exI)
- apply (simp add: load_machine_word_def load_value_def load_list_def load_list_basic_def MEM'_def 
+  apply (simp add: load_machine_word_def load_value_def load_list_def load_list_basic_def MEM'_def
                   deoption_list_def from_bytes_word_def machine_b2w_def word_rcat_bl 
                   decode_pde_def decode_pde_section_def addr_base_def mask_def
                   perm_bits_pde_sections_def
-           split: option.splits)
-  done
-find_theorems name:"word_extract"
+              split: option.splits)
+done
+
 
 lemma pt_walk_section_MEM':
   "pt_walk 1 MEM' (Addr 0) (Addr 0xFC) = 
              EntrySection 1 (ucast ((0xFC::32 word) >> 20) :: 12 word) (Some (0::12 word)) (0::8 word)"
   apply (simp only: pt_walk_def)
-  apply (subgoal_tac "get_pde MEM' (Addr 0) (Addr 0xFC) = Some (SectionPDE (Addr 0) 
-      \<lparr>arm_p_APX = 0, arm_p_AP = 0, arm_p_TEX = 0, arm_p_S = 0, arm_p_XN = 0, arm_p_C = 0, arm_p_B = 0, arm_p_nG = 0\<rparr>)")
+  apply (subgoal_tac "get_pde MEM' (Addr 0) (Addr 0xFC) = Some (SectionPDE (Addr 0)
+                      \<lparr>arm_p_APX = 0, arm_p_AP = 0, arm_p_TEX = 0, arm_p_S = 0, arm_p_XN = 0, arm_p_C = 0, arm_p_B = 0, arm_p_nG = 0\<rparr>)")
    prefer 2
    apply (clarsimp simp: get_pde_section_MEM')
   apply clarsimp
@@ -491,154 +473,91 @@ done
 lemma not_is_fault_MEM':
   "\<not>is_fault (pt_walk 1 MEM' (Addr 0) (Addr 0xFC))"
   apply (clarsimp simp: is_fault_def)
-  apply (subgoal_tac "pt_walk 1 MEM' (Addr 0) (Addr 0xFC) = 
-             EntrySection 1 (ucast ((0xFC::32 word) >> 20) :: 12 word) (Some (0::12 word)) (0::8 word)")
+  apply (subgoal_tac "pt_walk 1 MEM' (Addr 0) (Addr 0xFC) =
+                      EntrySection 1 (ucast ((0xFC::32 word) >> 20) :: 12 word) (Some (0::12 word)) (0::8 word)")
    apply clarsimp
   apply (clarsimp simp: pt_walk_section_MEM')
 done
 
 
-lemma impp:
-  "load_list MEM' 4 (Addr 0) \<noteq> None"
-  apply (clarsimp simp: load_list_def deoption_list_def)
-  apply (subgoal_tac "4 = Suc 3")
-   prefer 2 apply simp
-  apply (simp only:)
-  apply (simp only: load_list_basic.simps)
-  apply (subgoal_tac "3 = Suc 2")
-   prefer 2 apply simp
-  apply (simp only:)
-  apply (simp only: load_list_basic.simps)
-  apply (subgoal_tac "2 = Suc 1")
-   prefer 2
-   apply linarith
-  apply (simp only:)
-  apply (simp only: load_list_basic.simps)
-  apply (clarsimp simp: MEM'_def)
-  done
-
 lemma mmu_translate_MEM':
   "mmu_translate (Addr 0xFC) tlb_state' =  ((Addr 0xFC), 
       tlb_state' \<lparr> tlb_set := {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}    \<rparr> )"
-  apply (clarsimp simp:  mmu_translate_tlb_state_ext_def)
-  apply (clarsimp simp: tlb_state'_def lookup_def entry_set_def Let_def)
-  apply (clarsimp simp: not_is_fault_MEM')
-   apply (clarsimp simp: va_to_pa_def pt_walk_section_MEM' mask_def)
+  apply (clarsimp simp: mmu_translate_tlb_state_ext_def tlb_state'_def lookup_def entry_set_def Let_def
+                        not_is_fault_MEM')
+  apply (clarsimp simp: va_to_pa_def pt_walk_section_MEM' mask_def)
 done
 
 
-lemma
-  "MemA (Addr 0xFC, 4)
-           \<lparr>Architecture = ARMv7_A, CP14 = CP14', CP15 = CP15',
-              CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
-                        T = False, V = True, Z = True, psr'rst = 1\<rparr>,
-              CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
-              MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
-              TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr> = (p, s')"
-  apply (clarsimp simp: MemA_def)
-  apply (clarsimp simp: CurrentModeIsNotUser_def BadMode_def)
 
-oops
-lemma
-  "Align1 (Addr 0xFC, 4) = Addr 0xFC"
-  by (clarsimp simp:Align1_def)
-
-
-lemma
-  "MemA_with_priv (Addr 0xFC, 4, False)
-     \<lparr>Architecture = ARMv7_A, CP14 = CP14', CP15 = CP15',
-        CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
-                  T = False, V = True, Z = True, psr'rst = 1\<rparr>,
-        CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
-        REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
-        SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
-        tlb_set = {}\<rparr> =
-    (p, s')"
-  apply (clarsimp simp: MemA_with_priv_def CP15'_def SCTLR'_def)
-  apply (clarsimp simp: Aligned1_def Align1_def )
-  
-oops
-
-
-lemma ook:
+lemma mem1_read_MEM'1:
   " mem1 (Addr 0xFF)
-           \<lparr>Architecture = ARMv7_A, CP14 = CP14',
-              CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+           \<lparr>Architecture = ARMv7_A, CP14 = CP14', CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
                         SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
                                    M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
-                                   sctlr'rst = 1\<rparr>,
-                        VBAR = 1\<rparr>,
+                                   sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>,
               CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
               SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
-              TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> = ([True, True, True, False, False, True, False, True] ,
-\<lparr>Architecture = ARMv7_A, CP14 = CP14',
+              TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> = 
+       ([True, True, True, False, False, True, False, True] , \<lparr>Architecture = ARMv7_A, CP14 = CP14',
               CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
                         SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
                                    M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
-                                   sctlr'rst = 1\<rparr>,
-                        VBAR = 1\<rparr>,
+                                   sctlr'rst = 1\<rparr>,  VBAR = 1\<rparr>,
               CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
               SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
-              TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>
-)"
+              TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
   apply (clarsimp simp: mem1_def MEM'_def)
   apply (subgoal_tac "229 = Suc (228)")
-  apply (simp only:)
-  apply (simp only:"nat_to_bitstring.simps")
+   apply (simp only:)
+   apply (simp only:"nat_to_bitstring.simps")
    apply (clarsimp simp:)
-   by simp
+  by simp
 
 
-lemma  ook1:
+lemma  mem1_read_MEM'2:
   "mem1 (Addr 0xFE)
                 \<lparr>Architecture = ARMv7_A, CP14 = CP14',
                    CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
                              SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True,
                                         IE = True, M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False,
-                                        VE = True, Z = True, sctlr'rst = 1\<rparr>,
-                             VBAR = 1\<rparr>,
+                                        VE = True, Z = True, sctlr'rst = 1\<rparr>,VBAR = 1\<rparr>,
                    CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True,
                              Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
                    CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
                    MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
                    SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
                    TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> = 
- ([True, False, False, True, False, False, True, False] ,
-\<lparr>Architecture = ARMv7_A, CP14 = CP14',
+               ([True, False, False, True, False, False, True, False] , \<lparr>Architecture = ARMv7_A, CP14 = CP14',
               CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
                         SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
                                    M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
-                                   sctlr'rst = 1\<rparr>,
-                        VBAR = 1\<rparr>,
+                                   sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>,
               CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
               SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
-              TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>
-)"
- apply (clarsimp simp: mem1_def MEM'_def)
-apply (subgoal_tac "146 = Suc (145)")
-  apply (simp only:)
-  apply (simp only:"nat_to_bitstring.simps")
+              TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
+  apply (clarsimp simp: mem1_def MEM'_def)
+  apply (subgoal_tac "146 = Suc (145)")
+   apply (simp only:)
+   apply (simp only:"nat_to_bitstring.simps")
    apply (clarsimp simp:)
-   by simp
+  by simp
 
-lemma ook2:
+lemma mem1_read_MEM'3:
   "mem1 (Addr 0xFD)
-                     \<lparr>Architecture = ARMv7_A, CP14 = CP14',
-                        CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+            \<lparr>Architecture = ARMv7_A, CP14 = CP14',  CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
                                   SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True,
                                              IE = True, M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False,
-                                             VE = True, Z = True, sctlr'rst = 1\<rparr>,
-                                  VBAR = 1\<rparr>,
+                                             VE = True, Z = True, sctlr'rst = 1\<rparr>,  VBAR = 1\<rparr>,
                         CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True,
                                   Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
                         CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
@@ -646,35 +565,30 @@ lemma ook2:
                         SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',
                         exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
                         tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> =
-([True, False, False, False, False],
-\<lparr>Architecture = ARMv7_A, CP14 = CP14',
+                     ([False, False, False, True, False, False, False, False], \<lparr>Architecture = ARMv7_A, CP14 = CP14',
               CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
                         SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
                                    M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
-                                   sctlr'rst = 1\<rparr>,
-                        VBAR = 1\<rparr>,
+                                   sctlr'rst = 1\<rparr>,  VBAR = 1\<rparr>,
               CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
               SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
-              TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>
-)"
- apply (clarsimp simp: mem1_def MEM'_def)
-apply (subgoal_tac "16 = Suc (15)")
-  apply (simp only:)
-  apply (simp only:"nat_to_bitstring.simps")
+              TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
+  apply (clarsimp simp: mem1_def MEM'_def)
+  apply (subgoal_tac "16 = Suc (15)")
+   apply (simp only:)
+   apply (simp only:"nat_to_bitstring.simps")
    apply (clarsimp simp:)
-   by simp
+  by simp
 
-lemma  ook3:
-  "mem1 (Addr 0xFC)
-                          \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+lemma  mem1_read_MEM'4:
+  "mem1 (Addr 0xFC) \<lparr>Architecture = ARMv7_A, CP14 = CP14',
                              CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
                                        SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True,
-                                                  I = True, IE = True, M = True, NMFI = True, RR = True, SW = True, TE = True,
-                                                  U = False, V = False, VE = True, Z = True, sctlr'rst = 1\<rparr>,
-                                       VBAR = 1\<rparr>,
+                                        I = True, IE = True, M = True, NMFI = True, RR = True, SW = True, TE = True,
+                                        U = False, V = False, VE = True, Z = True, sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>,
                              CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10,
                                        N = True, Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
                              CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization},
@@ -682,154 +596,297 @@ lemma  ook3:
                              SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',
                              exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
                              tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> =
-([True, False, False],
-\<lparr>Architecture = ARMv7_A, CP14 = CP14',
+                          ([False, False, False, False, False, True, False, False], \<lparr>Architecture = ARMv7_A, CP14 = CP14',
               CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
                         SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
                                    M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
-                                   sctlr'rst = 1\<rparr>,
-                        VBAR = 1\<rparr>,
+                                   sctlr'rst = 1\<rparr>,VBAR = 1\<rparr>,
               CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
               SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
-              TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>
-)"
- apply (clarsimp simp: mem1_def MEM'_def)
-apply (subgoal_tac "4 = Suc (3)")
-  apply (simp only:)
-  apply (simp only:"nat_to_bitstring.simps")
+              TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
+  apply (clarsimp simp: mem1_def MEM'_def)
+  apply (subgoal_tac "4 = Suc (3)")
+   apply (simp only:)
+   apply (simp only:"nat_to_bitstring.simps")
    apply (clarsimp simp:)
-   by simp
-value 
-  "nat_to_bitstring 4"
-lemma
-  "length (nat_to_bitstring 229) + (length (nat_to_bitstring 146) + (length (nat_to_bitstring 16) + length (nat_to_bitstring 4)))
-     < 32 "
-  find_consts"bool list \<Rightarrow> nat"
-oops
+  by simp
 
-lemma
+lemma mmu_read_size_MEM':
   "mmu_read_size (Addr 0xFC, 4)
-                     \<lparr>Architecture = ARMv7_A, CP14 = CP14',
-                        CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
-                                  SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True,
-                                             IE = True, M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False,
-                                             VE = True, Z = True, sctlr'rst = 1\<rparr>,
-                                  VBAR = 1\<rparr>,
-                        CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True,
-                                  Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
-                        CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
-                        MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp',
-                        SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',
-                        exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr> = 
-     (mem_read2, \<lparr>Architecture = ARMv7_A, CP14 = CP14',
-           CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
-                     SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
-                                M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
-                                sctlr'rst = 1\<rparr>,
-                     VBAR = 1\<rparr>,
-           CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
-                     T = False, V = True, Z = True, psr'rst = 1\<rparr>,
-           CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
-           REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-           SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
-           TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>)"
+         \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+            CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+            SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True,
+            IE = True, M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False,
+            VE = True, Z = True, sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>,
+            CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True,
+            Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+            CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
+            MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp',
+            SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',
+            exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr> =
+         ([True, True, True, False, False, True, False, True, True, False, False, True, False, False, True, False,
+                False, False, False, True, False, False, False, False, False, False, False, False, False, True, False,
+                False],   \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+                   CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+                   SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
+                   M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
+                   sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>, CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+                   T = False, V = True, Z = True, psr'rst = 1\<rparr>, CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
+                   REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
+                   SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+                   TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>)"
   apply (clarsimp simp: mmu_read_size_tlb_state_ext_def)
-  apply (subgoal_tac "
-
-mmu_translate (Addr 0xFC) 
-\<lparr>Architecture = ARMv7_A, CP14 = CP14',
-              CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
-                        SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
-                                   M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
-                                   sctlr'rst = 1\<rparr>,
-                        VBAR = 1\<rparr>,
-              CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
-                        T = False, V = True, Z = True, psr'rst = 1\<rparr>,
-              CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
-              MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
-              TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr>
-
-
- =  ((Addr 0xFC), 
-      \<lparr>Architecture = ARMv7_A, CP14 = CP14',
-              CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
-                        SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
-                                   M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
-                                   sctlr'rst = 1\<rparr>,
-                        VBAR = 1\<rparr>,
-              CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
-                        T = False, V = True, Z = True, psr'rst = 1\<rparr>,
-              CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
-              MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
-              TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr> \<lparr> tlb_set := {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}    \<rparr> )
-
-
-")
+  apply (subgoal_tac " mmu_translate (Addr 0xFC)
+             \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+             CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+             SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
+             M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
+             sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>, CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+             T = False, V = True, Z = True, psr'rst = 1\<rparr>, CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
+             MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
+             SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+             TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr>
+             =  ((Addr 0xFC), \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+                  CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+                  SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
+                  M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
+                  sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>, CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+                  T = False, V = True, Z = True, psr'rst = 1\<rparr>,  CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
+                  MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
+                  SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+                  TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr> \<lparr> tlb_set := {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)} \<rparr> ) ")
    prefer 2
-   (*apply (clarsimp simp: mmu_translate_MEM' [OF tlb_state'_def CPSR'_def]) *)
    apply (clarsimp simp:  mmu_translate_tlb_state_ext_def)
    apply (clarsimp simp: tlb_state'_def lookup_def entry_set_def Let_def)
    apply (clarsimp simp: not_is_fault_MEM')
    apply (clarsimp simp: va_to_pa_def pt_walk_section_MEM' mask_def)
   apply clarsimp
   apply (clarsimp simp: mem_read1_def Let_def)
-  apply (clarsimp simp: ook ook1 ook2 ook3)
-  apply (clarsimp simp: mem_read1_def mem1_def MEM'_def Let_def)
-  apply (subgoal_tac "length (nat_to_bitstring 229) + (length (nat_to_bitstring 146) + (length (nat_to_bitstring 16) + length (nat_to_bitstring 4)))
-     < 32")
+  apply (clarsimp simp: mem1_read_MEM'1 mem1_read_MEM'2 mem1_read_MEM'3 mem1_read_MEM'4)
+done
+
+
+
+lemma MemA_with_priv_MEM':
+  "MemA_with_priv (Addr 0xFC, 4, False)
+     \<lparr>Architecture = ARMv7_A, CP14 = CP14', CP15 = CP15',
+        CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+                  T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+        CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
+        REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
+        SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+           tlb_set = {}\<rparr> =
+        (0xE5921004, \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+          CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+                 SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
+                            M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
+                            sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>,  CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+                 T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+       CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
+       REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>)"
+  apply (clarsimp simp: MemA_with_priv_def CP15'_def SCTLR'_def)
+  apply (clarsimp simp: Aligned1_def Align1_def )
+  apply (clarsimp simp: mmu_read_size_MEM')
+done
   
-  apply clarsimp
+
+lemma MemA_MEM':
+  "MemA (Addr 0xFC, 4)
+           \<lparr>Architecture = ARMv7_A, CP14 = CP14', CP15 = CP15',
+              CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+                        T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+              CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
+              MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
+              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+              TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr> = (0xE5921004,  \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+           CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+                 SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
+                            M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
+                            sctlr'rst = 1\<rparr>,  VBAR = 1\<rparr>,  CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+                 T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+       CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
+       REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>)"
+  apply (clarsimp simp: MemA_def)
+  apply (clarsimp simp: CurrentModeIsNotUser_def BadMode_def)
+  apply (clarsimp simp: MemA_with_priv_MEM')
+  done
 
 
-oops
-
-
-value "length (nat_to_bitstring 229)"
-value "length (nat_to_bitstring 146)"
-value "length (nat_to_bitstring 16)"
-value "length (nat_to_bitstring 4)"
-
-value "length (nat_to_bitstring 229) + (length (nat_to_bitstring 146) + (length (nat_to_bitstring 16) + length (nat_to_bitstring 4)))
-     < 32 "
-
-value
-  "replicate
-         (32 - (length (nat_to_bitstring 229) +
-                (length (nat_to_bitstring 146) + (length (nat_to_bitstring 16) + length (nat_to_bitstring 4)))))
-         False @
-        nat_to_bitstring 229 @ nat_to_bitstring 146 @ nat_to_bitstring 16 @ nat_to_bitstring 4"
-
-lemma
- "Fetch  tlb_state' = (mc, s')"
-  apply (clarsimp simp: Fetch_def)
-  apply (clarsimp simp: CurrentInstrSet_def ISETSTATE_def word_cat_def
+lemma fetch_ins:
+ "Fetch  tlb_state' = (ARM 0xE5921004, 
+ \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+       CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+                 SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
+                            M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
+                            sctlr'rst = 1\<rparr>,  VBAR = 1\<rparr>,
+       CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+                 T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+       CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
+       REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
+  apply (clarsimp simp: Fetch_def CurrentInstrSet_def ISETSTATE_def word_cat_def
                         tlb_state'_def CPSR'_def split:split_if_asm)
-  apply (clarsimp simp: Reg_Bank_def)
-  (*apply (clarsimp simp: FP'_def Reg_Bank_def SPSR_abt'_def
-                         SPSR_fiq'_def  SPSR_hyp'_def SPSR_irq'_def
-                        SPSR_mon'_def SPSR_svc'_def 
-                         SPSR_und'_def) *)
-  apply (clarsimp simp: MemA_def CurrentModeIsNotUser_def
-                        MemA_with_priv_def)
-  apply (subgoal_tac "Aligned1 (Addr 1, 4)")
-  apply (clarsimp simp: BadMode_def )
-  apply (clarsimp simp: mmu_read_size_tlb_state_ext_def
-   )
-  apply (clarsimp simp: lookup_def entry_set_def Let_def)
-  apply (subgoal_tac "\<not>is_fault (pt_walk 1 (\<lambda>x. Some 1) (Addr 1) (Addr 1))")
+  apply (clarsimp simp: Reg_Bank_def MemA_MEM')
+ done
+
+
+lemma decode_ins:
+  "Decode (ARM 0xE5921004) 
+\<lparr>Architecture = ARMv7_A, CP14 = CP14',
+       CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+                 SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
+                            M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
+                            sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>,
+       CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+                 T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+       CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
+       REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> = 
+     ( Load (LoadWord (True, True, False, 1, 2, immediate_form1 4)) , \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+       CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+                 SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
+                            M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
+                            sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>,
+       CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+                 T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+       CurrentCondition = 0xE, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
+       REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>  )"
+  apply (clarsimp simp: Decode_def)
+  apply (clarsimp simp: DecodeARM_def Let_def)
+  apply (clarsimp simp: mask_def Do_def ConditionPassed_def CurrentCond_def)
+done
+
+
+lemma get_pde_section_MEM'_new:
+  "get_pde MEM' (Addr 0) (Addr 0x4) = Some (SectionPDE (Addr 0) 
+      \<lparr>arm_p_APX = 0, arm_p_AP = 0, arm_p_TEX = 0, arm_p_S = 0, arm_p_XN = 0, arm_p_C = 0, arm_p_B = 0, arm_p_nG = 0\<rparr>)"
+  apply (clarsimp simp: get_pde_def decode_heap_pde_def vaddr_pd_index_def)
+  apply (rule_tac x = 2 in exI)
+  apply (simp add: load_machine_word_def load_value_def load_list_def load_list_basic_def MEM'_def
+                  deoption_list_def from_bytes_word_def machine_b2w_def word_rcat_bl 
+                  decode_pde_def decode_pde_section_def addr_base_def mask_def
+                  perm_bits_pde_sections_def
+           split: option.splits)
+done
+
+lemma pt_walk_section_MEM'_new:
+  "pt_walk 1 MEM' (Addr 0) (Addr 0x4) = 
+             EntrySection 1 (ucast ((0x4::32 word) >> 20) :: 12 word) (Some (0::12 word)) (0::8 word)"
+  apply (simp only: pt_walk_def)
+  apply (subgoal_tac "get_pde MEM' (Addr 0) (Addr 0x4) = Some (SectionPDE (Addr 0)
+                      \<lparr>arm_p_APX = 0, arm_p_AP = 0, arm_p_TEX = 0, arm_p_S = 0, arm_p_XN = 0, arm_p_C = 0, arm_p_B = 0, arm_p_nG = 0\<rparr>)")
+   prefer 2
+   apply (clarsimp simp: get_pde_section_MEM'_new)
+  apply clarsimp
+done
+  
+
+
+
+lemma run_ins:
+  "\<lbrakk>lookup ({EntrySection 1 0 (Some 0) 0} -
+             tlb_evict
+              \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+                 CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+                           SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True,
+                                      IE = True, M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False,
+                                      VE = True, Z = True, sctlr'rst = 1\<rparr>,
+                           VBAR = 1\<rparr>,
+                 CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True,
+                           Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+                 CurrentCondition = 0xE, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
+                 MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
+                 SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+                 TTBR0 = Addr 0, ASID = 1, \<dots> = {EntrySection 1 0 (Some 0) 0}\<rparr>)
+      1 4 \<noteq>
+     Incon ; Run (Load (LoadWord (True, True, False, 1, 2, immediate_form1 4)))
+   \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+       CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+                 SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
+                            M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False, VE = True, Z = True,
+                            sctlr'rst = 1\<rparr>,
+                 VBAR = 1\<rparr>,
+       CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
+                 T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+       CurrentCondition = 0xE, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
+       REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>  = (() , s')\<rbrakk> \<Longrightarrow>
+    REG s' =  Reg_Bank(RName_1usr := of_bl (nat_to_bitstring 16843009), RName_PC := 0x100)"
+  apply (clarsimp simp: Run_def)
+  apply (clarsimp simp: dfn'LoadWord_def)
+  apply (clarsimp simp: NullCheckIfThumbEE_def)
+  apply (clarsimp simp: CurrentInstrSet_def ISETSTATE_def word_cat_def)
+  apply (clarsimp simp: R_def Rmode_def IsSecure_def HaveSecurityExt_def LookUpRName_def Let_def)
+  apply (clarsimp simp:  MemU_def CurrentModeIsNotUser_def BadMode_def)
+  apply (clarsimp simp: MemU_with_priv_def)
+  apply (clarsimp simp: Aligned1_def Align1_def  Reg_Bank_def)
+  (* Remaining *)
+  apply (clarsimp simp: MemA_with_priv_def)
+  apply (clarsimp simp: Aligned1_def Align1_def)
+  apply (clarsimp simp: mmu_read_size_tlb_state_ext_def)
+  apply (clarsimp simp:mmu_translate_tlb_state_ext_def)
+  apply (clarsimp simp: pt_walk_section_MEM' typ_tlb_def state.defs)
+  apply (case_tac "lookup ({EntrySection 1 0 (Some 0) 0} -
+    tlb_evict
+    \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+    CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
+    SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True,
+    IE = True, M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False,
+    VE = True, Z = True, sctlr'rst = 1\<rparr>,
+    VBAR = 1\<rparr>,
+    CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True,
+    Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
+    CurrentCondition = 0xE, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
+    MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp',
+    SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException,
+    undefined = False, TTBR0 = Addr 0, ASID = 1, \<dots> = {EntrySection 1 0 (Some 0) 0}\<rparr>)
+    1 4 ")
+    apply (clarsimp simp: Let_def)
+    apply (clarsimp simp: pt_walk_section_MEM'_new)
+    apply (clarsimp simp: is_fault_def  va_to_pa_def mask_def)
+    apply (clarsimp simp: pt_walk_section_MEM'_new mask_def)
+    apply (clarsimp simp: mem_read1_def)
+    apply (clarsimp simp: mem1_def)
+    apply (clarsimp simp: MEM'_def)
+    apply (clarsimp simp: UnalignedSupport_def
+   ArchVersion_def write'R_def write'Rmode_def
+   IsSecure_def HaveSecurityExt_def CurrentInstrSet_def
+   ISETSTATE_def LookUpRName_def
+   IncPC_def
+   ThisInstrLength_def BranchTo_def Reg_Bank_def)
    apply clarsimp
-  apply (clarsimp simp: va_to_pa_def pt_walk_def get_pde_def
-                        decode_heap_pde_def load_machine_word_def load_value_def
-                         load_list_def)
-(* Fetch :: ??'a state_scheme \<Rightarrow> MachineCode \<times> ??'a state_scheme *)
+  apply clarsimp
+  apply (subgoal_tac "x3 = EntrySection 1 0 (Some 0) 0")
+   apply clarsimp
+   apply (clarsimp simp: is_fault_def va_to_pa_def mask_def)
+   apply (clarsimp simp: mem_read1_def)
+   apply (clarsimp simp: mem1_def)
+   apply (clarsimp simp: MEM'_def)
+   apply (clarsimp simp: UnalignedSupport_def
+  ArchVersion_def write'R_def write'Rmode_def
+  IsSecure_def HaveSecurityExt_def CurrentInstrSet_def
+  ISETSTATE_def LookUpRName_def
+  IncPC_def
+  ThisInstrLength_def BranchTo_def Reg_Bank_def)
+  apply (clarsimp simp: lookup_def entry_set_def split:split_if_asm)
+   apply blast+
+done
 
 
-thm Fetch_def
+
+
 
 
 end

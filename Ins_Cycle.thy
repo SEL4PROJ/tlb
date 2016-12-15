@@ -385,7 +385,7 @@ where
    else if (addr_val x) = 0xFF then Some 0xE5 
    else None"
 
-
+(* MEM' = [0 \<mapsto> 2, 1 \<mapsto> 0, ..] *)
 
 
 definition 
@@ -718,6 +718,9 @@ lemma MemA_MEM':
   apply (clarsimp simp: MemA_with_priv_MEM')
   done
 
+
+
+(*----- IMPORTANT ------ *)
 
 lemma fetch_ins:
  "Fetch  tlb_state' = (ARM 0xE5921004, 
