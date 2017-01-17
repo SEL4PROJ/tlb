@@ -7,11 +7,28 @@
 
 theory Misc
 imports
-  "~~/src/HOL/Main"
-  "/Users/hira/verification/l4v/lib/Lib"
-  "/Users/hira/verification/l4v/lib/Word_Lib/Word_Enum"
+  "Word_Lib/Word_Enum"
 
 begin
+
+(* from l4v/lib/Lib: *)
+definition
+  pred_conj :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" (infixl "and" 35)
+where
+  "pred_conj P Q \<equiv> \<lambda>x. P x \<and> Q x"
+
+definition
+  pred_disj :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" (infixl "or" 30)
+where
+  "pred_disj P Q \<equiv> \<lambda>x. P x \<or> Q x"
+
+definition
+  pred_neg :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" ("not _" [40] 40)
+where
+  "pred_neg P \<equiv> \<lambda>x. \<not> P x"
+
+definition "K \<equiv> \<lambda>x y. x"
+
 
 text {* Reversed composition of partial functions *}
 definition
