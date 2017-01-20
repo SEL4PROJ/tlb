@@ -180,6 +180,7 @@ begin
           | Incon \<Rightarrow> raise'exception (IMPLEMENTATION_DEFINED ''set on fire'')
    }"
 
+thm mmu_translate_tlb_state_ext_def
 (* print_context *)                      
   instance ..
 end
@@ -236,7 +237,7 @@ definition
   instance ..
 end
 
-
+thm  mmu_translate_tlb_sat_state_ext_def
 
 instantiation tlb_incon_state_ext :: (type) mmu    
 begin
@@ -258,7 +259,7 @@ definition
   instance ..
 end
 
-
+thm mmu_translate_tlb_incon_state_ext_def
 
 (* thm arg_cong
 thm state.cases_scheme  *)
@@ -1041,6 +1042,7 @@ definition
                      mem_read1 (pa , size)
   }"
 
+thm  mmu_read_size_tlb_state_ext_def
 
 definition   
   "(mmu_write_size  :: (bool list \<times> vaddr \<times> nat \<Rightarrow> 'a tlb_state_scheme \<Rightarrow> unit \<times> 'a tlb_state_scheme))
@@ -1055,6 +1057,7 @@ definition
   instance ..
 end
 
+thm  mmu_write_size_tlb_state_ext_def
 
 instantiation tlb_det_state_ext :: (type) mem_op   
 begin
@@ -1242,6 +1245,41 @@ lemma mem1_read_exception:
                    case_tac bd ,  case_tac be ,  case_tac bf , cases r ,clarsimp)
   apply (clarsimp simp: raise'exception_def split:split_if_asm)
 done
+
+
+lemma pt_walk_range:
+  "\<forall>va. pt_walk (ASID s) (MEM s) (TTBR0 s) va =  pt_walk (ASID s') (MEM s') (TTBR0 s') va  \<Longrightarrow> 
+     pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV = pt_walk (ASID s') (MEM s') (TTBR0 s') ` UNIV"
+  by auto
+
+lemma write_not_ptable_tlb_same:
+  "\<lbrakk> mmu_write_size (val,va,sz) s = ((), s');
+  \<forall>va. pt_walk (ASID s) (MEM s) (TTBR0 s) va = pt_walk (ASID s') (MEM s') (TTBR0 s') va;
+  consistent (typ_sat_tlb s) v; saturated (typ_sat_tlb s) \<rbrakk> \<Longrightarrow> tlb_sat_set s' = tlb_sat_set s \<and> consistent (typ_sat_tlb s') v"
+  apply (subgoal_tac "saturated (typ_sat_tlb s')")
+   prefer 2
+   apply (clarsimp simp: write'_not_in_translation_tables_saturated11)
+  apply (frule pt_walk_range)
+  apply (clarsimp simp: mmu_write_size_tlb_sat_state_ext_def Let_def)
+  apply (cases "mmu_translate va s") apply (clarsimp split: split_if_asm)
+   apply (case_tac "write'mem1 (val, a, sz) b") apply clarsimp
+   apply (subgoal_tac "tlb_sat_set b = tlb_sat_set s")
+    apply (subgoal_tac "ASID ba = ASID s \<and> TTBR0 ba = TTBR0 s")
+     apply (clarsimp simp: saturated_def)
+     apply (rule conjI)
+      apply blast
+     apply (clarsimp simp: consistent0_def)
+     apply (subgoal_tac "tlb_sat_set s \<union> range (pt_walk (ASID s) (MEM ba) (TTBR0 s)) =
+                         tlb_sat_set s")
+      apply clarsimp
+     apply blast
+    apply (simp add: mmu_sat_eq_ASID_TTBR0_MEM write'mem1_eq_ASID_TTBR0)
+   apply (simp add: mmu_translate_sat_TLB_union saturated_def sup.absorb1)
+  apply (rule conjI)
+   apply (metis mmu_translate_sat_TLB_union saturated_def sup.orderE tlb_sat_more typ_sat_prim_parameter)
+  by (metis Un_absorb1 inf_sup_aci(5) mmu_translate_sat_TLB_union sat_states_parameters saturated_def tlb_sat_more typ_sat_prim_parameter)
+
+
 
 
 lemma write'_not_in_translation_tables_TLB11:
@@ -1677,7 +1715,7 @@ lemma write'mem_sat_refine1:
   apply (frule_tac s="s" and s'="s'" and t="t" and t'="t'" in tlb_rel_2'11; clarsimp simp: tlb_rel_sat_def)
   done
 
-
+thm write'mem_sat_refine1
 
 lemma  mmu_translate_implies_pt_walk1:
   "\<lbrakk>mmu_translate v s = (p, t) ; ptable_walk' v s = (p', t') ;
@@ -1848,7 +1886,8 @@ lemma mmu_translate_sa_consistent:
 
 lemma mmu_translate_sat_abs_refine:
   "\<lbrakk> mmu_translate va s = (pa, s');  mmu_translate va t = (pa', t') ;
-      saturated (typ_sat_tlb s); (ASID t, addr_val va) \<notin> (tlb_incon_set t) ; tlb_rel_abs (typ_sat_tlb s) (typ_incon t) \<rbrakk> \<Longrightarrow>  tlb_rel_abs  (typ_sat_tlb s') (typ_incon t')"
+      saturated (typ_sat_tlb s); (ASID t, addr_val va) \<notin> (tlb_incon_set t) ; tlb_rel_abs (typ_sat_tlb s) (typ_incon t) \<rbrakk> \<Longrightarrow> 
+            tlb_rel_abs  (typ_sat_tlb s') (typ_incon t')"
   apply (frule_tac s = s in tlb_rel_abs_consistent ; clarsimp )
   apply (frule tlb_rel_absD , clarsimp)
   apply (frule_tac mmu_translate_sa_consistent ; clarsimp simp: tlb_rel_abs_def)
