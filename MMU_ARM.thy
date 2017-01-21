@@ -1255,7 +1255,8 @@ lemma pt_walk_range:
 lemma write_not_ptable_tlb_same:
   "\<lbrakk> mmu_write_size (val,va,sz) s = ((), s');
   \<forall>va. pt_walk (ASID s) (MEM s) (TTBR0 s) va = pt_walk (ASID s') (MEM s') (TTBR0 s') va;
-  consistent (typ_sat_tlb s) v; saturated (typ_sat_tlb s) \<rbrakk> \<Longrightarrow> tlb_sat_set s' = tlb_sat_set s \<and> consistent (typ_sat_tlb s') v"
+  consistent (typ_sat_tlb s) v; saturated (typ_sat_tlb s) \<rbrakk> \<Longrightarrow>
+    tlb_sat_set s' = tlb_sat_set s  \<and> consistent (typ_sat_tlb s') v \<and> saturated (typ_sat_tlb s')"
   apply (subgoal_tac "saturated (typ_sat_tlb s')")
    prefer 2
    apply (clarsimp simp: write'_not_in_translation_tables_saturated11)
