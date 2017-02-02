@@ -9,24 +9,7 @@ ARM_Monadic     - Initial Definitions of ARM Model upto memory write and read fu
 
 MMU_Ops         - classes definitions of MMU operations
 
-
 ARM_Monadic_Ops - All of the remaining functions of ARM Model
-                  Status: updated memory operations i.e they operate on virtual address
-                          No errors 
-
 
 MMU_ARM         - Instantiating definitions of MMU operations
                   MMU Refinement theorems
-
-
-
-
-Sorry-ed Proofs:
-
-No. of Proofs   :  5
-File containing :  MMU_ARM.thy
-Names:             sorry1
-                   sorry2
-                   sorry3
-                   sorry4
-                   sorry5
