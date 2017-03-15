@@ -689,9 +689,9 @@ where
                  of None                     \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
                  |  Some InvalidPTE          \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
                  |  Some (SmallPagePTE p1 a) \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) 
-                                            (Some  ((word_extract 31 12 (addr_val p)):: 20 word)) 0)"
+                                            (Some  ((word_extract 31 12 (addr_val p1)):: 20 word)) 0)"
 
-
+thm pt_walk_def
 (*definition 
   pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
 where
