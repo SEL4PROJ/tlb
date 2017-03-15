@@ -1255,7 +1255,8 @@ lemma pt_walk_range:
 lemma write_not_ptable_tlb_same:
   "\<lbrakk> mmu_write_size (val,va,sz) s = ((), s');
   \<forall>va. pt_walk (ASID s) (MEM s) (TTBR0 s) va = pt_walk (ASID s') (MEM s') (TTBR0 s') va;
-  consistent (typ_sat_tlb s) v; saturated (typ_sat_tlb s) \<rbrakk> \<Longrightarrow> tlb_sat_set s' = tlb_sat_set s \<and> consistent (typ_sat_tlb s') v"
+  consistent (typ_sat_tlb s) v; saturated (typ_sat_tlb s) \<rbrakk> \<Longrightarrow>
+    tlb_sat_set s' = tlb_sat_set s  \<and> consistent (typ_sat_tlb s') v \<and> saturated (typ_sat_tlb s')"
   apply (subgoal_tac "saturated (typ_sat_tlb s')")
    prefer 2
    apply (clarsimp simp: write'_not_in_translation_tables_saturated11)
@@ -2856,5 +2857,40 @@ lemma write_refinement_saturated_incon_only:
   apply (rule conjI)
    apply (clarsimp simp: state.defs)
   using mmu_sat_eq_ASID_TTBR0_MEM by blast
+
+lemma addr_val_eqD [dest!]:
+  "addr_val a = addr_val b \<Longrightarrow> a = b"
+  apply (cases a, cases b)
+  by simp
+
+
+(* A set of addresses SA is consistent, if it is not TLB-inconsistent and will
+   not page fault. Such addresses are safe to write to without losing consistency,
+   if their page mappings are not changed by the write operation *)
+
+definition
+  consistent_set :: "vaddr set \<Rightarrow> tlb_incon_state \<Rightarrow> bool"
+where
+  "consistent_set SA s \<equiv>
+     \<forall>va \<in> SA. (ASID s, addr_val va) \<notin> tlb_incon_set s \<and>
+               \<not> is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)"
+
+lemma consistent_set_translate:
+  "\<lbrakk> consistent_set SA s; va \<in> SA \<rbrakk> \<Longrightarrow>
+  mmu_translate va s = (Addr (va_to_pa (addr_val va) (pt_walk (ASID s) (MEM s) (TTBR0 s) va)), s)"
+  by (simp add: mmu_translate_tlb_incon_state_ext_def consistent_set_def Let_def)
+
+lemma incon_safe_writes:
+  "\<lbrakk> mmu_write_size (val, va, sz) s = ((), s');
+     va \<in> SA; consistent_set SA s;
+     \<forall>v \<in> SA. pt_walk (ASID s) (MEM s) (TTBR0 s) v = pt_walk (ASID s') (MEM s') (TTBR0 s') v \<rbrakk>
+    \<Longrightarrow> consistent_set SA s'"
+  apply (simp add: mmu_write_size_tlb_incon_state_ext_def)
+  apply (cases "mmu_translate va s")
+  apply (clarsimp simp: consistent_set_translate split: if_splits)
+  apply (clarsimp split: prod.splits)
+  apply (simp add: consistent_set_def write'mem1_eq_ASID_TTBR0)
+  apply (auto simp: ptable_comp_def)
+  done
 
 end
