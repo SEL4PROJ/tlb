@@ -4196,16 +4196,46 @@ lemma write_refinement_saturated_incon_only:
    apply (clarsimp simp: state.defs)
   using mmu_sat_eq_ASID_TTBR0_MEM by blast
 
-find_theorems "saturated'"
+find_theorems name:"refine" "mmu_translate"
 
 
 
 thm lookup_range_pt_walk_hit
 
 
+(* important theorems *)
+
+thm mmu_translate_det_refine         (* with no faults , deterministic/deterministic *)
+    mmu_translate_det_evict_refine   (* with no faults , deterministic/non-deterministic *)
+    mmu_translate_det_flt_refine     (* with faults    , deterministic/deterministic *)
+    mmu_translate_flt_refine_det     (* with faults    ,  deterministic/non-deterministic *)
+    mmu_translate_det_sat_refine     (* deterministic/saturated (tlb + pde) *)
+    mmu_translate_sat_refine_non_det (* non-deterministic/saturated (tlb + pde) *)
+    sat_sat_refine                   (* saturated (tlb + pde)/ saturate (tlb only)  *)
+    mmu_translate_sat_abs_refine     (* saturated (tlb only)/ incon set  *)
+
+    
+find_theorems name: "refine" "mmu_translate" 
+
+
+thm mmu_translate_det_refine         (* with no faults , deterministic/deterministic *)
+    mmu_translate_det_evict_refine   (* with no faults , deterministic/non-deterministic *)
+    mmu_translate_det_flt_refine     (* with faults    , deterministic/deterministic *)
+    mmu_translate_flt_refine_det     (* with faults    ,  deterministic/non-deterministic *)
+    mmu_translate_det_sat_refine     (* deterministic/saturated (tlb + pde) *)
+    mmu_translate_sat_refine_non_det (* non-deterministic/saturated (tlb + pde) *)
+    sat_sat_refine                   (* saturated (tlb + pde)/ saturate (tlb only)  *)
+    mmu_translate_sat_abs_refine     (* saturated (tlb only)/ incon set  *)
+
+
+find_theorems name: "refine" name: "write"
+
+thm write'mem'det1_sat_refine1            (* deterministic/saturated (tlb + pde) *)
+    write'mem'_sat_refine1                (* non-deterministic/saturated (tlb + pde) *)
+    write'mem'_sat_sat_refine             (* saturated (tlb + pde)/ saturate (tlb only)  *)
+    write_refinement_saturated_incon_only (* saturated (tlb only)/ incon set  *)
 
 
 
-
-
+ 
 end
