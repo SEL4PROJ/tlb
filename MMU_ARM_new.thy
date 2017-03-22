@@ -803,7 +803,6 @@ lemma pde_sat_state_lookup_not_miss:
 done
   
 
-
 lemma sat_con_not_miss_incon:
   "\<lbrakk>saturated s ; consistent' s va\<rbrakk> \<Longrightarrow> 
     (lookup (fst(state.more s)) (ASID s) (addr_val va) \<noteq> Incon \<and> lookup (fst(state.more s)) (ASID s) (addr_val va) \<noteq> Miss \<and>
@@ -2645,16 +2644,13 @@ lemma mmu_sat_eq_ASID_TTBR0_MEM:
    apply (cases "lookup (tlb_sat_set' s \<union> range (pt_walk (ASID s) (MEM s) (TTBR0 s))) (ASID s) (addr_val va) ")
    by (clarsimp simp:raise'exception_def split: split_if_asm)+
 
+
 lemma mmu_translate_sa_consistent:
-  "\<lbrakk> mmu_translate va s = (pa, s'); consistent'' (typ_sat_tlb' s) va ; saturated' (typ_sat_tlb' s)\<rbrakk>  \<Longrightarrow>  consistent'' (typ_sat_tlb' s') va"
-  apply (subgoal_tac " tlb_sat_set' s = tlb_sat_set' s' \<and> ASID s = ASID s' \<and> MEM s = MEM s'  \<and> TTBR0 s = TTBR0 s'")
-   apply (clarsimp simp: consistent0''_def)
-  apply (clarsimp simp: mmu_sat_eq_ASID_TTBR0_MEM)
-  apply (subgoal_tac "tlb_sat_set' s = tlb_sat_set' s \<union> range (pt_walk (ASID s) (MEM s) (TTBR0 s))")
-   apply (subgoal_tac "tlb_sat_set' s' = tlb_sat_set' s \<union> range (pt_walk (ASID s) (MEM s) (TTBR0 s))")
-    apply clarsimp
-   apply (simp add: mmu_translate_sat_TLB_union)
-  by (simp add: saturated'_def sup.absorb1)
+  assumes A: "mmu_translate va s = (pa, s')"
+  shows
+  "\<lbrakk>  consistent'' (typ_sat_tlb' s) va ; saturated' (typ_sat_tlb' s)\<rbrakk>  \<Longrightarrow>  consistent'' (typ_sat_tlb' s') va"
+  thm mmu_translate_sat_TLB_union
+  by (simp add: saturated'_def sup.absorb1 mmu_translate_sat_TLB_union[OF A] mmu_sat_eq_ASID_TTBR0_MEM[OF A])
 
 
 
@@ -4234,6 +4230,120 @@ thm write'mem'det1_sat_refine1            (* deterministic/saturated (tlb + pde)
     write'mem'_sat_refine1                (* non-deterministic/saturated (tlb + pde) *)
     write'mem'_sat_sat_refine             (* saturated (tlb + pde)/ saturate (tlb only)  *)
     write_refinement_saturated_incon_only (* saturated (tlb only)/ incon set  *)
+
+
+(* Read Relation *)
+
+
+(* for saturated tlb and pde*)
+
+lemma saturated_tlb_const [simp]:
+  "saturated (typ_sat_tlb s) \<Longrightarrow>
+  fst(tlb_sat_set s) \<union> range (pt_walk (ASID s) (MEM s) (TTBR0 s)) = fst(tlb_sat_set s) \<and>
+   snd(tlb_sat_set s) \<union> range (pde_walk (ASID s) (MEM s) (TTBR0 s)) = snd(tlb_sat_set s)"
+  by (auto simp add: saturated_def)
+
+thm lookup_type.splits
+lemma mmu_translate_sat_const_tlb [simp]:
+  "saturated (typ_sat_tlb s) \<Longrightarrow> fst(tlb_sat_set (snd (mmu_translate va s))) = fst(tlb_sat_set s) \<and>
+     snd(tlb_sat_set (snd (mmu_translate va s))) = snd(tlb_sat_set s)"
+  apply (simp add: mmu_translate_tlb_sat_state_ext_def Let_def raise'exception_def impp fst_def
+              split: lookup_type.splits lookup_pde_type.splits)
+using sat_state_tlb by fastforce
+
+
+lemma tlb_sat_set_mem1 [simp]:
+  "fst(tlb_sat_set (snd (mem1 ps s))) = fst(tlb_sat_set s) \<and>
+     snd(tlb_sat_set (snd (mem1 ps s))) = snd(tlb_sat_set s)"
+  by (simp add: mem1_def raise'exception_def split: option.splits)
+
+
+lemma mmu_read_sat_const [simp]:
+  "saturated (typ_sat_tlb s) \<Longrightarrow> fst(tlb_sat_set (snd (mmu_read_size v s))) = fst(tlb_sat_set s) \<and>
+       snd(tlb_sat_set (snd (mmu_read_size v s))) = snd(tlb_sat_set s)"
+   by (clarsimp simp: mmu_read_size_tlb_sat_state_ext_def split_def Let_def
+                      mem_read1_def raise'exception_def
+               split: split_if_asm)
+
+lemma mmu_read_sat_const':
+  "\<lbrakk> mmu_read_size (va, sz) s = (val, t); saturated (typ_sat_tlb s) \<rbrakk> \<Longrightarrow>
+     fst(tlb_sat_set t) = fst(tlb_sat_set s)  \<and>  snd(tlb_sat_set t) = snd(tlb_sat_set s)"
+   by (drule sndI) clarsimp
+
+
+
+
+(* for saturated tlb only *)
+
+
+lemma saturated'_tlb_const [simp]:
+  "saturated' (typ_sat_tlb' s) \<Longrightarrow>
+  tlb_sat_set' s \<union> range (pt_walk (ASID s) (MEM s) (TTBR0 s)) = tlb_sat_set' s"
+  by (auto simp add: saturated'_def)
+
+
+lemma mmu_translate_sat'_const_tlb [simp]:
+  "saturated' (typ_sat_tlb' s) \<Longrightarrow> tlb_sat_set' (snd (mmu_translate va s)) = tlb_sat_set' s"
+  by (simp add: mmu_translate_tlb_sat_state'_ext_def Let_def raise'exception_def
+         split: lookup_type.splits)
+
+
+lemma tlb_sat'_set_mem1 [simp]:
+  "tlb_sat_set' (snd (mem1 ps s)) = tlb_sat_set' s"
+  by (simp add: mem1_def raise'exception_def split: option.splits)
+
+
+lemma mmu_read_sat'_const [simp]:
+  "saturated' (typ_sat_tlb' s) \<Longrightarrow> tlb_sat_set' (snd (mmu_read_size v s)) = tlb_sat_set' s"
+   by (clarsimp simp: mmu_read_size_tlb_sat_state'_ext_def split_def Let_def
+                      mem_read1_def raise'exception_def
+               split: split_if_asm)
+
+
+lemma mmu_read_sat'_const':
+  "\<lbrakk> mmu_read_size (va, sz) s = (val, t); saturated' (typ_sat_tlb' s) \<rbrakk> \<Longrightarrow>
+     tlb_sat_set' t = tlb_sat_set' s"
+   by (drule sndI) clarsimp
+
+find_theorems "saturated" "mmu_write_size"
+
+lemma write_read_saturated_tlb:
+  "\<lbrakk> mmu_write_size (val,va,sz) s = ((), t); mmu_read_size (va, sz) t = (val, r) \<rbrakk>  \<Longrightarrow> tlb_sat_set' t = tlb_sat_set' r"
+  apply (cases "\<not> ptable_trace (MEM s) (TTBR0 s) va \<subseteq> \<Union>(ptable_trace (MEM s) (TTBR0 s) ` UNIV)" )
+   apply (subgoal_tac "saturated' (typ_sat_tlb' t)")
+    prefer 2
+    apply (clarsimp simp: write_size_saturated)
+   apply (clarsimp simp: mmu_read_size_tlb_sat_state'_ext_def)
+   apply (cases "mmu_translate va t" , clarsimp)
+   apply (clarsimp simp:  mmu_translate_tlb_sat_state'_ext_def Let_def)
+   apply (cases "lookup (tlb_sat_set' t \<union> range (pt_walk (ASID t) (MEM t) (TTBR0 t))) (ASID t) (addr_val va)")
+     apply (simp only: split_if_asm raise'exception_def saturated'_def, force)+
+  apply simp
+  apply (subgoal_tac "saturated' (typ_sat_tlb' t)")
+   prefer 2
+   apply (clarsimp simp:  write_size_saturated')
+  apply (clarsimp simp: mmu_read_size_tlb_sat_state'_ext_def)
+  apply (cases "mmu_translate va t" , clarsimp)
+  apply (subgoal_tac "saturated' (typ_sat_tlb' b)")
+   prefer 2
+   apply (clarsimp simp: sat_states_parameters)
+  apply (subgoal_tac "tlb_sat_set' t = tlb_sat_set' b")
+   apply clarsimp
+   apply (drule mem1_read_exception)
+   apply (case_tac b , cases r , clarsimp)
+  apply (subgoal_tac "ASID t = ASID b \<and> MEM t = MEM b \<and> TTBR0 t = TTBR0 b")
+   apply (clarsimp simp: saturated'_def)
+   apply (subgoal_tac "tlb_sat_set' b = tlb_sat_set' t \<union> range (pt_walk (ASID b) (MEM b) (TTBR0 b))")
+    apply (subgoal_tac "range (pt_walk (ASID b) (MEM b) (TTBR0 b)) \<subseteq> tlb_sat_set' t")
+     apply blast
+    apply blast
+   apply (clarsimp simp: mmu_translate_sat_TLB_union)
+  apply (clarsimp simp: mmu_translate_tlb_sat_state'_ext_def Let_def)
+  apply (cases "lookup (tlb_sat_set' t \<union> range (pt_walk (ASID t) (MEM t) (TTBR0 t))) (ASID t) (addr_val va)";
+                clarsimp simp : raise'exception_def split: split_if_asm)
+done
+
+
 
 
 
