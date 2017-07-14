@@ -63,7 +63,6 @@ fun bval :: "bexp \<Rightarrow> p_state \<rightharpoonup> bool"
 
 datatype flush_type = flushTLB
                     | flushASID    asid
-                    | flushva      vaddr
                     | flushvarange "vaddr set"  (*  new one *)
                     | flushASIDva  asid vaddr
 
@@ -76,9 +75,10 @@ datatype com =  SKIP
              |  Flush flush_type
              |  UpdateTTBR0 aexp       (* should this be 32 word instead of aexp? *)
              |  UpdateASID asid
-             |  SetMode mode_t
              |  UpdateRTMap aexp asid  (* should this be 32 word instead of aexp *)
-             (* is there a need to have an instruction switching to user *)
+             |  SetMode mode_t
+             
+            
 
 
 fun
@@ -86,9 +86,7 @@ fun
 where
   "flush_effect flushTLB iset  = {}"
 |
-  "flush_effect (flushASID a) iset = {av\<in>iset. fst av \<noteq> a}"
-|
-  "flush_effect (flushva va) iset = {av\<in>iset. snd av \<noteq> addr_val va}"     (* this might not be a used case, as we have to flush a set of virtual addresses after changing any page table entry *)                                                                     
+  "flush_effect (flushASID a) iset = {av\<in>iset. fst av \<noteq> a}"                                                          
 | 
   "flush_effect (flushvarange vset) iset = {av\<in>iset. snd av \<notin> addr_val ` vset}"
 |
@@ -116,25 +114,51 @@ where
 *)
 
 
-definition 
+(*definition 
   pde_comp :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> (asid \<times> 32 word) set"
 where
   "pde_comp a hp1 hp2 rt \<equiv> 
          (\<lambda>x. (a, addr_val x)) ` {va. \<exists>p1 p2. ptable_lift' hp1 rt va = Some p1 \<and> ptable_lift' hp2 rt va = Some p2 \<and> p1 \<noteq> p2 }"
+*)
+
+
+definition 
+  pde_comp :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> (asid \<times> 32 word) set"
+where
+  "pde_comp a hp1 hp2 rt \<equiv> 
+         (\<lambda>x. (a, addr_val x)) ` {va. (\<exists>p1 p2. ptable_lift' hp1 rt va = Some p1 \<and> ptable_lift' hp2 rt va = Some p2 \<and> p1 \<noteq> p2 )  \<or> 
+                                      (\<exists>p. ptable_lift' hp1 rt va = Some p \<and> ptable_lift' hp2 rt va = None )}"
+
+
+(* previous version of pde_comp  *)
+
+(*definition 
+  pde_comp' :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> (asid \<times> 32 word) set"
+where
+  "pde_comp' a hp1 hp2 rt \<equiv> 
+         (\<lambda>x. (a, addr_val x)) ` {va. (\<exists>p1 p2. ptable_lift' hp1 rt va = Some p1 \<and> ptable_lift' hp2 rt va = Some p2 \<and> p1 \<noteq> p2 )}"
+
+lemma
+  "va \<in> pde_comp' a hp1 hp2 rt \<Longrightarrow> va \<in> pde_comp a hp1 hp2 rt"
+  by (clarsimp simp: pde_comp_def pde_comp'_def)
+*)
 
 
 lemma ptable_trace_pde_comp:
   "\<forall>x. p \<notin> ptable_trace' h r x \<Longrightarrow> pde_comp a  h (h(p \<mapsto> v)) r = {}"
   apply (clarsimp simp: ptable_trace'_def pde_comp_def Let_def)
   apply (drule_tac x = x in spec)
-  by(clarsimp simp: ptable_lift'_def lookup_pde'_def get_pde'_def decode_heap_pde'_def decode_heap_pte'_def vaddr_pt_index_def vaddr_pd_index_def lookup_pte'_def
-      get_pte'_def  split:option.splits split: pde.splits)
+  apply (clarsimp simp: ptable_lift'_def lookup_pde'_def get_pde'_def decode_heap_pde'_def decode_heap_pte'_def vaddr_pt_index_def vaddr_pd_index_def lookup_pte'_def
+                        get_pte'_def  split:option.splits split: pde.splits split: pte.splits)
+  using Let_def by auto
 
 
 lemma plift_equal_not_in_pde_comp [simp]:
-  "\<lbrakk> ptable_lift' h1 r (Addr va) =  ptable_lift' h2 r (Addr va) \<rbrakk> \<Longrightarrow>  (a, va) \<notin> pde_comp a h1 h2 r"
+  "\<lbrakk> ptable_lift' h1 r (Addr va) =  Some pa ; ptable_lift' h2 r (Addr va) = Some pa \<rbrakk> \<Longrightarrow>  
+            (a, va) \<notin> pde_comp a h1 h2 r"
   by (clarsimp simp: pde_comp_def) 
  
+
 
 inductive
   big_step :: "com \<times> p_state \<Rightarrow> p_state option \<Rightarrow> bool" (infix "\<Rightarrow>" 55)
