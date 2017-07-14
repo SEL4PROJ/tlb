@@ -19,7 +19,7 @@ definition
   safe_memory :: "32 word set \<Rightarrow> p_state \<Rightarrow> bool"
 where
   "safe_memory V s \<equiv> \<forall>va \<in> V. \<exists>p. ptable_lift_m (heap s) (root s) (mode s) (Addr va) = Some p \<and>  
-                                 p \<notin> ptrace_set V s"
+                                 p \<notin> ptrace_set V s" 
 
 
 definition
@@ -49,23 +49,18 @@ lemma cons_set_preserved:
    apply (drule_tac x = va in bspec , simp)
    apply (clarsimp simp: pde_comp_def ptable_lift'_def ptrace_set_def)
    apply (drule_tac x = va in bspec , simp)
-   apply (clarsimp simp: ptable_trace'_def  Let_def lookup_pde'_def  get_pde'_def split: option.splits)
-   apply (case_tac x2 ; clarsimp  simp: decode_heap_pde'_def)
-   apply (drule_tac x = "addr_val x" in bspec , simp)
-   apply (clarsimp simp: lookup_pte'_def split:option.splits)
-   apply (case_tac x2 ; clarsimp simp: get_pte'_def decode_heap_pte'_def)
+   apply (clarsimp simp: ptable_trace'_def  Let_def lookup_pde'_def  get_pde'_def decode_heap_pde'_def split: option.splits pde.splits)
+   apply (frule_tac x = "addr_val x" in bspec , simp)
+   apply (clarsimp simp: lookup_pte'_def get_pte'_def decode_heap_pte'_def split:option.splits pte.splits)
   apply (drule_tac x = va in bspec ; clarsimp)
   apply (frule ptable_lift_m_user)
   apply (drule_tac x = va in bspec , simp)
   apply (clarsimp simp: pde_comp_def ptable_lift'_def ptrace_set_def)
   apply (drule_tac x = va in bspec , simp)
-  apply (clarsimp simp: ptable_trace'_def  Let_def lookup_pde'_def  get_pde'_def split: option.splits)
-  apply (case_tac x2 ; clarsimp  simp: decode_heap_pde'_def)
+  apply (clarsimp simp: ptable_trace'_def  Let_def lookup_pde'_def  get_pde'_def decode_heap_pde'_def split: option.splits pde.splits)
   apply (drule_tac x = "addr_val x" in bspec , simp)
-  apply (clarsimp simp: lookup_pte'_def split:option.splits)
-  apply (case_tac x2 ; clarsimp simp: get_pte'_def decode_heap_pte'_def)
-done
-
+ apply (clarsimp simp: lookup_pte'_def get_pte'_def decode_heap_pte'_def split:option.splits pte.splits)
+ done
 
 lemma safe_set_preserved:
   "\<Turnstile> \<lbrace> \<lambda>s. safe_set SM s \<and> (\<exists>vp v. aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM)\<rbrace>
@@ -124,7 +119,7 @@ lemma weak_pre_write':
 
 lemma weak_pre_write'_user:
   "\<Turnstile> \<lbrace> \<lambda>s. safe_set SM s \<and> (\<exists>vp v. aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> 
-                  (\<forall>v\<in>SM. Addr v \<notin> ptable_mapped' (heap s) (root s)) \<and>  
+                  (\<forall>v\<in>SM. Addr v \<notin> ptable_mapped (heap s) (root s)) \<and>  
              (* I am using ptable_mapped' because the physical address of va in SM is aleady mapped '*)
      Q (s \<lparr> heap := heap s (the ( ptable_lift_m (heap s) (root s) (mode s) (Addr vp)) \<mapsto> v)\<rparr> ) ) \<rbrace>
              lval ::= rval  \<lbrace>\<lambda>s. safe_set SM s \<and> Q s \<rbrace>" 
@@ -142,7 +137,7 @@ lemma weak_pre_write'_user:
   apply (subgoal_tac "pde_comp (asid s) (heap s) (heap s(the (ptable_lift_m (heap s) (root s) (mode s) (Addr vp)) \<mapsto> v)) (root s) = {}")
    apply clarsimp
   apply (drule_tac x = vp in bspec , clarsimp)
-  apply (clarsimp simp: ptable_mapped'_def)
+  apply (clarsimp simp: ptable_mapped_def)
   apply (clarsimp simp: ptable_lift_m_implies_ptlift)
   apply (clarsimp simp: ptable_trace_pde_comp)
 done
@@ -164,7 +159,6 @@ where
   "SM_user h r  \<equiv> {va. \<exists>p. ptable_lift_m h r User (Addr va) = Some p \<and> p \<notin> \<Union>range (ptable_trace' h r)} "
 
 
-
 lemma [simp]:
   "con_set S (s\<lparr>root := rt, asid := a, incon_set := is, mode := m\<rparr>) = con_set S (s\<lparr>asid := a, incon_set := is\<rparr>)"
   by (clarsimp simp: con_set_def)
@@ -172,7 +166,6 @@ lemma [simp]:
 lemma [simp]:
   "safe_memory S (s\<lparr>root := r, asid := a, incon_set := is, mode := m\<rparr>) = safe_memory S (s\<lparr>root := r,  mode := m\<rparr>)"
    by (clarsimp simp: safe_memory_def ptrace_set_def)
-
 
 lemma [simp]:
   " safe_memory (SM_user (heap s) (Addr rt)) (s\<lparr>root := Addr rt, mode := User\<rparr>)"
@@ -186,7 +179,6 @@ lemma [simp]:
 done
   
 
-
 lemma  user_safe_set_established:
   "\<Turnstile> \<lbrace> \<lambda>s. \<exists>rt. aval ttbr0 s = Some rt \<and>  mode s = Kernel\<rbrace>  
                 UpdateTTBR0 ttbr0 ;; UpdateASID a ;;  Flush (flushASID a) ;;  SetMode User 
@@ -194,39 +186,6 @@ lemma  user_safe_set_established:
   apply vcg
   by (clarsimp simp: safe_set_def con_set_def)
   
-
-
-(* all the entries that are mapped with kernel privilege *)
-
-(*definition
-  vas_mapped_kernel :: "heap \<Rightarrow> paddr \<Rightarrow> vaddr set"
-where
-  "vas_mapped_kernel h r  \<equiv>   {va. \<exists>p. ptable_lift_m h r Kernel va = Some p} "
-
-definition
-  vas_mapped_kernel' :: "heap \<Rightarrow> paddr \<Rightarrow> 32 word set"
-where
-  "vas_mapped_kernel' h r  \<equiv>   {va. \<exists>p. ptable_lift_m h r Kernel (Addr va) = Some p} "
-
-
-definition
-  page_info_kernel :: "heap \<Rightarrow> paddr \<Rightarrow>  (paddr \<times> page_type \<times> arm_perm_bits) option set"
-where
-  "page_info_kernel h r  \<equiv>  lookup_pde' h r ` (vas_mapped_kernel h r)"
-
-
-definition
-  kernel_section_entries:: "heap \<Rightarrow> paddr \<Rightarrow>  bool"
-where
-  "kernel_section_entries h r  \<equiv>  fst `(snd `(the ` lookup_pde' h r ` (vas_mapped_kernel h r))) = {ArmSection}"
-
-
-definition
-  ptrace_set' ::"32 word set \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> paddr set"
-where
-  "ptrace_set' SM hp rt = \<Union>(ptable_trace' hp rt ` (Addr ` SM)) "
- 
-*)
 
 
 

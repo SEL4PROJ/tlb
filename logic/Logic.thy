@@ -35,6 +35,26 @@ fun aval :: "aexp \<Rightarrow> p_state  \<rightharpoonup> val" where
   "aval AsidLookup s =  Some (ucast (asid s))"   
 *)
 
+
+(* simplification theorems for the aval *)
+
+lemma aval_state_incon_eq[simp]:
+  "(aval e (s\<lparr>incon_set := iset\<rparr>) = Some v) = (aval e s = Some v)"
+  by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
+
+lemma aval_state_mode_eq[simp]:
+  "(aval e (s\<lparr>mode := m\<rparr>) = Some v) = (aval e s = Some v)"
+  by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
+
+lemma aval_state_incon_mode_eq[simp]:
+  "(aval e (s\<lparr>incon_set := iset, mode := m\<rparr>) = Some v) = (aval e s = Some v)"
+  by clarsimp
+
+
+lemma aval_state_rt_map_eq[simp]:
+  "(aval e (s\<lparr>root_map := root_map s(Addr r \<mapsto> a)\<rparr>) = Some v) = (aval e s = Some v)"
+  by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
+
                              
 thm aval.induct
 
