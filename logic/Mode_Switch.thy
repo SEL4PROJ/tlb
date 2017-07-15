@@ -8,11 +8,14 @@ begin
 
 declare assign_sound [vcg del] 
 
-(* there is a need of a memory model now, a typed memory, that 
-   explicitly differentiate between page tables and rest of the memory  *)
+(* 
+there is a need of a memory model now, a typed memory, that 
+explicitly differentiate between page tables and rest of the memory  
+*)
 
-(*   first theorem, kernel wrote to the memory but it didn't change the page tables at all, then there should not be TLB flush, 
- here we should only tag the heap with page_tables, lets gp ans see the program state
+(*   
+first theorem, kernel wrote to the memory but it didn't change the page tables at all, then there should not be TLB flush, 
+here we should only tag the heap with page_tables, lets gp ans see the program state
 
 *)
 
@@ -23,6 +26,7 @@ where
                         asid s = a  \<and> root_map s rt = Some a \<and> partial_inj (root_map s) \<and> rt\<in>root_log s \<and>
                         global_mappings_of_all_processes s \<and> non_overlapping_page_tables s  \<and>
                         \<Union>(ptable_trace' (heap s) (root s) ` UNIV) \<subseteq> kernel_phy_mem" 
+
 
 lemma kernel_state_implies_current_page_table:
   "kernel_state s \<Longrightarrow>  current_page_table s"
@@ -39,11 +43,11 @@ done
 (* when kernel doesn't write to any of the page-table *)
 
 lemma [simp]:
-  "\<lbrakk>kernel_state s; assinged_asids_consistent (root_map s) (incon_set s)\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>kernel_state s; assigned_asids_consistent (root_map s) (incon_set s)\<rbrakk> \<Longrightarrow> 
                     con_set VA s"
-  apply (clarsimp simp: assinged_asids_consistent_def con_set_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
-  apply force
-done
+  apply (clarsimp simp: assigned_asids_consistent_def con_set_def kernel_state_def assigned_asid_va_map_def ran_def)
+  by force
+
 
 lemma [simp]:
   "\<lbrakk>kernel_state s;  va \<in> kernel_safe_region' s\<rbrakk> \<Longrightarrow> ptable_lift_m (heap s) (root s) (mode s) (Addr va) = Some (Addr va r- global_offset) "
@@ -53,7 +57,8 @@ lemma [simp]:
 lemma global_mappings_decode':
   "\<lbrakk>kernel_state s  ; va \<in> kernel_safe_region' s\<rbrakk> \<Longrightarrow> 
          \<exists>p perm. decode_heap_pde' (heap s) (root s r+ (vaddr_pd_index va << 2)) =  Some (SectionPDE p perm)"
-  apply (clarsimp simp: kernel_safe_region'_def vas_mapped_by_global_mappings_def global_mappings_of_all_processes_def pd_idx_offset_def get_pde'_def kernel_state_def)
+  apply (clarsimp simp: kernel_safe_region'_def vas_mapped_by_global_mappings_def global_mappings_of_all_processes_def global_mappings_def 
+                        pd_idx_offset_def get_pde'_def kernel_state_def)
   by force
 
 
@@ -61,27 +66,9 @@ lemma  kernel_safe_region_ptable_trace' [simp]:
   "\<lbrakk>kernel_state s; vp' \<in> kernel_safe_region' s; vp \<in> kernel_safe_region' s\<rbrakk> \<Longrightarrow> Addr (vp' - global_offset) \<notin> ptable_trace' (heap s) (root s) (Addr vp)"
   apply (frule_tac va = vp in global_mappings_decode')
    apply (clarsimp simp: kernel_state_def) apply clarsimp
-  apply (clarsimp simp: kernel_state_def ptable_trace'_def kernel_safe_region'_def vas_mapped_by_global_mappings_def vas_of_current_state_mapped_to_global_mappings_of_all_processes_def pd_idx_offset_def)+
-done
+  by (clarsimp simp: kernel_state_def ptable_trace'_def kernel_safe_region'_def vas_mapped_by_global_mappings_def vas_of_current_state_mapped_to_global_mappings_of_all_processes_def pd_idx_offset_def)+
 
 
-lemma [simp]:
-  "safe_memory va (s\<lparr>heap := hp , incon_set := iset , mode := m\<rparr>) =  safe_memory va (s\<lparr>heap := hp , mode := m\<rparr>)"
-  by (clarsimp simp: safe_memory_def ptrace_set_def)
-
-lemma [simp]:
-  "con_set va (s\<lparr>heap := hp ,  incon_set := iset , mode := m\<rparr>) =  con_set va (s\<lparr>incon_set := iset\<rparr>) "
-  by (clarsimp simp: con_set_def)
-
-lemma union_imp_all:
-  "p \<notin> \<Union>(ptable_trace' h r ` UNIV) \<Longrightarrow> \<forall>x. p \<notin> ptable_trace' h r x"
-  by (clarsimp)
- 
-
-lemma pde_comp_empty:
-  "p \<notin> \<Union>(ptable_trace' h r ` UNIV) \<Longrightarrow> pde_comp a  h (h(p \<mapsto> v)) r = {}"
-  apply (drule union_imp_all)
-  by (clarsimp simp: ptable_trace_pde_comp)
 
 
 (* can not put in the simp set *)
@@ -92,7 +79,7 @@ lemma kernel_state_mode:
 
 lemma  mode_switch_safe_set_when_not_in_current_page_table:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-           assinged_asids_consistent (root_map s) (incon_set s)  \<and> 
+           assigned_asids_consistent (root_map s) (incon_set s)  \<and> 
             (Addr vp r- global_offset) \<notin> \<Union>(ptable_trace' (heap s) (root s) ` UNIV) \<rbrace>
                      lval ::= rval ;; SetMode User
                   \<lbrace>\<lambda>s. safe_set (SM_user (heap s) (root s)) s \<and>  heap s (Addr vp r- global_offset) = Some v\<rbrace>"
@@ -110,19 +97,19 @@ lemma  mode_switch_safe_set_when_not_in_current_page_table:
 
 lemma  mode_switch_invariant_for_current_asid:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-           assinged_asids_consistent (root_map s) (incon_set s)  \<and> 
+           assigned_asids_consistent (root_map s) (incon_set s)  \<and> 
             (Addr vp r- global_offset) \<notin> \<Union>(ptable_trace' (heap s) (root s) ` UNIV) \<rbrace>
                      lval ::= rval ;; SetMode User
-                  \<lbrace>\<lambda>s. (asid_va_set (asid s)) \<inter> incon_set s = {}\<rbrace>"
-  apply_trace (vcg vcg:  assign_sound)
+                  \<lbrace>\<lambda>s. {asid s} \<times> UNIV  \<inter> incon_set s = {}\<rbrace>"
+  apply_trace (vcg vcg: assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
+   apply (clarsimp simp: assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
    apply force
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
   apply (clarsimp simp: pde_comp_empty)
-  apply (clarsimp simp: assinged_asids_consistent_def con_set_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
-  by force
+  apply (clarsimp simp: assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
+  by auto                                 
 
 
 (* might not a be a good use case *)
@@ -131,7 +118,7 @@ lemma  mode_switch_invariant_for_current_asid:
 
 lemma mode_switch_safe_set_when_not_in_page_table:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-             assinged_asids_consistent (root_map s) (incon_set s)  \<and> (tagged_heap s) (Addr vp r- global_offset) \<noteq> page_table \<rbrace> 
+             assigned_asids_consistent (root_map s) (incon_set s)  \<and> (tagged_heap s) (Addr vp r- global_offset) \<noteq> page_table \<rbrace> 
                      lval ::= rval ;; SetMode User
                   \<lbrace>\<lambda>s. safe_set (SM_user (heap s) (root s)) s \<and>  heap s (Addr vp r- global_offset) = Some v\<rbrace>"
   apply_trace (vcg vcg: weak_pre_write [of SM])
@@ -151,12 +138,12 @@ done
 
 lemma mode_switch_invariant_for_all_assigned_asid:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-             assinged_asids_consistent (root_map s) (incon_set s)  \<and> (tagged_heap s) (Addr vp r- global_offset) \<noteq> page_table \<rbrace> 
+             assigned_asids_consistent (root_map s) (incon_set s)  \<and> (tagged_heap s) (Addr vp r- global_offset) \<noteq> page_table \<rbrace> 
                      lval ::= rval ;; SetMode User
-                  \<lbrace>\<lambda>s. assinged_asids_consistent (root_map s) (incon_set s) \<rbrace>"
+                  \<lbrace>\<lambda>s. assigned_asids_consistent (root_map s) (incon_set s) \<rbrace>"
   apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
+   apply (clarsimp simp: assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
    apply force
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
@@ -173,8 +160,8 @@ done
 
 lemma mode_switch_safe_set_in_current_page_table:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-      assinged_asids_consistent (root_map s) (incon_set s)  \<and> 
-            Addr vp \<in> ptable_mapped' (heap s) (root s) \<and> asid s = a \<rbrace>
+      assigned_asids_consistent (root_map s) (incon_set s)  \<and> 
+            Addr vp \<in> ptable_mapped (heap s) (root s) \<and> asid s = a \<rbrace>
                      lval ::= rval ;; Flush (flushASID a) ;; SetMode User
                   \<lbrace>\<lambda>s. safe_set (SM_user (heap s) (root s)) s  \<and> heap s (Addr vp r- global_offset) = Some v\<rbrace>"
   apply_trace (vcg vcg: weak_pre_write [of SM])
@@ -190,17 +177,16 @@ lemma mode_switch_safe_set_in_current_page_table:
 
 lemma  mode_switch_invariant_flush_current_asid:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-         assinged_asids_consistent (root_map s) (incon_set s)  \<and> 
-            Addr vp \<in> ptable_mapped' (heap s) (root s) \<and> asid s = a \<rbrace>
+         assigned_asids_consistent (root_map s) (incon_set s)  \<and> 
+            Addr vp \<in> ptable_mapped (heap s) (root s) \<and> asid s = a \<rbrace>
                      lval ::= rval ;; Flush (flushASID a) ;; SetMode User
-                  \<lbrace>\<lambda>s. (asid_va_set (asid s)) \<inter> incon_set s = {}\<rbrace>"
+                  \<lbrace>\<lambda>s. {asid s} \<times> UNIV  \<inter> incon_set s = {}\<rbrace>"
   apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
+   apply (clarsimp simp: assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
    apply force
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
-  apply (clarsimp simp: asid_va_set_def)
   by force
 
 
@@ -209,27 +195,29 @@ lemma
   apply (clarsimp simp: pde_comp_def)
 done
 
+
 lemma pde_comp_asid_incon:
   "{av. (av \<in> incon_set s \<or> av \<in> pde_comp (asid s) (heap s) (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s)) \<and> fst av \<noteq> asid s} =
    {av. av \<in> incon_set s  \<and> fst av \<noteq> asid s}"
   apply (clarsimp simp: pde_comp_def)
   apply force
 done
+
 thm kernel_state_def
 
 (* this is important *)
 lemma  mode_switch_invariant_flush_all_assigned_asid:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-         assinged_asids_consistent (root_map s) (incon_set s)  \<and>  Addr vp \<in> ptable_mapped' (heap s) (root s) \<and> asid s = a \<rbrace>
+         assigned_asids_consistent (root_map s) (incon_set s)  \<and>  Addr vp \<in> ptable_mapped (heap s) (root s) \<and> asid s = a \<rbrace>
                      lval ::= rval ;; Flush (flushASID a) ;; SetMode User
-                  \<lbrace>\<lambda>s. assinged_asids_consistent (root_map s) (incon_set s) \<rbrace>"
+                  \<lbrace>\<lambda>s. assigned_asids_consistent (root_map s) (incon_set s) \<rbrace>"
   apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
+   apply (clarsimp simp: assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
    apply force
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
-  apply (clarsimp simp: assinged_asids_consistent_def pde_comp_asid_incon)
+  apply (clarsimp simp: assigned_asids_consistent_def pde_comp_asid_incon)
   apply force
 done
 
@@ -238,18 +226,7 @@ done
 
 thm lookup_pde'_def
 
-(* whenever, we write to the section entry of page table, the corresponding range of the virtual addresses should be deleted, for all the asids,
-   right now we have a flushva instruction, that only invlaidates one va, sop there shpuld  be aother function *)
-
-definition
-  flush_range_vas :: "(asid \<times> 32 word) set \<Rightarrow> 32 word set  \<Rightarrow> (asid \<times> 32 word) set" 
-where
-  "flush_range_vas iset vset = \<Union>((\<lambda>v. flush_effect (flushva (Addr v)) iset ) ` vset)  "
-
-
-(* next i should have an instruction of flush, for flushing the set of addresses, not only va *)
-
-(* when kernel is writing to the section, might happen rarely as user virtual addresses are not written as section entries *)
+(* when kernel is writing to the section *)
 
 
 (* here *)
@@ -265,21 +242,21 @@ lemma pde_comp_simp_vset_flush:
 done
 
 lemma incon_set_flsuhVA_section_simp:
-  "asid_va_set (asid s) \<inter> incon_set s = {} \<Longrightarrow> 
-       asid_va_set (asid s) \<inter> {av \<in> incon_set s. snd av \<notin> addr_val ` vspace_section_entry (heap s) (root s) (SectionPDE p p_bits)} = {}"
+  "{asid s} \<times> UNIV \<inter> incon_set s = {} \<Longrightarrow> 
+       {asid s} \<times> UNIV \<inter> {av \<in> incon_set s. snd av \<notin> addr_val ` vspace_section_entry (heap s) (root s) (SectionPDE p p_bits)} = {}"
   apply force
 done
 
 
 lemma  remaining:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-      assinged_asids_consistent (root_map s) (incon_set s)  \<and>  Addr vp \<in> ptable_mapped' (heap s) (root s) \<and>
+      assigned_asids_consistent (root_map s) (incon_set s)  \<and>  Addr vp \<in> ptable_mapped (heap s) (root s) \<and>
                (\<exists>p p_bits. get_pde' (heap s) (root s) (Addr vp) = Some (SectionPDE p p_bits) \<and> V = vspace_section_entry (heap s) (root s) (SectionPDE p p_bits) ) \<rbrace>
                                lval ::= rval ;; Flush (flushvarange V) ;; SetMode User
-                  \<lbrace>\<lambda>s. (asid_va_set (asid s)) \<inter> incon_set s = {}\<rbrace>"
+                  \<lbrace>\<lambda>s. {asid s} \<times> UNIV \<inter> incon_set s = {}\<rbrace>"
   apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
+   apply (clarsimp simp: assigned_asids_consistent_def assigned_asid_va_map_def ran_def  kernel_state_def)
    apply force
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
@@ -289,10 +266,10 @@ lemma  remaining:
    apply (erule disjE)
     apply (clarsimp simp: pde_comp_simp_vset_flush)
     apply (rule incon_set_flsuhVA_section_simp , clarsimp simp: kernel_state_def
-                assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def)
+                assigned_asids_consistent_def assigned_asid_va_map_def ran_def)
     apply force
-   apply (clarsimp simp: kernel_state_def assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def)
-   apply force
+   apply (clarsimp simp: kernel_state_def assigned_asids_consistent_def assigned_asid_va_map_def ran_def)
+   apply fastforce
   apply (case_tac "(heap s(Addr (vp - global_offset) \<mapsto> v)) (Addr (vp - global_offset)) = heap s (Addr (vp - global_offset))")
    apply (rule disjI2)
    apply (subgoal_tac "heap s = (heap s(Addr (vp - global_offset) \<mapsto> v))")
@@ -305,7 +282,6 @@ lemma  remaining:
   apply (clarsimp simp: pde_comp_def)
   apply (subgoal_tac "{va. \<exists>p1. ptable_lift' (heap s) (root s) va = Some p1 \<and> (\<exists>p2. ptable_lift' (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) va = Some p2 \<and> p1 \<noteq> p2)} =
                          vspace_section_entry (heap s) (root s) (SectionPDE p p_bits) ")
-   apply clarsimp
   apply (clarsimp simp: vspace_section_entry_def)
    apply safe
   (*  here *)
@@ -318,7 +294,7 @@ oops
 
 lemma 
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-      assinged_asids_consistent (root_map s) (incon_set s)  \<and>  Addr vp \<in> ptable_mapped' (heap s) (root s) \<and>
+      assigned_asids_consistent (root_map s) (incon_set s)  \<and>  Addr vp \<in> ptable_mapped (heap s) (root s) \<and>
                (\<exists>p p_bits. get_pde' (heap s) (root s) (Addr vp) = Some (SectionPDE p p_bits) \<and> V = vspace_section_entry (heap s) (root s) (SectionPDE p p_bits) ) \<rbrace>
                                lval ::= rval ;; Flush (flushvarange V) ;; SetMode User
                   \<lbrace>\<lambda>s. safe_set (SM_user (heap s) (root s)) s \<and>  heap s (Addr vp r- global_offset) = Some v\<rbrace>"
@@ -332,8 +308,8 @@ lemma
    apply (clarsimp simp: safe_memory_def SM_user_def ptrace_set_def)
   apply (clarsimp simp: con_set_def)
   apply (rule conjI)
-   apply (clarsimp simp: kernel_state_def assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def)
-   apply force
+   apply (clarsimp simp: kernel_state_def assigned_asids_consistent_def assigned_asid_va_map_def ran_def)
+   apply fastforce
  (* remaining, can be done but it requires reasoning *)
    
 oops
@@ -344,36 +320,47 @@ oops
 (* if the physical address of vp is any of the page table, then the asid assigned to the respective root should be flushed  *)
 
 lemma screwed:
-  " \<lbrakk> a \<in> ptable_trace' h r1 xa; 
-           (\<Union>x. ptable_trace' h r1 x) \<inter> (\<Union>x. ptable_trace' h r2 x) = {}\<rbrakk>
-       \<Longrightarrow> a \<notin> ptable_trace' h r2 x"
+  " \<lbrakk> a \<in> ptable_trace' h r1 xa; (\<Union>x. ptable_trace' h r1 x) \<inter> (\<Union>x. ptable_trace' h r2 x) = {}\<rbrakk>  \<Longrightarrow>
+           a \<notin> ptable_trace' h r2 x"
   by force
+
+
+lemma assigned_rt_map_update:
+  "assigned_asids_consistent (root_map s) (incon_set s) \<and>  {a} \<times> UNIV \<inter>incon_set s = {}  \<Longrightarrow>
+              assigned_asids_consistent (root_map s(Addr r \<mapsto> a)) (incon_set s)"
+  apply (clarsimp simp: assigned_asids_consistent_def  assigned_asid_va_map_def ran_def )
+  by force
+
+thm pde_comp_asid_incon
+
+
+lemma non_overlapping_page_tables_ptrace:
+  "\<lbrakk>non_overlapping_page_tables_assertion rtlog hp ; rt \<in> rtlog; rt' \<in> rtlog ; rt \<noteq> rt' ; p \<in> \<Union>(ptable_trace' hp rt ` UNIV)  \<rbrakk>  \<Longrightarrow>
+                  p \<notin> \<Union>(ptable_trace' hp rt' ` UNIV)"
+  apply (clarsimp simp: non_overlapping_page_tables_def non_overlapping_page_tables_assertion_def)
+  by fastforce
 
 
 lemma kernel_writing_to_inactive_process_page_table_and_flush:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-         assinged_asids_consistent (root_map s) (incon_set s)  \<and> rt \<in> root_log s \<and> rt \<noteq> root s \<and> 
-                  (Addr vp r- global_offset) \<in> \<Union>(ptable_trace' (heap s) rt ` UNIV) \<and> root_map s rt = Some a \<rbrace>
+         assigned_asids_consistent (root_map s) (incon_set s)  \<and> rt \<in> root_log s \<and> rt \<noteq> root s \<and> 
+                  Addr vp r- global_offset \<in> \<Union>(ptable_trace' (heap s) rt ` UNIV) \<and> root_map s rt = Some a \<rbrace>
                      lval ::= rval ;; Flush (flushASID a) ;; SetMode User
-                  \<lbrace>\<lambda>s. assinged_asids_consistent (root_map s) (incon_set s) \<rbrace>"
+                  \<lbrace>\<lambda>s. assigned_asids_consistent (root_map s) (incon_set s) \<rbrace>"
   apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
-   apply force
+   apply (clarsimp simp: assigned_asids_consistent_def  assigned_asid_va_map_def ran_def kernel_state_def)
+   apply auto [1]
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
+  find_theorems "pde_comp"
   apply (subgoal_tac "pde_comp (asid s) (heap s) (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) = {}")
    apply clarsimp
-   apply (clarsimp simp: assinged_asids_consistent_def)
+   apply (clarsimp simp: assigned_asids_consistent_def)
    apply force
-  apply (clarsimp simp: pde_comp_def)
-  apply (frule_tac p = "Addr (vp - global_offset)" and v = v in  ptable_lift_preserved' [rotated])
-   prefer 2
-   apply clarsimp
-  apply (clarsimp simp: kernel_state_def non_overlapping_page_tables_def)
-  apply (drule_tac x = "root s" in spec)
-  apply (drule_tac x = rt in spec)
-  apply clarsimp
+  apply (rule ptable_trace_pde_comp)
+  apply (clarsimp simp: kernel_state_def)
+  apply (frule_tac rt = rt and rt' = "root s" and hp = "heap s" and p = "Addr vp r- global_offset" in non_overlapping_page_tables_ptrace ; clarsimp)
   by force
 
 
@@ -384,34 +371,24 @@ lemma kernel_writing_to_inactive_process_page_table_and_flush:
 
 lemma  context_swtich_to_assigned_root_valid_asid: 
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval rt s = Some r \<and> Addr r \<in> root_log s \<and> root_map s (Addr r) = Some a \<and>
-            assinged_asids_consistent (root_map s) (incon_set s) \<rbrace>
+            assigned_asids_consistent (root_map s) (incon_set s) \<rbrace>
                       UpdateTTBR0 rt ;; UpdateASID a 
-                  \<lbrace>\<lambda>s. assinged_asids_consistent (root_map s) (incon_set s) \<rbrace>"
+                  \<lbrace>\<lambda>s. assigned_asids_consistent (root_map s) (incon_set s) \<rbrace>"
   apply vcg
   by (clarsimp simp: kernel_state_def)
 
 
 (* context switching and prepare for the meeting *)
 
-lemma assigned_rt_map_update:
-  "assinged_asids_consistent (root_map s) (incon_set s) \<and>                                 
-            (asid_va_set a) \<inter> incon_set s = {}  \<Longrightarrow> assinged_asids_consistent (root_map s(Addr r \<mapsto> a)) (incon_set s)"
-  apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def )
-  by force
-  
-
 definition
-  "asid_assumption s  \<equiv> assinged_asids_consistent (root_map s) (incon_set s) \<and> 
-          (\<forall>a. a \<notin> set_of_assigned_asids (root_map s) \<longrightarrow> (asid_va_set a) \<inter> incon_set s = {}  )"
+  "asid_assumption s  \<equiv>  \<forall>a.  {a} \<times> UNIV \<inter> incon_set s = {} "
 
 lemma [simp]:
-  "\<forall>rts. root_map s rts  \<noteq> Some a \<Longrightarrow>  a \<notin> set_of_assigned_asids (root_map s)"
-  by (clarsimp simp: set_of_assigned_asids_def) 
+  "\<forall>rts. root_map s rts  \<noteq> Some a \<Longrightarrow>  a \<notin> ran (root_map s)"
+  by (simp add: ran_def) 
 
 
-
-
-lemma parital_inj_uodate:
+lemma parital_inj_update:
   "\<lbrakk>mode s = Kernel; aval rt s = Some v; root_map s (Addr v) = None; \<forall>rt. root_map s rt \<noteq> Some a; partial_inj (root_map s)\<rbrakk> \<Longrightarrow> partial_inj (root_map s(Addr v \<mapsto> a))"
   unfolding partial_inj_def
   by (metis fun_upd_apply)
@@ -422,15 +399,16 @@ lemma context_switch:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval rt s = Some r \<and> Addr r \<in> root_log s \<and> root_map s (Addr r) = None \<and> (\<forall>rts. root_map s rts \<noteq> Some a) \<and>
             asid_assumption s \<rbrace>
                        UpdateRTMap rt a ;; UpdateTTBR0 rt ;; UpdateASID a 
-                  \<lbrace>\<lambda>s. assinged_asids_consistent (root_map s) (incon_set s) \<and> partial_inj (root_map s)\<rbrace>"
+                  \<lbrace>\<lambda>s. assigned_asids_consistent (root_map s) (incon_set s) \<and> partial_inj (root_map s)\<rbrace>"
   apply_trace (vcg vcg: rt_map_update_partial)
   (* how to use rt_map_update_partial with vcg *)
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
   apply (rule conjI)
    apply (rule assigned_rt_map_update)
-   apply (clarsimp simp: asid_assumption_def)
-  apply (rule_tac rt = rt in  parital_inj_uodate ; clarsimp simp: kernel_state_def)
+   apply (clarsimp simp: asid_assumption_def  assigned_asids_consistent_def assigned_asid_va_map_def ran_def)
+   apply force
+  apply (rule_tac rt = rt in  parital_inj_update ; clarsimp simp: kernel_state_def)
 done
 
 
@@ -445,14 +423,14 @@ done
 
 thm pde_comp_def
 
-definition 
+(*definition 
   pde_comp_n :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> (asid \<times> 32 word) set"
 where
   "pde_comp_n a hp1 hp2 rt \<equiv> 
          (\<lambda>x. (a, addr_val x)) ` {va. (\<exists>p1 p2. ptable_lift' hp1 rt va = Some p1 \<and> ptable_lift' hp2 rt va = Some p2 \<and> p1 \<noteq> p2 )   
    (* it won't flush  if it re-maps the page to itself, this might not be consistent with seL4, there is some PR though *)
                                    \<or>  (\<exists>p. ptable_lift' hp1 rt va = Some p \<and> ptable_lift' hp2 rt va = None )}"
-
+*)
 (* pde_comp will work in the case of map and remap, but not in the case of unmap, because pde_comp will still be empty *)
 
 (*  Mapping *)                                                             
@@ -489,27 +467,36 @@ done
 
 lemma  kernel_map_invariant: 
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-         assinged_asids_consistent (root_map s) (incon_set s)  \<and> 
-            (Addr vp r- global_offset) \<in> \<Union>(ptable_trace' (heap s) (root s) ` UNIV) \<and> ((heap s) (Addr vp r- global_offset)) = Some w \<and> 
+             assigned_asids_consistent (root_map s) (incon_set s)  \<and> 
+            (Addr vp r- global_offset) \<in> \<Union>(ptable_trace' (heap s) (root s) ` UNIV) \<and>
+                 ((heap s) (Addr vp r- global_offset)) = Some w \<and> 
                 (decode_pde w = InvalidPDE \<or> decode_pte_small w = InvalidPTE) \<and>  
                (\<exists>p pbits. decode_pde v = SectionPDE p pbits \<or> decode_pte_small v = SmallPagePTE p pbits) \<rbrace>
                           lval ::= rval 
-                  \<lbrace>\<lambda>s. (asid_va_set (asid s)) \<inter> incon_set s = {} \<rbrace>"
+                  \<lbrace>\<lambda>s. {asid s} \<times> UNIV \<inter> incon_set s = {} \<rbrace>"
   apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
-   apply force
+   apply (clarsimp simp: assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
+   apply fastforce
   apply (subgoal_tac "pde_comp (asid s) (heap s) (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) = {}")
    apply clarsimp
-   apply (clarsimp simp: asid_assumption_def assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
-   apply force
+   apply (clarsimp simp: asid_assumption_def assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
+   apply fastforce
   apply (clarsimp simp: pde_comp_def)
+  apply (rule conjI)
+  apply clarsimp
   apply (case_tac "Addr (vp - global_offset) \<notin> ptable_trace' (heap s) (root s) xa")
    apply (frule_tac p = "Addr (vp - global_offset)" and v = v in  ptable_lift_preserved' [rotated] ; clarsimp)
   apply clarsimp
   apply (erule disjE)
-   apply (clarsimp simp: ptrace_invalid_ptable_lift_none)+
- done
+    apply (clarsimp simp: ptrace_invalid_ptable_lift_none)
+   apply (clarsimp simp: ptrace_invalid_ptable_lift_none)
+   apply clarsimp
+ 
+  (* do later *)
+   
+
+oops
 
 
 lemma  kernel_map_invariant': 

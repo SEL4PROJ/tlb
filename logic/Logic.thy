@@ -173,6 +173,13 @@ lemma ptable_trace_pde_comp:
   using Let_def by auto
 
 
+lemma pde_comp_empty:
+  "p \<notin> \<Union>(ptable_trace' h r ` UNIV) \<Longrightarrow> pde_comp a  h (h(p \<mapsto> v)) r = {}"
+  apply (drule union_imp_all)
+  by (clarsimp simp: ptable_trace_pde_comp)
+
+
+
 lemma plift_equal_not_in_pde_comp [simp]:
   "\<lbrakk> ptable_lift' h1 r (Addr va) =  Some pa ; ptable_lift' h2 r (Addr va) = Some pa \<rbrakk> \<Longrightarrow>  
             (a, va) \<notin> pde_comp a h1 h2 r"

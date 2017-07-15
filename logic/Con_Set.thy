@@ -32,4 +32,15 @@ lemma flush_ASID_va_mem_write':
    by vcg
 
 
+
+lemma [simp]:
+  "con_set va (s\<lparr>heap := hp ,  incon_set := iset , mode := m\<rparr>) =  con_set va (s\<lparr>incon_set := iset\<rparr>) "
+  by (clarsimp simp: con_set_def)
+
+
+lemma [simp]:
+  "con_set V (s\<lparr>heap := hp, incon_set := iset \<rparr>) = con_set V (s\<lparr>incon_set := iset\<rparr>)"
+ by (clarsimp simp: con_set_def)
+
+
 end

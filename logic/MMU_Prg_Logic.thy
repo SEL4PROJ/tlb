@@ -266,6 +266,9 @@ lemma ptable_lift_m_implies_ptlift:
   by (clarsimp simp: ptable_lift_m_def ptable_lift'_def lookup_pde_perm_def filter_pde_def user_perms_def split: option.splits split_if_asm)   
 
 
+lemma union_imp_all:
+  "p \<notin> \<Union>(ptable_trace' h r ` UNIV) \<Longrightarrow> \<forall>x. p \<notin> ptable_trace' h r x"
+  by (clarsimp)
 
 (* tagged heap *)
 
@@ -290,16 +293,16 @@ where
 
 
 definition
-  first_level_defined_page_table :: "paddr \<Rightarrow> heap \<Rightarrow> heap_typ \<Rightarrow>  bool"
+  first_level_defined_page_table :: "heap \<Rightarrow> heap_typ \<Rightarrow> paddr \<Rightarrow> bool"
 where
-  "first_level_defined_page_table r h ht \<equiv> \<forall>v. \<exists>pde. get_pde' h r v = Some pde \<and> 
+  "first_level_defined_page_table  h ht r \<equiv> \<forall>v. \<exists>pde. get_pde' h r v = Some pde \<and> 
                 (\<forall>x\<in>\<Union>(ptable_trace' h r ` UNIV). ht x = page_table)"
 
 
 definition
-  page_tables_of_roots :: "paddr set \<Rightarrow> heap \<Rightarrow> heap_typ \<Rightarrow>  bool"
+  page_tables_of_roots :: "heap \<Rightarrow> heap_typ \<Rightarrow> paddr set \<Rightarrow>  bool"
 where
-  "page_tables_of_roots rset h ht \<equiv> \<forall>r\<in>rset. \<forall>v. \<exists>pde. get_pde' h r v = Some pde \<and> 
+  "page_tables_of_roots h ht rset \<equiv> \<forall>r\<in>rset. \<forall>v. \<exists>pde. get_pde' h r v = Some pde \<and> 
         (\<forall>x\<in>\<Union>(ptable_trace' h r ` UNIV). ht x = page_table)"
 
 
@@ -311,13 +314,13 @@ where
 definition
   current_page_table :: "p_state \<Rightarrow> bool"
 where
-  "current_page_table s \<equiv> first_level_defined_page_table (root s) (heap s) (tagged_heap s)"
+  "current_page_table s \<equiv> first_level_defined_page_table (heap s) (tagged_heap s)  (root s)"
 
 
 definition
   page_tables :: "p_state \<Rightarrow> bool"
 where
-  "page_tables s \<equiv> page_tables_of_roots (root_log s) (heap s) (tagged_heap s)"
+  "page_tables s \<equiv> page_tables_of_roots (heap s) (tagged_heap s) (root_log s)"
 
 
 
@@ -380,6 +383,9 @@ definition
   vspace_section_entry :: "heap \<Rightarrow> paddr \<Rightarrow> pde \<Rightarrow> vaddr set"
 where
   "vspace_section_entry h r pde  \<equiv> {va. get_pde' h r va = Some pde}"
+
+
+
 
 
 

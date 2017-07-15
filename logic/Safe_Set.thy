@@ -29,17 +29,6 @@ where
  
 
 
-lemma [simp]:
-  "ptrace_set V (s\<lparr>heap := hp, incon_set := iset \<rparr>) = ptrace_set V (s\<lparr>heap := hp\<rparr>)"
- by (clarsimp simp: ptrace_set_def)
-
-
-lemma [simp]:
-  "con_set V (s\<lparr>heap := hp, incon_set := iset \<rparr>) = con_set V (s\<lparr>incon_set := iset\<rparr>)"
- by (clarsimp simp: con_set_def)
-
-
-
 lemma cons_set_preserved:
   "\<lbrakk> \<forall>va\<in>SM. \<exists>p.  ptable_lift_m (heap s) (root s) (mode s) (Addr va) = Some p \<and> p \<notin> ptrace_set SM s;
           \<forall>va\<in>SM. (asid s, va) \<notin> incon_set s; p \<notin> ptrace_set SM s; va \<in> SM\<rbrakk>  \<Longrightarrow> 
@@ -186,8 +175,14 @@ lemma  user_safe_set_established:
   apply vcg
   by (clarsimp simp: safe_set_def con_set_def)
   
+lemma [simp]:
+  "safe_memory va (s\<lparr>heap := hp , incon_set := iset , mode := m\<rparr>) =  safe_memory va (s\<lparr>heap := hp , mode := m\<rparr>)"
+  by (clarsimp simp: safe_memory_def ptrace_set_def)
 
 
+lemma [simp]:
+  "ptrace_set V (s\<lparr>heap := hp, incon_set := iset \<rparr>) = ptrace_set V (s\<lparr>heap := hp\<rparr>)"
+ by (clarsimp simp: ptrace_set_def)
 
 
 end
