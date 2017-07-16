@@ -463,6 +463,92 @@ lemma ptrace_invalid_ptable_lift_none:
   apply (clarsimp simp: decode_pde_def decode_pte_small_def Let_def)
 done
 
+(* have specific theorem for map, remap and unmap condition and pde_comp, will make life easier *)
+
+
+
+thm pde_comp_def
+(* true only for remap *)
+lemma        
+  "pde_comp a h (h(p \<mapsto> v)) r = {a} \<times> addr_val `{va. p \<in> ptable_trace' h t va}"
+  apply (clarsimp simp: pde_comp_def ptable_trace'_def Let_def)
+oops
+
+lemma ptable_trace_get_pde:
+  "\<lbrakk>p \<notin> ptable_trace' h r x;  get_pde' h r x = Some pde\<rbrakk>  \<Longrightarrow> 
+                   get_pde' (h(p \<mapsto> v)) r x = Some pde"
+  apply (clarsimp simp: ptable_trace'_def Let_def get_pde'_def decode_heap_pde'_def )
+  by (case_tac " decode_pde z" ; clarsimp)
+
+
+lemma ptable_trace_get_pte:
+  "\<lbrakk>p \<notin> ptable_trace' h r x;  get_pde' h r x = Some (PageTablePDE x3) ; get_pte' h x3 x = Some x2\<rbrakk> \<Longrightarrow> 
+             get_pte' (h(p \<mapsto> v)) x3 x = Some x2"
+  apply (subgoal_tac "get_pde' (h(p \<mapsto> v)) r x = Some (PageTablePDE x3)")
+   prefer 2
+   apply (clarsimp simp: ptable_trace_get_pde)
+  by (clarsimp simp: ptable_trace'_def Let_def get_pde'_def get_pte'_def decode_heap_pde'_def decode_heap_pte'_def)
+  
+
+lemma ptable_trace_lookup_pte:
+  "\<lbrakk>p \<notin> ptable_trace' h r x;  get_pde' h r x = Some (PageTablePDE x3); lookup_pte' (h(p \<mapsto> v)) x3 x = None\<rbrakk> \<Longrightarrow>
+                lookup_pte' h x3 x = None"
+  apply (clarsimp simp: lookup_pte'_def  Let_def)
+  apply (clarsimp split: option.splits)
+   by (clarsimp simp: ptable_trace_get_pte)+
+ 
+
+
+lemma   map_pde_comp_empty:     
+  "h p = Some w \<and> (decode_pde w = InvalidPDE \<or> decode_pte_small w = InvalidPTE) \<Longrightarrow>  
+         pde_comp a h (h(p \<mapsto> v)) r = {}"
+  apply (clarsimp simp: pde_comp_def)
+  apply (rule conjI)
+   apply clarsimp
+   apply (case_tac "p \<notin> ptable_trace' h r x")
+    apply (frule_tac p = p and v = v in  ptable_lift_preserved' [rotated] ; clarsimp)
+   apply clarsimp
+   apply (erule disjE)
+    apply (clarsimp simp: ptrace_invalid_ptable_lift_none)
+   apply (clarsimp simp: ptrace_invalid_ptable_lift_none)
+  apply clarsimp
+  apply (case_tac "p \<notin> ptable_trace' h r x")
+   apply (clarsimp simp: ptable_lift'_def lookup_pde'_def)
+   apply (clarsimp split: option.splits)
+    apply (case_tac x2 ; clarsimp)
+     apply (case_tac "ptable_trace' h r x = {}")
+      apply clarsimp
+      apply (clarsimp simp: ptable_trace'_def Let_def split:option.splits)
+       apply (clarsimp simp: get_pde'_def)
+      apply (clarsimp simp: get_pde'_def)
+     apply (clarsimp simp: ptable_trace_get_pde)
+    apply (clarsimp simp: ptable_trace_get_pde)
+   apply (case_tac x2 ; clarsimp)
+     apply (clarsimp simp: ptable_trace_get_pde)
+    apply (clarsimp simp: ptable_trace_get_pde)
+   apply (clarsimp simp: ptable_trace_get_pde)
+   apply (clarsimp simp: ptable_trace_lookup_pte)
+  apply clarsimp
+  apply (erule_tac disjE)
+   apply (clarsimp simp: ptable_trace'_def Let_def split:option.splits)
+   apply (clarsimp simp: ptable_lift'_def lookup_pde'_def get_pde'_def)
+   apply (case_tac x2 ; clarsimp)
+    apply (erule disjE)
+     apply (clarsimp simp: lookup_pte'_def get_pte'_def decode_heap_pte'_def decode_pde_def decode_pte_def decode_pte_small_def
+                     decode_pde_pt_def  decode_pde_section_def Let_def split:split_if_asm)
+     apply word_bitwise apply force
+    apply (clarsimp simp: decode_heap_pde'_def)
+   apply (clarsimp simp: decode_heap_pde'_def)
+  apply (clarsimp simp: ptable_trace'_def Let_def split:option.splits)
+  apply (clarsimp simp: ptable_lift'_def lookup_pde'_def get_pde'_def)
+  apply (case_tac x2 ; clarsimp)
+   apply (erule disjE)
+    apply (clarsimp simp: lookup_pte'_def get_pte'_def decode_heap_pte'_def  decode_pte_def)
+   apply (clarsimp simp: decode_heap_pde'_def decode_pde_def decode_pte_def decode_pte_small_def
+         decode_pde_pt_def  decode_pde_section_def Let_def split:split_if_asm)
+  apply (clarsimp simp: decode_pte_small_def)
+done
+
 
 
 lemma  kernel_map_invariant: 
@@ -482,44 +568,27 @@ lemma  kernel_map_invariant:
    apply clarsimp
    apply (clarsimp simp: asid_assumption_def assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
    apply fastforce
-  apply (clarsimp simp: pde_comp_def)
-  apply (rule conjI)
-  apply clarsimp
-  apply (case_tac "Addr (vp - global_offset) \<notin> ptable_trace' (heap s) (root s) xa")
-   apply (frule_tac p = "Addr (vp - global_offset)" and v = v in  ptable_lift_preserved' [rotated] ; clarsimp)
-  apply clarsimp
-  apply (erule disjE)
-    apply (clarsimp simp: ptrace_invalid_ptable_lift_none)
-   apply (clarsimp simp: ptrace_invalid_ptable_lift_none)
-   apply clarsimp
- 
-  (* do later *)
-   
+  apply (clarsimp simp: map_pde_comp_empty)
+ done
 
-oops
+
 
 
 lemma  kernel_map_invariant': 
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-         assinged_asids_consistent (root_map s) (incon_set s)  \<and> 
+         assigned_asids_consistent (root_map s) (incon_set s)  \<and> 
             (Addr vp r- global_offset) \<in> \<Union>(ptable_trace' (heap s) (root s) ` UNIV) \<and> ((heap s) (Addr vp r- global_offset)) = Some w \<and> 
                 (decode_pde w = InvalidPDE \<or> decode_pte_small w = InvalidPTE) \<and>  
                (\<exists>p pbits. decode_pde v = SectionPDE p pbits \<or> decode_pte_small v = SmallPagePTE p pbits) \<rbrace>
                           lval ::= rval 
-                  \<lbrace>\<lambda>s. assinged_asids_consistent (root_map s) (incon_set s) \<rbrace>"
+                  \<lbrace>\<lambda>s. assigned_asids_consistent (root_map s) (incon_set s) \<rbrace>"
   apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
-   apply force
+   apply (clarsimp simp: assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
+   apply fastforce
   apply (subgoal_tac "pde_comp (asid s) (heap s) (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) = {}")
    prefer 2
-   apply (clarsimp simp: pde_comp_def)
-   apply (case_tac "Addr (vp - global_offset) \<notin> ptable_trace' (heap s) (root s) xa")
-    apply (frule_tac p = "Addr (vp - global_offset)" and v = v in  ptable_lift_preserved' [rotated] ; clarsimp)
-   apply clarsimp
-   apply (erule disjE)
-    apply (clarsimp simp: ptrace_invalid_ptable_lift_none)
-   apply (clarsimp simp: ptrace_invalid_ptable_lift_none)
+   apply (clarsimp simp: map_pde_comp_empty)
   by clarsimp
 
 (*  there should be multiple assignments, if we are updating the  different levels of page tables *)
@@ -536,15 +605,13 @@ lemma  kernel_map_invariant':
 
 lemma  
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-         assinged_asids_consistent (root_map s) (incon_set s)  \<and>  rt \<in> root_log s \<and> rt \<noteq> root s \<and>
+         assigned_asids_consistent (root_map s) (incon_set s)  \<and>  rt \<in> root_log s \<and> rt \<noteq> root s \<and>
             (Addr vp r- global_offset) \<in> \<Union>(ptable_trace' (heap s) rt ` UNIV) \<and> ((heap s) (Addr vp r- global_offset)) = Some w \<and> (decode_pde w = InvalidPDE \<or> decode_pte_small w = InvalidPTE) \<and>  
                (\<exists>p pbits. decode_pde v = SectionPDE p pbits \<or> decode_pte_small v = SmallPagePTE p pbits) \<rbrace>
                              lval ::= rval 
                   \<lbrace>\<lambda>s. some_invariant \<rbrace>"
  
 oops
-
-
 
 
 
@@ -555,93 +622,87 @@ find_theorems "Flush (flushASID _)"
 
 lemma  remap_section_entry_current_page_table:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-             assinged_asids_consistent (root_map s) (incon_set s)  \<and> 
+             assigned_asids_consistent (root_map s) (incon_set s)  \<and> 
              (Addr vp r- global_offset) \<in> \<Union>(ptable_trace' (heap s) (root s) ` UNIV) \<and> 
                 ((heap s) (Addr vp r- global_offset)) = Some w \<and> (\<exists>p pbits. decode_pde w = SectionPDE p pbits) \<and>  
                    (\<exists>p pbits. decode_pde v = SectionPDE p pbits) \<and> asid s = a \<rbrace>
                           lval ::= rval ;; Flush (flushASID a)
-                  \<lbrace>\<lambda>s. (asid_va_set (asid s)) \<inter> incon_set s = {} \<rbrace>"
+                  \<lbrace>\<lambda>s. {asid s} \<times> UNIV \<inter> incon_set s = {} \<rbrace>"
 (* simple to prove in case of asid flush, it should be va flush *)
   apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
-   apply force
+   apply (clarsimp simp: assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
+   apply fastforce
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
-  apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def )
   by force
 
 
 lemma remap_section_entry_inactive_page_table:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-         assinged_asids_consistent (root_map s) (incon_set s)  \<and> rt \<in> root_log s \<and> rt \<noteq> root s \<and>  (* remove this condition later *)
+         assigned_asids_consistent (root_map s) (incon_set s)  \<and> rt \<in> root_log s \<and> rt \<noteq> root s \<and>  (* remove this condition later *)
                   (Addr vp r- global_offset) \<in> \<Union>(ptable_trace' (heap s) rt ` UNIV) \<and> ((heap s) (Addr vp r- global_offset)) = Some w \<and> (\<exists>p pbits. decode_pde w = SectionPDE p pbits) \<and>  
                    (\<exists>p pbits. decode_pde v = SectionPDE p pbits) \<and> root_map s rt = Some a \<rbrace>
                      lval ::= rval ;; Flush (flushASID a)
-                  \<lbrace>\<lambda>s. assinged_asids_consistent (root_map s) (incon_set s) \<rbrace>"
+                  \<lbrace>\<lambda>s. assigned_asids_consistent (root_map s) (incon_set s) \<rbrace>"
+   (* do it with kernel_writing_to_inactive_process_page_table_and_flush *)
   apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
-   apply force
+   apply (clarsimp simp: assigned_asids_consistent_def  assigned_asid_va_map_def ran_def kernel_state_def)
+   apply auto [1]
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
   apply (subgoal_tac "pde_comp (asid s) (heap s) (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) = {}")
-   prefer 2
-   apply (clarsimp simp: pde_comp_def)
-   apply (subgoal_tac  "Addr (vp - global_offset) \<notin> ptable_trace' (heap s) (root s) xa")
-    apply (frule_tac p = "Addr (vp - global_offset)" and v = v in  ptable_lift_preserved' [rotated] ; clarsimp)
-   apply (clarsimp simp: kernel_state_def non_overlapping_page_tables_def)
-   apply (drule_tac x = "root s" in spec)
-   apply (drule_tac x = rt in spec)
    apply clarsimp
+   apply (clarsimp simp: assigned_asids_consistent_def)
    apply force
-  using assinged_asids_consistent_def by force
-  
- 
+  apply (rule ptable_trace_pde_comp)
+  apply (clarsimp simp: kernel_state_def)
+  apply (frule_tac rt = rt and rt' = "root s" and hp = "heap s" and p = "Addr vp r- global_offset" in non_overlapping_page_tables_ptrace ; clarsimp)
+  by force
+
+
 
 lemma  remap_scond_level_entry_inactive_page_table:   (* not relevant to entries as we are flushing asid, will be relevant if we flush vadder set *)
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-             assinged_asids_consistent (root_map s) (incon_set s)  \<and> 
+             assigned_asids_consistent (root_map s) (incon_set s)  \<and> 
              (Addr vp r- global_offset) \<in> \<Union>(ptable_trace' (heap s) (root s) ` UNIV) \<and> 
                 ((heap s) (Addr vp r- global_offset)) = Some w \<and> (\<exists>p pbits. decode_pte w = SmallPagePTE p pbits) \<and>  
                    (\<exists>p pbits. decode_pte v = SmallPagePTE p pbits) \<and> asid s = a \<rbrace>
                           lval ::= rval ;; Flush (flushASID a)
-                  \<lbrace>\<lambda>s. (asid_va_set (asid s)) \<inter> incon_set s = {} \<rbrace>"
+                  \<lbrace>\<lambda>s. {asid s} \<times> UNIV \<inter> incon_set s = {} \<rbrace>"
  apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
-   apply force
+   apply (clarsimp simp: assigned_asids_consistent_def assigned_asid_va_map_def ran_def kernel_state_def)
+   apply fastforce
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
-  apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def )
   by force
 
 
 lemma remap_second_level_entry_inactive_page_table:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region' s \<and>
-         assinged_asids_consistent (root_map s) (incon_set s)  \<and> rt \<in> root_log s \<and> rt \<noteq> root s \<and>  (* remove this condition later *)
+         assigned_asids_consistent (root_map s) (incon_set s)  \<and> rt \<in> root_log s \<and> rt \<noteq> root s \<and>  (* remove this condition later *)
                   (Addr vp r- global_offset) \<in> \<Union>(ptable_trace' (heap s) rt ` UNIV) \<and> ((heap s) (Addr vp r- global_offset)) = Some w \<and> (\<exists>p pbits. decode_pte w = SmallPagePTE p pbits) \<and>  
                    (\<exists>p pbits. decode_pte v = SmallPagePTE p pbits) \<and> root_map s rt = Some a \<rbrace>
                      lval ::= rval ;; Flush (flushASID a)
-                  \<lbrace>\<lambda>s. assinged_asids_consistent (root_map s) (incon_set s) \<rbrace>"
+                  \<lbrace>\<lambda>s. assigned_asids_consistent (root_map s) (incon_set s) \<rbrace>"
+  (* same proof as remap_section_entry_inactive_page_table *)
   apply_trace (vcg vcg:  assign_sound)
   apply (rule conjI)
-   apply (clarsimp simp: assinged_asids_consistent_def asids_va_set_def set_of_assigned_asids_def asid_va_set_def kernel_state_def)
-   apply force
+   apply (clarsimp simp: assigned_asids_consistent_def  assigned_asid_va_map_def ran_def kernel_state_def)
+   apply auto [1]
   apply (rule conjI)
    apply (clarsimp simp: kernel_state_def)
   apply (subgoal_tac "pde_comp (asid s) (heap s) (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) = {}")
-   prefer 2
-   apply (clarsimp simp: pde_comp_def)
-   apply (subgoal_tac  "Addr (vp - global_offset) \<notin> ptable_trace' (heap s) (root s) xa")
-    apply (frule_tac p = "Addr (vp - global_offset)" and v = v in  ptable_lift_preserved' [rotated] ; clarsimp)
-   apply (clarsimp simp: kernel_state_def non_overlapping_page_tables_def)
-   apply (drule_tac x = "root s" in spec)
-   apply (drule_tac x = rt in spec)
    apply clarsimp
+   apply (clarsimp simp: assigned_asids_consistent_def)
    apply force
-  using assinged_asids_consistent_def by force
-  
+  apply (rule ptable_trace_pde_comp)
+  apply (clarsimp simp: kernel_state_def)
+  apply (frule_tac rt = rt and rt' = "root s" and hp = "heap s" and p = "Addr vp r- global_offset" in non_overlapping_page_tables_ptrace ; clarsimp)
+  by force
+
 (*  above four theorems should be combined in one case *)
 
 thm get_pte'_def
