@@ -207,7 +207,7 @@ end
 
 
 lemma  mmu_translate_det_refine:
-  "\<lbrakk> mmu_translate va s = (pa, s'); consistent (typ_det_tlb t) va;  tlb_rel (typ_det_tlb s) (typ_det_tlb t); no_faults (tlb_det_set t)\<rbrakk> \<Longrightarrow>
+  "\<lbrakk> mmu_translate va s = (pa, s'); consistent (typ_det_tlb t) va;  tlb_rel (typ_det_tlb s) (typ_det_tlb t)\<rbrakk> \<Longrightarrow>
      let (pa', t') = mmu_translate va t
          in pa' = pa \<and> consistent (typ_det_tlb t') va \<and> tlb_rel (typ_det_tlb s') (typ_det_tlb t')"
   apply (frule (1) tlb_rel_consistent , clarsimp)
@@ -238,7 +238,7 @@ done
 
 (* refinement between eviction and deterministic TLB lookups *)
 lemma  mmu_translate_non_det_det_refine:
-  "\<lbrakk> mmu_translate va s = (pa, s');  consistent (typ_det_tlb t) va; tlb_rel (typ_tlb s) (typ_det_tlb t) ; no_faults (tlb_det_set t) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> mmu_translate va s = (pa, s');  consistent (typ_det_tlb t) va; tlb_rel (typ_tlb s) (typ_det_tlb t)  \<rbrakk> \<Longrightarrow>
     let (pa', t') = mmu_translate va t
      in pa' = pa  \<and> consistent (typ_det_tlb t') va \<and> tlb_rel (typ_tlb s') (typ_det_tlb t')"
   apply (frule (1) tlb_rel_consistent , clarsimp)
@@ -492,7 +492,7 @@ thm lookup_pde_def
 
 
 lemma not_member_incon_consistent':
-  "\<lbrakk>(ASID s , addr_val va) \<notin>  asid_va_incon_tlb_mem (typ_sat_no_flt_tlb s); saturated_no_flt (typ_sat_no_flt_tlb s) ; no_faults (tlb_sat_no_flt_set s)  \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>(ASID s , addr_val va) \<notin>  asid_va_incon_tlb_mem (typ_sat_no_flt_tlb s) \<rbrakk> \<Longrightarrow> 
          consistent (typ_sat_no_flt_tlb s) va"
   apply (clarsimp simp: asid_va_incon_tlb_mem_def asid_va_incon_def asid_va_hit_incon_def)
   apply (clarsimp simp: lookup_def consistent0_def split: split_if_asm)
@@ -500,8 +500,7 @@ lemma not_member_incon_consistent':
 
 
 lemma tlb_rel_abs_consistent':
-  "\<lbrakk>(ASID t, addr_val va) \<notin> (tlb_incon_set' t) ;   tlb_rel_abs' (typ_sat_no_flt_tlb s) (typ_incon' t) ; 
-        saturated_no_flt  (typ_sat_no_flt_tlb s) ; no_faults (tlb_sat_no_flt_set s) \<rbrakk>  \<Longrightarrow> 
+  "\<lbrakk>(ASID t, addr_val va) \<notin> (tlb_incon_set' t) ;   tlb_rel_abs' (typ_sat_no_flt_tlb s) (typ_incon' t) \<rbrakk>  \<Longrightarrow> 
            consistent (typ_sat_no_flt_tlb s) va " 
   apply (rule not_member_incon_consistent' ; clarsimp)
   apply (clarsimp simp: tlb_rel_abs'_def)
@@ -1298,7 +1297,7 @@ lemma
 
 
 
-lemma
+lemma lookup_hit_mis_hit:
   " lookup (t1 \<union> t2) a va = Hit x \<and> lookup t2 a va = Miss \<Longrightarrow> lookup t1 a va = Hit x   "
   apply (clarsimp simp: lookup_def entry_set_def split: split_if_asm)
   apply auto
@@ -1523,16 +1522,15 @@ done
 
 
 lemma  lookup_miss_is_fault:
-  "lookup {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e} (ASID b) bd = Miss \<Longrightarrow> is_fault (pt_walk (ASID b) (MEM bc) (TTBR0 b) (Addr bd))"
+  "lookup {e \<in> range (pt_walk a m r). \<not> is_fault e} a v = Miss \<Longrightarrow> is_fault (pt_walk a m r (Addr v))"
   apply (clarsimp simp: lookup_def entry_set_def split: split_if_asm)
-  by (drule_tac x = "pt_walk (ASID b) (MEM bc) (TTBR0 b) (Addr bd)" in spec, clarsimp simp: asid_va_entry_range_pt_entry)
+  by (drule_tac x = "pt_walk a m r (Addr v)" in spec, clarsimp simp: asid_va_entry_range_pt_entry)
 
 
 
 lemma lookup_range_fault_pt_walk:
-  "\<lbrakk>lookup {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e} (ASID b) bd = Hit x\<rbrakk>  \<Longrightarrow> 
-                     \<forall>va\<in> entry_range x. x = pt_walk (ASID b) (MEM bc) (TTBR0 b) (Addr va)"
-  apply (subgoal_tac "x \<in> {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e}")
+  "\<lbrakk>lookup {e \<in> range (pt_walk a m r). \<not> is_fault e} a v = Hit x\<rbrakk>  \<Longrightarrow>  \<forall>va\<in> entry_range x. x = pt_walk a m r (Addr va)"
+  apply (subgoal_tac "x \<in> {e \<in> range (pt_walk a m r). \<not> is_fault e}")
    prefer 2
    using  lookup_in_tlb apply force
   apply clarsimp
