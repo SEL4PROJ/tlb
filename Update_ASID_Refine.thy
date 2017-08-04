@@ -173,14 +173,10 @@ lemma update_asid_sat_no_flt_abs_refine:
          tlb_rel_abs' (typ_sat_no_flt_tlb (s\<lparr>ASID := a\<rparr>)) (typ_incon' t);   \<forall>va. (a, va) \<notin> (tlb_incon_set' t) \<rbrakk> \<Longrightarrow> 
                     tlb_rel_abs' (typ_sat_no_flt_tlb s') (typ_incon' t') \<and>  (\<forall>va. (a, va) \<notin> (tlb_incon_set' t'))"
   apply (subgoal_tac "tlb_sat_no_flt_set s = tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e} ")
-   apply rule
-    prefer 2
-    apply (clarsimp simp: update_asid_tlb_sat_no_flt_state_ext_def update_asid_tlb_incon_state'_ext_def)
-   apply (clarsimp simp: update_asid_tlb_sat_no_flt_state_ext_def update_asid_tlb_incon_state'_ext_def)
-   apply (clarsimp simp: tlb_rel_abs'_def)
+   apply (clarsimp simp: update_asid_tlb_sat_no_flt_state_ext_def update_asid_tlb_incon_state'_ext_def tlb_rel_abs'_def)
    apply (cases s, cases t , clarsimp simp: state.defs)
-  apply (clarsimp simp:  tlb_rel_abs'_def saturated_no_flt_def) apply force
-done
+  apply (clarsimp simp:  tlb_rel_abs'_def saturated_no_flt_def) by force
+
  
 
 (*
