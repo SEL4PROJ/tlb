@@ -1,0 +1,11 @@
+Ins_cycle.thy
+  contains Fetch, Decode and Run theorems for 
+      load register
+       ldr r1,[r2,#4]
+
+
+
+Ins_cycle1.thy
+  contains Fetch, Decode and Run theorems for 
+      store register
+      str r1,[r2,#4]

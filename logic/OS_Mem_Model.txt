@@ -1,0 +1,72 @@
+Example OS:
+
+Page Table Management:
+
+Page tables consist of two levels
+   Page Directory    (First Level)
+   Page Table        (Second Level)
+
+Each Process has its own non-shared page directory and page table
+
+Page Directory of a process looks like (in Physical Memory)
+
+In virtual address space, a specific higher range of addresses are mapped to the High Memory of page directory, and lower range is mapped to User Mappings
+
+The kernel maps itself using Global Mappings, they are all section entries and provide a constant (offset based) address translation to the kernel virtual addresses
+
+Global Mappings are set at the boot, and they remain constant (write protected) during the execution, for every process
+
+User Mappings can be either small page, or super section (Gerwin confirmed that User can have sections assigned to them)
+
+User can not access kernel mappings
+
+Kernel can access all of the page table, but it does so using Global Mappings
+
+Page Directory and page table is present in kernel addressable memory
+
+Kernel code is also write protected, even by the kernel itself
+
+Non-overlapping page tables for different processes, means that although two or more processes can share a page, but they have separate page table entries for them
+
+Root of the page directories are stored in a “root log” of the current state
+
+Kernel can write to the user mappings of the active or inactive processes
+
+The complete page directory (4KB?) is always present in the memory corresponding to a specific root, the entries may be Valid or Invalid, but all of the virtual address space has some translation trace in the memory
+
+There are 3 types of page table operations
+  	Map:	      invalid to valid (section entry) active/inactive
+                 	      invalid to valid (only second level page table write)  active/inactive
+                         invalid to valid (first and second level writes)    active/inactive
+  	ReMap:  valid to valid (section entry)    active/inactive
+                         valid to valid (only second level page table write)    active/inactive
+                         valid to valid (first and second level writes)   active/inactive
+  	UnMap:  valid to invalid (section entry)   active/inactive
+                         valid to invalid (only second level page table write)  active/inactive
+                         valid to invalid (first and second level writes)  active/inactive
+
+TLB: 
+“root asid map” contains the assigned asids of the processes
+TLB assumption is that it should be consistent for all the asids, assigned or unassigned (might be little contradictory with the refinement assumption, or may be not)
+TLB is not flushed in case of Map
+TLB is flushed in case of ReMap  (in seL4, we always flush TLB in case of ReMap, I think it should not be flushed if the kernel is remapping the same page, any optimisation? )
+TLB is flushed in case of UnMap
+Flushing can be of asid, or VA set
+
+Boot:
+we assume that incon_set is empty and there is a current page table, root_log contains only the present root, there are global mappings inside the current page table and the current page table is inside the physical memory accessible by the global (kernel) mappings 
+
+Kenrel Execution:
+Kernel can map, re-map and un-map	pages of the active or the inactive processes, and we have to flush (add more later)
+
+Context Switch:
+mode switch
+context switch
+Kernel execution and context/mode switch
+Context/Mode switch and user execution
+
+User Execution:
+User Safe Set
+( Going to add more things (specific to logic etc)later in this file *)
+
+
