@@ -1,6 +1,6 @@
 theory Ins_Cycle
 
-imports MMU_ARM
+imports "../MMU_ARM"
 
 begin               
 
@@ -741,6 +741,8 @@ lemma fetch_ins:
  done
 
 
+
+
 lemma decode_ins:
   "Decode (ARM 0xE5921004) 
 \<lparr>Architecture = ARMv7_A, CP14 = CP14',
@@ -827,62 +829,31 @@ lemma run_ins:
        SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
        tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>  = (() , s')\<rbrakk> \<Longrightarrow>
     REG s' =  Reg_Bank(RName_1usr := of_bl (nat_to_bitstring 16843009), RName_PC := 0x100)"
-  apply (clarsimp simp: Run_def)
-  apply (clarsimp simp: dfn'LoadWord_def)
-  apply (clarsimp simp: NullCheckIfThumbEE_def)
-  apply (clarsimp simp: CurrentInstrSet_def ISETSTATE_def word_cat_def)
-  apply (clarsimp simp: R_def Rmode_def IsSecure_def HaveSecurityExt_def LookUpRName_def Let_def)
-  apply (clarsimp simp:  MemU_def CurrentModeIsNotUser_def BadMode_def)
-  apply (clarsimp simp: MemU_with_priv_def)
-  apply (clarsimp simp: Aligned1_def Align1_def  Reg_Bank_def)
-  (* Remaining *)
-  apply (clarsimp simp: MemA_with_priv_def)
-  apply (clarsimp simp: Aligned1_def Align1_def)
-  apply (clarsimp simp: mmu_read_size_tlb_state_ext_def)
-  apply (clarsimp simp:mmu_translate_tlb_state_ext_def)
-  apply (clarsimp simp: pt_walk_section_MEM' typ_tlb_def state.defs)
+  apply (clarsimp simp: Run_def dfn'LoadWord_def NullCheckIfThumbEE_def CurrentInstrSet_def ISETSTATE_def word_cat_def R_def Rmode_def IsSecure_def HaveSecurityExt_def LookUpRName_def Let_def
+                        MemU_def CurrentModeIsNotUser_def BadMode_def MemU_with_priv_def Aligned1_def Align1_def  Reg_Bank_def)
+  apply (clarsimp simp: MemA_with_priv_def Aligned1_def Align1_def mmu_read_size_tlb_state_ext_def mmu_translate_tlb_state_ext_def
+                         pt_walk_section_MEM' typ_tlb_def state.defs)
   apply (case_tac "lookup ({EntrySection 1 0 (Some 0) 0} -
-    tlb_evict
-    \<lparr>Architecture = ARMv7_A, CP14 = CP14',
+    tlb_evict \<lparr>Architecture = ARMv7_A, CP14 = CP14',
     CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
     SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True,
     IE = True, M = True, NMFI = True, RR = True, SW = True, TE = True, U = False, V = False,
-    VE = True, Z = True, sctlr'rst = 1\<rparr>,
-    VBAR = 1\<rparr>,
+    VE = True, Z = True, sctlr'rst = 1\<rparr>,  VBAR = 1\<rparr>,
     CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True,
     Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
     CurrentCondition = 0xE, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
     MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp',
     SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException,
-    undefined = False, TTBR0 = Addr 0, ASID = 1, \<dots> = {EntrySection 1 0 (Some 0) 0}\<rparr>)
-    1 4 ")
-    apply (clarsimp simp: Let_def)
-    apply (clarsimp simp: pt_walk_section_MEM'_new)
-    apply (clarsimp simp: is_fault_def  va_to_pa_def mask_def)
-    apply (clarsimp simp: pt_walk_section_MEM'_new mask_def)
-    apply (clarsimp simp: mem_read1_def)
-    apply (clarsimp simp: mem1_def)
-    apply (clarsimp simp: MEM'_def)
-    apply (clarsimp simp: UnalignedSupport_def
-   ArchVersion_def write'R_def write'Rmode_def
-   IsSecure_def HaveSecurityExt_def CurrentInstrSet_def
-   ISETSTATE_def LookUpRName_def
-   IncPC_def
-   ThisInstrLength_def BranchTo_def Reg_Bank_def)
+    undefined = False, TTBR0 = Addr 0, ASID = 1, \<dots> = {EntrySection 1 0 (Some 0) 0}\<rparr>)   1 4 ")
+    apply (clarsimp simp: Let_def is_fault_def  va_to_pa_def pt_walk_section_MEM'_new mask_def mem_read1_def   mem1_def MEM'_def)
+    apply (clarsimp simp: UnalignedSupport_def ArchVersion_def write'R_def write'Rmode_def  IsSecure_def HaveSecurityExt_def CurrentInstrSet_def  ISETSTATE_def LookUpRName_def IncPC_def ThisInstrLength_def BranchTo_def Reg_Bank_def)
    apply clarsimp
   apply clarsimp
   apply (subgoal_tac "x3 = EntrySection 1 0 (Some 0) 0")
    apply clarsimp
-   apply (clarsimp simp: is_fault_def va_to_pa_def mask_def)
-   apply (clarsimp simp: mem_read1_def)
-   apply (clarsimp simp: mem1_def)
-   apply (clarsimp simp: MEM'_def)
-   apply (clarsimp simp: UnalignedSupport_def
-  ArchVersion_def write'R_def write'Rmode_def
-  IsSecure_def HaveSecurityExt_def CurrentInstrSet_def
-  ISETSTATE_def LookUpRName_def
-  IncPC_def
-  ThisInstrLength_def BranchTo_def Reg_Bank_def)
+   apply (clarsimp simp: is_fault_def va_to_pa_def mask_def  mem_read1_def mem1_def MEM'_def)
+   apply (clarsimp simp: UnalignedSupport_def ArchVersion_def write'R_def write'Rmode_def IsSecure_def HaveSecurityExt_def CurrentInstrSet_def ISETSTATE_def 
+           LookUpRName_def IncPC_def ThisInstrLength_def BranchTo_def Reg_Bank_def)
   apply (clarsimp simp: lookup_def entry_set_def split:split_if_asm)
    apply blast+
 done
