@@ -1,6 +1,6 @@
 theory RT_Map
                   
-imports Con_set
+imports Con_Set
         
 
 begin               
@@ -23,15 +23,15 @@ lemma  rt_map_none_partial_inj:
 lemma rt_map_update_none_partial:
   "\<Turnstile> \<lbrace> \<lambda>s. mode s = Kernel \<and>  aval rt s = Some v \<and> (\<forall>rt. root_map s rt = None)\<rbrace>
                 UpdateRTMap rt a  \<lbrace>\<lambda>s. partial_inj (root_map s)\<rbrace>"
-  apply vcg
+  apply vcgm
   by (clarsimp simp: partial_inj_def)
 
 
-lemma rt_map_update_partial:   (* for vcg *)
+lemma rt_map_update_partial:   (* for vcgm *)
   "\<Turnstile> \<lbrace> \<lambda>s. mode s = Kernel \<and> 
       aval rt s = Some v \<and> root_map s (Addr v) = None \<and> (\<forall>rt. root_map s rt \<noteq> Some a) \<and> partial_inj (root_map s) \<rbrace>
                 UpdateRTMap rt a  \<lbrace>\<lambda>s. partial_inj (root_map s)\<rbrace>"
-  apply vcg
+  apply vcgm
   unfolding partial_inj_def
   by (metis fun_upd_apply)
 
@@ -39,7 +39,7 @@ lemma rt_map_update_partial':
   "\<Turnstile> \<lbrace> \<lambda>s. mode s = Kernel \<and> aval rt s = Some v \<and>
            root_map s (Addr v) = None \<and> (\<forall>rt. root_map s rt \<noteq> Some a) \<and> partial_inj (root_map s) \<rbrace>
                 UpdateRTMap rt a  \<lbrace>\<lambda>s. partial_inj (root_map s) \<and> root_map s (Addr v) = Some a\<rbrace>"
-  apply vcg
+  apply vcgm
   unfolding partial_inj_def
   by (metis fun_upd_apply)
   
@@ -48,7 +48,7 @@ lemma rt_map_update_not_partial:
   "\<Turnstile> \<lbrace> \<lambda>s. mode s = Kernel \<and> aval rt s = Some v \<and>
            root_map s (Addr v) = None \<and> (\<exists>rt. rt \<noteq> Addr v \<and> root_map s rt = Some a) \<and> partial_inj (root_map s) \<rbrace>
                 UpdateRTMap rt a  \<lbrace>\<lambda>s. \<not>partial_inj (root_map s)\<rbrace>"
-  apply vcg
+  apply vcgm
   (* should be solved from force *)
   unfolding partial_inj_def
   apply (drule_tac x = "rta" in spec)
@@ -92,7 +92,7 @@ where
 lemma rt_map_update_boot_incon_set:
   "\<Turnstile> \<lbrace> \<lambda>s. mode s = Kernel \<and> (\<exists>v. aval rt s = Some v) \<and> incon_set s = {} \<and> (\<forall>rt. root_map s rt = None)\<rbrace>
                 UpdateRTMap rt a  \<lbrace>\<lambda>s. partial_inj (root_map s) \<and> assigned_asid_va_map  (root_map s) \<inter> incon_set s = {} \<rbrace>"
-  apply vcg
+  apply vcgm
   by (clarsimp simp: partial_inj_def)
 
 

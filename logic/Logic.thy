@@ -16,6 +16,12 @@ datatype aexp = Const val
 *)
 
 
+definition
+  mem_read_hp' :: "asid \<Rightarrow> (asid \<times> 32 word) set \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> vaddr \<rightharpoonup> val"
+where
+  "mem_read_hp' a iset hp rt vp \<equiv>  if (a , addr_val vp) \<notin> iset then (ptable_lift' hp rt \<rhd>o load_value_word_hp hp) vp else None" 
+ 
+
 fun aval :: "aexp \<Rightarrow> p_state  \<rightharpoonup> val" where
   "aval (Const c) s = Some c" 
 |
@@ -26,7 +32,7 @@ fun aval :: "aexp \<Rightarrow> p_state  \<rightharpoonup> val" where
          (case (aval e1 s , aval e2 s) of (Some v1, Some v2) \<Rightarrow> Some (f v1 v2) | _ \<Rightarrow> None )"
 |
   "aval (HeapLookup vp) s = 
-         (case (aval vp s) of None \<Rightarrow> None | Some v \<Rightarrow> mem_read_hp (heap s) (root s) (Addr v))"
+         (case (aval vp s) of None \<Rightarrow> None | Some v \<Rightarrow> mem_read_hp' (asid s) (incon_set s) (heap s) (root s) (Addr v))"
 (*
    just leaving it here, to be removed later
 |                                                             
@@ -36,19 +42,28 @@ fun aval :: "aexp \<Rightarrow> p_state  \<rightharpoonup> val" where
 *)
 
 
+
+(* there might be a potential mistake in heap lookup, mem_read_hp is not taking incon_set into account, correct should be
+  "aval (HeapLookup vp) s = 
+         (case (aval vp s) of None \<Rightarrow> None | Some v \<Rightarrow> mem_read_hp' (asid s) (incon_set s) (heap s) (root s) (Addr v))"
+
+   *)
+
+
+
 (* simplification theorems for the aval *)
 
-lemma aval_state_incon_eq[simp]:
+(*lemma aval_state_incon_eq[simp]:
   "(aval e (s\<lparr>incon_set := iset\<rparr>) = Some v) = (aval e s = Some v)"
-  by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
+  by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)*)
 
 lemma aval_state_mode_eq[simp]:
   "(aval e (s\<lparr>mode := m\<rparr>) = Some v) = (aval e s = Some v)"
   by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
 
-lemma aval_state_incon_mode_eq[simp]:
+(*lemma aval_state_incon_mode_eq[simp]:
   "(aval e (s\<lparr>incon_set := iset, mode := m\<rparr>) = Some v) = (aval e s = Some v)"
-  by clarsimp
+  by clarsimp*)
 
 
 lemma aval_state_rt_map_eq[simp]:
@@ -99,8 +114,6 @@ datatype com =  SKIP
              |  SetMode mode_t
              
             
-
-
 fun
   flush_effect ::"flush_type \<Rightarrow> (asid \<times> 32 word) set \<Rightarrow> (asid \<times> 32 word) set"
 where
@@ -113,77 +126,84 @@ where
   "flush_effect (flushASIDva a va) iset = {av\<in>iset. fst av \<noteq> a \<and> snd av \<noteq> (addr_val va)}"
 
 
-(*
+type_synonym vSm = "20 word"
+type_synonym pSm = "20 word"
 
-definition 
-  pde_comp :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> (asid \<times> 32 word) set"
-where
-  "pde_comp a hp1 hp2 rt \<equiv> 
-         (\<lambda>x. (a, addr_val x)) ` {va. \<exists>x1 x2. lookup_pde' hp1 rt va = Some x1 \<and> lookup_pde' hp2 rt va = Some x2 \<and> 
-                                       lookup_pde' hp1 rt va \<noteq> lookup_pde' hp2 rt va }"                                   
-*)
+type_synonym vSe = "12 word"
+type_synonym pSe = "12 word"
 
-(* wrong *)
+type_synonym asid  = "8 word" 
+type_synonym fl     = "8 word"
 
-(*definition 
-  pde_comp :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> (asid \<times> 32 word) set"
-where
-  "pde_comp a hp1 hp2 rt \<equiv> 
-         (\<lambda>x. (a, addr_val x)) ` {va. \<exists>x1 x2. lookup_pde' hp1 rt va = Some x1 \<and> lookup_pde' hp2 rt va = Some x2 \<and> 
-                                       x1 \<noteq> x2 }"
-*)
+type_synonym va    = "32 word" 
+ 
 
-
-(*definition 
-  pde_comp :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> (asid \<times> 32 word) set"
-where
-  "pde_comp a hp1 hp2 rt \<equiv> 
-         (\<lambda>x. (a, addr_val x)) ` {va. \<exists>p1 p2. ptable_lift' hp1 rt va = Some p1 \<and> ptable_lift' hp2 rt va = Some p2 \<and> p1 \<noteq> p2 }"
-*)
+datatype tlb_entry = 
+    EntrySmall   asid vSm "pSm option" fl
+  | EntrySection asid vSe "pSe option" fl
 
 
 definition 
-  pde_comp :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> (asid \<times> 32 word) set"
+ pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
 where
-  "pde_comp a hp1 hp2 rt \<equiv> 
-         (\<lambda>x. (a, addr_val x)) ` {va. (\<exists>p1 p2. ptable_lift' hp1 rt va = Some p1 \<and> ptable_lift' hp2 rt va = Some p2 \<and> p1 \<noteq> p2 )  \<or> 
-                                      (\<exists>p. ptable_lift' hp1 rt va = Some p \<and> ptable_lift' hp2 rt va = None )}"
+  "pt_walk a h rt v \<equiv>
+      case get_pde' h rt v
+       of None                 \<Rightarrow> EntrySection a (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some InvalidPDE       \<Rightarrow> EntrySection a (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some ReservedPDE      \<Rightarrow> EntrySection a (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some (SectionPDE p ac) \<Rightarrow> 
+          EntrySection a (ucast (addr_val v >> 20) :: 12 word) 
+                            (Some  ((word_extract 31 20 (addr_val p)):: 12 word))  (0::8 word)
+       | Some (PageTablePDE p) \<Rightarrow> 
+               (case get_pte' h p v 
+                 of None                     \<Rightarrow> EntrySmall a (ucast (addr_val v >> 12) :: 20 word) None 0
+                 |  Some InvalidPTE          \<Rightarrow> EntrySmall a (ucast (addr_val v >> 12) :: 20 word) None 0
+                 |  Some (SmallPagePTE p1 ac) \<Rightarrow> EntrySmall a (ucast (addr_val v >> 12) :: 20 word) 
+                                                 (Some ((word_extract 31 12 (addr_val p1)):: 20 word)) 0)"
+
+datatype bpa = Bpsm "20 word" | Bpse "12 word"
+
+fun 
+  bpa_entry :: "tlb_entry \<Rightarrow> bpa option"
+where
+  "bpa_entry (EntrySmall _ _ p _)   = map_option Bpsm p" 
+| "bpa_entry (EntrySection _ _ p _) = map_option Bpse p"
 
 
-(* previous version of pde_comp  *)
+definition
+  "is_fault e = (bpa_entry e = None)"
 
-(*definition 
+
+
+definition 
   pde_comp' :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> (asid \<times> 32 word) set"
 where
   "pde_comp' a hp1 hp2 rt \<equiv> 
-         (\<lambda>x. (a, addr_val x)) ` {va. (\<exists>p1 p2. ptable_lift' hp1 rt va = Some p1 \<and> ptable_lift' hp2 rt va = Some p2 \<and> p1 \<noteq> p2 )}"
-
-lemma
-  "va \<in> pde_comp' a hp1 hp2 rt \<Longrightarrow> va \<in> pde_comp a hp1 hp2 rt"
-  by (clarsimp simp: pde_comp_def pde_comp'_def)
-*)
+         (\<lambda>x. (a, addr_val x)) ` {va. (\<exists>e1 e2. pt_walk a hp1 rt va = e1 \<and> pt_walk a hp2 rt va = e2  \<and> \<not>is_fault e1 \<and> \<not>is_fault e2 \<and> e1 \<noteq> e2 )  \<or> 
+                                      (\<exists>e1 e2. pt_walk a hp1 rt va = e1 \<and> pt_walk a hp2 rt va = e2  \<and> \<not>is_fault e1 \<and> is_fault e2 )}"
 
 
 lemma ptable_trace_pde_comp:
-  "\<forall>x. p \<notin> ptable_trace' h r x \<Longrightarrow> pde_comp a  h (h(p \<mapsto> v)) r = {}"
-  apply (clarsimp simp: ptable_trace'_def pde_comp_def Let_def)
+  "\<forall>x. p \<notin> ptable_trace' h r x \<Longrightarrow> pde_comp' a  h (h(p \<mapsto> v)) r = {}"
+  apply (clarsimp simp: ptable_trace'_def pde_comp'_def Let_def)
   apply (drule_tac x = x in spec)
-  apply (clarsimp simp: ptable_lift'_def lookup_pde'_def get_pde'_def decode_heap_pde'_def decode_heap_pte'_def vaddr_pt_index_def vaddr_pd_index_def lookup_pte'_def
+  
+ apply (clarsimp simp: pt_walk_def is_fault_def lookup_pde'_def get_pde'_def decode_heap_pde'_def decode_heap_pte'_def vaddr_pt_index_def vaddr_pd_index_def lookup_pte'_def
                         get_pte'_def  split:option.splits split: pde.splits split: pte.splits)
-  using Let_def by auto
+ using Let_def by auto
 
 
 lemma pde_comp_empty:
-  "p \<notin> \<Union>(ptable_trace' h r ` UNIV) \<Longrightarrow> pde_comp a  h (h(p \<mapsto> v)) r = {}"
+  "p \<notin> \<Union>(ptable_trace' h r ` UNIV) \<Longrightarrow> pde_comp' a  h (h(p \<mapsto> v)) r = {}"
   apply (drule union_imp_all)
   by (clarsimp simp: ptable_trace_pde_comp)
 
 
 
 lemma plift_equal_not_in_pde_comp [simp]:
-  "\<lbrakk> ptable_lift' h1 r (Addr va) =  Some pa ; ptable_lift' h2 r (Addr va) = Some pa \<rbrakk> \<Longrightarrow>  
-            (a, va) \<notin> pde_comp a h1 h2 r"
-  by (clarsimp simp: pde_comp_def) 
+  "\<lbrakk> pt_walk a h1 r (Addr va) =  e ; pt_walk a h2 r (Addr va) = e \<rbrakk> \<Longrightarrow>  
+            (a, va) \<notin> pde_comp' a h1 h2 r"
+  by (clarsimp simp: pde_comp'_def) 
  
 
 
@@ -200,7 +220,7 @@ where
   Assign:          "\<lbrakk>aval lval s = Some vp ; aval rval s = Some v ; (asid s, vp) \<notin> incon_set s;
                          ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some pp \<rbrakk>  \<Longrightarrow> 
                           (lval ::= rval , s) \<Rightarrow> Some (s \<lparr> heap := heap s (pp \<mapsto> v) , 
-                            incon_set := incon_set s \<union>  pde_comp (asid s)  (heap s)  (heap s (pp \<mapsto> v)) (root s) \<rparr>)" 
+                            incon_set := incon_set s \<union>  pde_comp' (asid s)  (heap s)  (heap s (pp \<mapsto> v)) (root s) \<rparr>)" 
 | 
   Seq:             "\<lbrakk>(c1,s1) \<Rightarrow> Some s2;  (c2,s2) \<Rightarrow> s3 \<rbrakk> \<Longrightarrow> (c1;;c2, s1) \<Rightarrow> s3" 
 |
@@ -332,7 +352,7 @@ done
 named_theorems vcg
 named_theorems vcg_pre
 
-method vcg declares vcg = (rule vcg_pre, (rule vcg)+, (assumption|clarsimp split del: split_if)?)
+method vcgm declares vcg = (rule vcg_pre, (rule vcg)+, (assumption|clarsimp split del: split_if)?)
 
 
 lemma skip_sound[vcg]:
@@ -341,8 +361,8 @@ lemma skip_sound[vcg]:
 
 lemma  assign_sound[vcg]:
   " \<Turnstile> \<lbrace>\<lambda>s. \<exists>vp v pp. aval l s = Some vp \<and> aval r s = Some v \<and> (asid s , vp) \<notin> incon_set s \<and>
-           P (s \<lparr>heap := heap s (pp \<mapsto> v) , incon_set := incon_set s \<union>  pde_comp (asid s)  (heap s)  (heap s (pp \<mapsto> v)) (root s)\<rparr>)
-            \<and>   ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some pp\<rbrace>  l ::= r \<lbrace>P\<rbrace>" 
+   P (s \<lparr>heap := heap s (pp \<mapsto> v) , incon_set := incon_set s \<union>  pde_comp' (asid s)  (heap s)  (heap s (pp \<mapsto> v)) (root s)\<rparr>)
+      \<and>   ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some pp\<rbrace>  l ::= r \<lbrace>P\<rbrace>" 
   apply (clarsimp simp: hoare_valid_def)
   apply auto
 done

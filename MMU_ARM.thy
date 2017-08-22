@@ -7,7 +7,7 @@ begin
 
 
 record tlb_state = state + 
-           tlb_set :: "tlb_entry set"
+           tlb_set :: "tlb_entry set "
 
 
 record tlb_det_state = state + 
@@ -842,12 +842,7 @@ lemma mmu_translate_sat_sat':
   "mmu_translate v s = (p,t) \<Longrightarrow>  saturated (typ_sat_tlb t)"
   apply (clarsimp simp: mmu_translate_tlb_sat_state_ext_def Let_def)
   apply (cases "lookup (tlb_sat_set s \<union> range (pt_walk (ASID s) (MEM s) (TTBR0 s))) (ASID s) (addr_val v)")
-    apply (unfold saturated_def) [1]
-    apply (clarsimp simp:raise'exception_def split:split_if_asm)
-   apply (unfold saturated_def) [1]
-   apply (clarsimp simp:raise'exception_def split:split_if_asm)
-  apply (unfold saturated_def) [1]
-  apply (clarsimp simp:raise'exception_def split:split_if_asm)
+    apply (clarsimp simp: saturated_def raise'exception_def split:split_if_asm)+
 done
 
 
@@ -1283,7 +1278,7 @@ lemma write_not_ptable_tlb_same:
 
 
 
-lemma write'_not_in_translation_tables_TLB11:
+lemma write_read_saturated_tlb:
   "\<lbrakk> mmu_write_size (val,va,sz) s = ((), t); mmu_read_size (va, sz) t = (val, r) \<rbrakk>  \<Longrightarrow> tlb_sat_set t = tlb_sat_set r"
   apply (cases "\<not> ptable_trace (MEM s) (TTBR0 s) va \<subseteq> \<Union>(ptable_trace (MEM s) (TTBR0 s) ` UNIV)" )
    apply (subgoal_tac "saturated (typ_sat_tlb t)")
@@ -1539,7 +1534,7 @@ lemma write'mem'det1_sat_refine1:
   apply (clarsimp simp: tlb_rel_sat_def)
   apply (clarsimp simp:  write'_not_in_translation_tables_saturated11)
   apply (rule conjI)
-   prefer 2
+   prefer 2                                                               
    apply (frule_tac s="s" and s'="s'" and t="t" and t'="t'" in tlb_rel_write1; clarsimp simp: tlb_rel_sat_def)
   apply (frule_tac s="s" and s'="s'" and t="t" and t'="t'" in tlb_rel_2'1; clarsimp simp: tlb_rel_sat_def)
   done
@@ -1883,6 +1878,7 @@ lemma mmu_translate_sa_consistent:
     apply clarsimp
    apply (simp add: mmu_translate_sat_TLB_union)
   by (simp add: saturated_def sup.absorb1)
+
 
 
 lemma mmu_translate_sat_abs_refine:
@@ -2797,7 +2793,7 @@ lemma write_asid_incon_set_rel:
   apply (clarsimp simp: asid_va_incon_def ptable_comp_def)
   apply (case_tac "a = ASID b" , clarsimp)
    apply (subgoal_tac "pt_walk (ASID b) (MEM b) (TTBR0 b) (Addr bb) =
-    pt_walk (ASID b) (MEM bc) (TTBR0 b) (Addr bb)")
+                       pt_walk (ASID b) (MEM bc) (TTBR0 b) (Addr bb)")
     prefer 2
     apply force
    apply (subgoal_tac "(ASID b, bb) \<in> {(asid, va). lookup (tlb_sat_set b) asid va = Incon}")
@@ -2858,6 +2854,41 @@ lemma write_refinement_saturated_incon_only:
    apply (clarsimp simp: state.defs)
   using mmu_sat_eq_ASID_TTBR0_MEM by blast
 
+
+
+
+lemma mmu_translate_sat_abs_refine':
+  "\<lbrakk>mmu_translate va s = (pa, s'); mmu_translate va t = (pa', t'); saturated (typ_sat_tlb s);
+    (ASID t, addr_val va) \<notin> tlb_incon_set t; tlb_rel_abs (typ_sat_tlb s) (typ_incon t)\<rbrakk>
+   \<Longrightarrow> pa = pa' \<and> tlb_rel_abs (typ_sat_tlb s') (typ_incon t')"
+   by (simp add: mmu_translate_sat_abs_refine mmu_translate_sat_abs_refine_pa)
+
+
+lemma saturated_tlb_const [simp]:
+  "saturated (typ_sat_tlb s) \<Longrightarrow>
+  tlb_sat_set s \<union> range (pt_walk (ASID s) (MEM s) (TTBR0 s)) = tlb_sat_set s"
+  by (auto simp add: saturated_def)
+
+
+lemma mmu_translate_sat_const_tlb [simp]:
+  "saturated (typ_sat_tlb s) \<Longrightarrow> tlb_sat_set (snd (mmu_translate va s)) = tlb_sat_set s"
+  by (simp add: mmu_translate_tlb_sat_state_ext_def Let_def raise'exception_def
+         split: lookup_type.splits)
+
+
+lemma tlb_sat_set_mem1 [simp]:
+  "tlb_sat_set (snd (mem1 ps s)) = tlb_sat_set s"
+  by (simp add: mem1_def raise'exception_def split: option.splits)
+
+
+lemma mmu_read_sat_const [simp]:
+  "saturated (typ_sat_tlb s) \<Longrightarrow> tlb_sat_set (snd (mmu_read_size v s)) = tlb_sat_set s"
+   by (clarsimp simp: mmu_read_size_tlb_sat_state_ext_def split_def Let_def
+                      mem_read1_def raise'exception_def
+               split: split_if_asm)
+
+
+
 lemma addr_val_eqD [dest!]:
   "addr_val a = addr_val b \<Longrightarrow> a = b"
   apply (cases a, cases b)
@@ -2892,5 +2923,7 @@ lemma incon_safe_writes:
   apply (simp add: consistent_set_def write'mem1_eq_ASID_TTBR0)
   apply (auto simp: ptable_comp_def)
   done
+
+     
 
 end

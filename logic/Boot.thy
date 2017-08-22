@@ -83,19 +83,36 @@ lemma  assign_safe_kernel_region':
   "\<Turnstile> \<lbrace> \<lambda>s. boot_state s \<and> aval lval s = Some vp \<and> aval rval s = Some v \<and> vp \<in> SM \<and> SM = kernel_safe_region s \<rbrace>  
                         lval ::= rval  
                      \<lbrace>\<lambda>s. safe_set SM s \<and> heap s (Addr vp r- global_offset) = Some v\<rbrace>"
-  by (vcg vcg: weak_pre_write')
+  by (vcgm vcg: weak_pre_write')
  
  
 
+(*
 lemma assignments_safe_kernel_region:
   "\<Turnstile> \<lbrace> \<lambda>s.  boot_state s \<and> aval lval1 s = Some vp1 \<and> aval rval1 s = Some v1 \<and> vp1 \<in> SM \<and> 
             aval lval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1)\<rparr>) = Some vp2 \<and> 
             aval rval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1)\<rparr>) = Some v2 \<and> vp2 \<in> SM \<and> SM = kernel_safe_region s  \<rbrace>  
                lval1 ::= rval1 ;; lval2 ::= rval2 
       \<lbrace>\<lambda>s. safe_set SM s \<and> heap s (Addr vp2 r- global_offset) = Some v2\<rbrace>"
-  apply_trace (vcg vcg: weak_pre_write')
+  apply_trace (vcgm vcg: weak_pre_write')
+  apply (rule_tac x = vp2 in exI)
+
+   thm ptable_lift_write_n
+ (* using  ptable_lift_write_n by force *)
+  oops
+   *)
+
+(* problem of aval here  *)
+
+lemma assignments_safe_kernel_region:
+  "\<Turnstile> \<lbrace> \<lambda>s.  boot_state s \<and> aval lval1 s = Some vp1 \<and> aval rval1 s = Some v1 \<and> vp1 \<in> SM \<and> 
+            aval lval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1) , incon_set := incon_set s \<union> pde_comp' (asid s) (heap s) (heap s(Addr (vp1 - global_offset) \<mapsto> v1)) (root s)\<rparr>) = Some vp2 \<and> 
+            aval rval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1) , incon_set := incon_set s \<union> pde_comp' (asid s) (heap s) (heap s(Addr (vp1 - global_offset) \<mapsto> v1)) (root s)\<rparr>) = Some v2 \<and> vp2 \<in> SM \<and> SM = kernel_safe_region s  \<rbrace>  
+                       lval1 ::= rval1 ;; lval2 ::= rval2 
+      \<lbrace>\<lambda>s. safe_set SM s \<and> heap s (Addr vp2 r- global_offset) = Some v2\<rbrace>"
+  apply (vcgm vcg: weak_pre_write')
   using  ptable_lift_write_n by force
-   
+
 
 
 definition
@@ -129,8 +146,8 @@ lemma  assign_safe_kernel_region_n:
 
 lemma assignments_safe_kernel_region':
   "\<Turnstile> \<lbrace> \<lambda>s.  boot_state' s \<and> aval lval1 s = Some vp1 \<and> aval rval1 s = Some v1 \<and> vp1 \<in> SM \<and> 
-            aval lval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1)\<rparr>) = Some vp2 \<and> 
-            aval rval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1)\<rparr>) = Some v2 \<and> vp2 \<in> SM \<and> SM = kernel_safe_region' s  \<rbrace>  
+            aval lval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1) , incon_set := incon_set s \<union> pde_comp' (asid s) (heap s) (heap s(Addr (vp1 - global_offset) \<mapsto> v1)) (root s)\<rparr>) = Some vp2 \<and> 
+            aval rval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1) , incon_set := incon_set s \<union> pde_comp' (asid s) (heap s) (heap s(Addr (vp1 - global_offset) \<mapsto> v1)) (root s)\<rparr>) = Some v2 \<and> vp2 \<in> SM \<and> SM = kernel_safe_region' s  \<rbrace>  
                lval1 ::= rval1 ;; lval2 ::= rval2 
       \<lbrace>\<lambda>s. safe_set SM s \<and> heap s (Addr vp2 r- global_offset) = Some v2\<rbrace>"
   apply (rule weak_pre)

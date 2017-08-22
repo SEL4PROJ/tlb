@@ -66,7 +66,7 @@ lemma  kernel_execution_assign:
              assigned_asids_consistent (root_map s) (incon_set s) \<rbrace>    (* assumption added for consistency *)
                      lval ::= rval  
                   \<lbrace>\<lambda>s. safe_set SM s \<and>  heap s (Addr vp r- global_offset) = Some v\<rbrace>"
-  apply_trace (vcg vcg: weak_pre_write')
+  apply (vcgm vcg: weak_pre_write')
   by (clarsimp simp: safe_set_def safe_memory_def ptrace_set_def)
  
 
@@ -101,15 +101,16 @@ lemma ptable_lift_write_n:
 
 lemma kernel_execution_multi_assign:
   "\<Turnstile> \<lbrace> \<lambda>s. kernel_state s \<and> aval lval1 s = Some vp1 \<and> aval rval1 s = Some v1 \<and> vp1 \<in> SM \<and> 
-            aval lval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1)\<rparr>) = Some vp2 \<and> 
-            aval rval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1)\<rparr>) = Some v2 \<and> vp2 \<in> SM  \<and>  
-           assigned_asids_consistent (root_map s) (incon_set s) \<and>  SM = kernel_safe_region' s\<rbrace>  
+            aval lval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1) , incon_set := incon_set s \<union> pde_comp' (asid s) (heap s) (heap s(Addr (vp1 - global_offset) \<mapsto> v1)) (root s)\<rparr>) = Some vp2 \<and> 
+            aval rval2 (s\<lparr>heap := heap s(Addr vp1 r- global_offset \<mapsto> v1) , incon_set := incon_set s \<union> pde_comp' (asid s) (heap s) (heap s(Addr (vp1 - global_offset) \<mapsto> v1)) (root s)\<rparr>) = Some v2 \<and> vp2 \<in> SM  \<and>  
+           assigned_asids_consistent (root_map s) (incon_set s)  \<and>  SM = kernel_safe_region' s\<rbrace>  
                   lval1 ::= rval1 ;; lval2 ::= rval2 
            \<lbrace>\<lambda>s. safe_set SM s \<and> heap s (Addr vp2 r- global_offset) = Some v2\<rbrace>"
-  apply_trace (vcg vcg: weak_pre_write')
+  apply (vcgm vcg: weak_pre_write')
   apply (rule conjI)
    apply (clarsimp simp: safe_set_def safe_memory_def ptrace_set_def)
   using  ptable_lift_write_n by force
+  
 
 
 end

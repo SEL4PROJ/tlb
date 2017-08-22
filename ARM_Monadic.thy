@@ -4298,7 +4298,7 @@ end
 \<close>
 
 
-
+thm IncPC_def
 (*lemma
   "mem1 1 (s \<lparr>MEM := empty , exception := NoException\<rparr>) = 
      (HOL.undefined, s \<lparr>MEM := empty , exception := UNPREDICTABLE ''undefined memory'' \<rparr>)"
@@ -4329,7 +4329,7 @@ definition
   mem_read1 :: "paddr \<times> nat \<Rightarrow> 'b state_scheme \<Rightarrow> bool list \<times> 'b state_scheme"
 where
   "mem_read1 \<equiv>
-\<lambda>(address, size).
+   \<lambda>(address, size).
    if size = 1 then do {
                       v \<leftarrow> mem1 (address r+ 0);
                       return (bitstring_field 7 0 v)
