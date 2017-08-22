@@ -5,7 +5,6 @@ imports MMU_ARM_Refine_No_Fault
 begin               
 
 
-
 class update_asid =
   fixes update_asid :: "asid \<Rightarrow> 'a state_scheme \<Rightarrow>  unit \<times> 'a state_scheme" 
 
@@ -55,7 +54,10 @@ instantiation tlb_incon_state'_ext :: (type) update_asid
 begin
   definition   
   "(update_asid a :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      update_state (\<lambda>s. s\<lparr> ASID := a \<rparr>)} "
+      update_state (\<lambda>s. s\<lparr> ASID := a \<rparr>);
+      iset   <- read_state tlb_incon_set';
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset \<union> ({a} \<times> UNIV) \<rparr>)
+} "
 thm update_asid_tlb_incon_state'_ext_def
 print_context                     
   instance ..
@@ -63,19 +65,80 @@ end
 
 
 
-
-
-(* the goal is to have the final assumption of the incon set, that we are using in the logic, that
-       should say that the intersection of updated asid and the iset is empty *)
-
 lemma update_asid_non_det_det_refine:
   "\<lbrakk> update_asid a (s::tlb_state) = ((), s') ;  update_asid a (t::tlb_det_state) = ((), t'); 
-         tlb_rel (typ_tlb s) (typ_det_tlb t); \<forall>va. consistent0 (MEM t) a (TTBR0 t) ( tlb_det_set t) va \<rbrakk> \<Longrightarrow> 
-                  tlb_rel (typ_tlb s') (typ_det_tlb t') \<and> (\<forall>va. consistent0 (MEM t') a (TTBR0 t') (tlb_det_set t') va) "
+         tlb_rel (typ_tlb s) (typ_det_tlb t) \<rbrakk> \<Longrightarrow>  tlb_rel (typ_tlb s') (typ_det_tlb t') "
   apply (clarsimp simp: update_asid_tlb_state_ext_def update_asid_tlb_det_state_ext_def tlb_rel_def) 
   by (cases s, cases t , clarsimp simp: state.defs)
 
-thm entry_range_single_element
+
+lemma  update_asid_det_sat_no_flt_refine:
+  "\<lbrakk> update_asid a (s::tlb_det_state) = ((), s') ;  update_asid a (t::tlb_sat_no_flt_state) = ((), t'); 
+         tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t) \<rbrakk> \<Longrightarrow> 
+                  tlb_rel_sat_no_flt (typ_det_tlb s') (typ_sat_no_flt_tlb t')"
+  apply (clarsimp simp: update_asid_tlb_det_state_ext_def update_asid_tlb_sat_no_flt_state_ext_def)
+  apply (clarsimp simp: tlb_rel_sat_no_flt_def saturated_no_flt_def no_faults_def)
+  apply (cases s, cases t , clarsimp simp: state.defs , force)
+done
+
+
+lemma lookup_no_flt_range_pt_walk_asid_miss:
+  "a \<noteq> a1 \<Longrightarrow> lookup {e \<in> range (pt_walk a mem ttbr0). \<not> is_fault e} a1 va = Miss"
+  apply (clarsimp simp: lookup_def entry_set_def entry_range_asid_tags_def)
+  by force
+
+lemma lookup_no_flt_range_pt_walk_not_incon':
+  "lookup {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e} asid1 va \<noteq> Incon"
+  apply (case_tac "asid = asid1")
+   apply (clarsimp simp: lookup_no_flt_range_pt_walk_not_incon)
+  by (clarsimp simp: lookup_no_flt_range_pt_walk_asid_miss)
+ 
+lemma update_asid_sat_no_flt_abs_refine':
+  "\<lbrakk> update_asid a (s::tlb_sat_no_flt_state) = ((), s') ;  update_asid a (t::tlb_incon_state') = ((), t'); 
+     (*  saturated_no_flt (typ_sat_no_flt_tlb s) ; *) tlb_rel_abs' (typ_sat_no_flt_tlb s) (typ_incon' t) \<rbrakk> \<Longrightarrow> 
+                                 tlb_rel_abs' (typ_sat_no_flt_tlb s') (typ_incon' t')"
+  apply (clarsimp simp: update_asid_tlb_sat_no_flt_state_ext_def update_asid_tlb_incon_state'_ext_def)
+  apply (clarsimp simp:  tlb_rel_abs'_def)
+  apply (rule conjI)
+   apply (clarsimp simp: typ_sat_no_flt_tlb_def "state.defs")
+  apply (clarsimp simp: asid_va_incon_tlb_mem_def)
+  apply (rule conjI)
+   prefer 2
+   apply (clarsimp simp: asid_va_hit_incon_def)
+  apply (clarsimp simp: asid_va_incon_def)
+  apply (case_tac "aa = a")
+   apply assumption
+  apply (drule union_incon_cases1)
+  using lookup_no_flt_range_pt_walk_asid_miss lookup_no_flt_range_pt_walk_not_incon' by auto
+  
+ 
+
+
+(* remove the asid from here *)
+lemma update_asid_sat_no_flt_abs_refine:
+  "\<lbrakk> update_asid a (s::tlb_sat_no_flt_state) = ((), s') ;  update_asid a (t::tlb_incon_state') = ((), t'); 
+       saturated_no_flt (typ_sat_no_flt_tlb s\<lparr>ASID := a \<rparr>) ; tlb_rel_abs' (typ_sat_no_flt_tlb s\<lparr>ASID := a \<rparr>) (typ_incon' t) \<rbrakk> \<Longrightarrow> 
+                                 tlb_rel_abs' (typ_sat_no_flt_tlb s') (typ_incon' t')"
+  apply (clarsimp simp: update_asid_tlb_sat_no_flt_state_ext_def update_asid_tlb_incon_state'_ext_def)
+  apply (clarsimp simp:  tlb_rel_abs'_def)
+  apply (subgoal_tac "tlb_sat_no_flt_set s =
+                      tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}")
+   apply (clarsimp simp: typ_sat_no_flt_tlb_def "state.defs")
+   apply blast
+  using saturated_no_flt_def by force
+
+
+
+
+
+(* consistency *)
+
+lemma update_asid_non_det_det_refine':
+  "\<lbrakk> update_asid a (s::tlb_state) = ((), s') ;  update_asid a (t::tlb_det_state) = ((), t'); 
+         tlb_rel (typ_tlb s) (typ_det_tlb t); \<forall>va. consistent0 (MEM t) a (TTBR0 t) (tlb_det_set t) va \<rbrakk> \<Longrightarrow> 
+                  tlb_rel (typ_tlb s') (typ_det_tlb t') \<and> (\<forall>va. consistent0 (MEM t') a (TTBR0 t') (tlb_det_set t') va) "
+  apply (clarsimp simp: update_asid_tlb_state_ext_def update_asid_tlb_det_state_ext_def tlb_rel_def) 
+  by (cases s, cases t , clarsimp simp: state.defs)
 
 
 lemma lookup_hit_union_cases_rule:
@@ -124,7 +187,8 @@ lemma lookup_not_incon_hit_miss':
 
 
 
-lemma  update_asid_det_sat_no_flt_refine:
+
+lemma  update_asid_det_sat_no_flt_refine':
   "\<lbrakk> update_asid a (s::tlb_det_state) = ((), s') ;  update_asid a (t::tlb_sat_no_flt_state) = ((), t'); 
          tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t); \<forall>va. consistent0 (MEM t) a (TTBR0 t) (tlb_sat_no_flt_set t) va \<rbrakk> \<Longrightarrow> 
                   tlb_rel_sat_no_flt (typ_det_tlb s') (typ_sat_no_flt_tlb t') \<and> (\<forall>va. consistent0 (MEM t') a (TTBR0 t') (tlb_sat_no_flt_set t') va)"
@@ -164,71 +228,7 @@ lemma  update_asid_det_sat_no_flt_refine:
 done
 
 
-
-lemma update_asid_sat_no_flt_abs_refine:
-  "\<lbrakk> update_asid a (s::tlb_sat_no_flt_state) = ((), s') ;  update_asid a (t::tlb_incon_state') = ((), t'); 
-       saturated_no_flt (typ_sat_no_flt_tlb (s\<lparr>ASID := a\<rparr>)) ; 
-        (* coming from 'update_asid_det_sat_no_flt_refine' theorem i.e.
-       tlb_rel_sat_no_flt (typ_det_tlb s') (typ_sat_no_flt_tlb t') states the saturated assumption with the updated asid  *) 
-         tlb_rel_abs' (typ_sat_no_flt_tlb (s\<lparr>ASID := a\<rparr>)) (typ_incon' t);   \<forall>va. (a, va) \<notin> (tlb_incon_set' t) \<rbrakk> \<Longrightarrow> 
-                    tlb_rel_abs' (typ_sat_no_flt_tlb s') (typ_incon' t') \<and>  (\<forall>va. (a, va) \<notin> (tlb_incon_set' t'))"
-  apply (subgoal_tac "tlb_sat_no_flt_set s = tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e} ")
-   apply (clarsimp simp: update_asid_tlb_sat_no_flt_state_ext_def update_asid_tlb_incon_state'_ext_def tlb_rel_abs'_def)
-   apply (cases s, cases t , clarsimp simp: state.defs)
-  apply (clarsimp simp:  tlb_rel_abs'_def saturated_no_flt_def) by force
-
  
-
-(*
-lemma
-  "\<lbrakk>tlb_sat_no_flt_set s = tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}; saturated_no_flt (typ_sat_no_flt_tlb s); no_faults (tlb_sat_no_flt_set s);
-              lookup (tlb_sat_no_flt_set s) a b = Hit x;  x \<noteq> pt_walk a (MEM s) (TTBR0 s) (Addr b)\<rbrakk>  \<Longrightarrow> False"
-  apply (subgoal_tac "saturated_no_flt (typ_sat_no_flt_tlb s\<lparr>ASID := a\<rparr>)")
-   prefer 2
-   apply (clarsimp simp: saturated_no_flt_def)
-   apply force
-oops
-
-
-lemma 
-  "\<lbrakk> \<forall>va. (a , addr_val va) \<notin>  asid_va_incon_tlb_mem (typ_sat_no_flt_tlb s) \<rbrakk> \<Longrightarrow> 
-           \<forall>va. consistent0 (MEM s) a (TTBR0 s) (tlb_sat_no_flt_set s) va "
-  apply (clarsimp simp: asid_va_incon_tlb_mem_def asid_va_incon_def asid_va_hit_incon_def)
-  apply (clarsimp simp: lookup_def consistent0_def split: split_if_asm)  apply auto
-  done
-
-lemma tlb_rel_abs_consistent':
-  "\<lbrakk> \<forall>va. (a, va) \<notin> (tlb_incon_set' t) ;   tlb_sat_no_flt_set s = tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e} ;
-                tlb_rel_abs' (typ_sat_no_flt_tlb s) (typ_incon' t) \<rbrakk>  \<Longrightarrow> 
-             \<forall>va. consistent0 (MEM s) a (TTBR0 s) (tlb_sat_no_flt_set s) va  " 
-  apply (rule not_member_incon_consistent' ; clarsimp)
-  apply (clarsimp simp: tlb_rel_abs'_def)
-  apply (subgoal_tac "ASID s = ASID t" , simp)
-   apply blast
-  apply (cases s , cases t , clarsimp simp: state.defs)
-oops
-
-
-lemma 
-  "\<lbrakk> update_asid a (s::tlb_sat_no_flt_state) = ((), s') ;  update_asid a (t::tlb_incon_state') = ((), t'); 
-            tlb_sat_no_flt_set s = tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e} ; 
-       saturated_no_flt (typ_sat_no_flt_tlb s) ; no_faults (tlb_sat_no_flt_set s);
-         tlb_rel_abs' (typ_sat_no_flt_tlb s) (typ_incon' t);   \<forall>va. (a, va) \<notin> (tlb_incon_set' t) \<rbrakk> \<Longrightarrow> 
-                    tlb_rel_abs' (typ_sat_no_flt_tlb s') (typ_incon' t') \<and>  (\<forall>va. (a, va) \<notin> (tlb_incon_set' t'))"
-  apply rule
-   prefer 2
-   apply (clarsimp simp: update_asid_tlb_sat_no_flt_state_ext_def update_asid_tlb_incon_state'_ext_def)
-  apply (clarsimp simp: update_asid_tlb_sat_no_flt_state_ext_def update_asid_tlb_incon_state'_ext_def)
-  apply (clarsimp simp: tlb_rel_abs'_def)
-  apply rule
-   apply (cases s, cases t , clarsimp simp: state.defs)
-  apply (simp add: asid_va_incon_tlb_mem_def)
-  apply (clarsimp simp: asid_va_hit_incon_def)
-  apply (clarsimp simp: lookup_def split: split_if_asm)
-oops
-*)
-
-
 
 
 end
