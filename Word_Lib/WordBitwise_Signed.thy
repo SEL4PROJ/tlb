@@ -12,9 +12,8 @@ section "Bitwise tactic for Signed Words"
 
 theory WordBitwise_Signed
 imports
-  "~~/src/HOL/Word/WordBitwise"
+  "HOL-Word.WordBitwise"
   Signed_Words
-  "~~/src/HOL/Library/Prefix_Order"
 begin
 
 ML \<open>fun bw_tac_signed ctxt = let

@@ -11,7 +11,7 @@
 section "More Lemmas on Division"
 
 theory More_Divides
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 lemma div_mult_le:
@@ -23,7 +23,7 @@ lemma div_mult_le:
 
 lemma diff_mod_le:
   "\<lbrakk> (a::nat) < d; b dvd d \<rbrakk> \<Longrightarrow> a - a mod b \<le> d - b"
-  apply(subst mult_div_cancel [symmetric])
+  apply(subst minus_mod_eq_mult_div)
   apply(clarsimp simp: dvd_def)
   apply(case_tac "b = 0")
    apply simp
