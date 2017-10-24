@@ -5,6 +5,10 @@ This folder contains .thy files for the project
 
 The theories files in this repository are for *Isabelle2016*.
 
+To check the proofs, run
+
+    Isabelle2016/bin/isabelle build -bv -d . CASE_STUDY
+
 
 Folder Information:
 
