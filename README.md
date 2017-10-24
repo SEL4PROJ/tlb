@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/SEL4PROJ/tlb.svg?branch=ESOP18)](https://travis-ci.org/SEL4PROJ/tlb)
+
 This folder contains .thy files for the project
 
 ##  Program Verification in the Presence of Cached Address Translation
