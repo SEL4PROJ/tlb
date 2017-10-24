@@ -42,7 +42,7 @@ session ARM_REF = MMU_ARM +
 session MMU_CASE = ARM_REF +
   theories
     "./Ins_Cycle/Ins_Cycle"
-    "./ins_cycle/Ins_Cycle1"
+    "./Ins_Cycle/Ins_Cycle1"
     "./Invalidation_Operations/Invalid_Ops"
 
 
