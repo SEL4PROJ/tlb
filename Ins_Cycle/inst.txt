@@ -1,0 +1,10 @@
+load register
+ldr r1,[r2,#4]
+fetch
+decode
+run
+
+
+store register
+
+str r1,[r2,#4]

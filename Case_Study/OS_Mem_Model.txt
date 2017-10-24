@@ -1,0 +1,32 @@
+
+This file contains the information for the page table management of the case studies.
+
+
+
+Page Table Management:
+
+Page tables consist of two levels
+   Page Directory    (First Level)
+   Page Table        (Second Level)
+
+Each Process has its own non-shared page directory and page table
+
+In virtual address space, a higher range of addresses is mapped to the Kernel Window, and lower range is mapped to User Mappings
+
+The kernel maps itself using Kernel Window, they are all section entries and provide a constant (offset based) address translation to the kernel virtual addresses
+
+Global Mappings (Kernel Window mappings) are set at the boot, and they remain constant (write protected) during the execution, for every process
+
+User Mappings can be either small page, or section 
+
+User can not access kernel mappings
+
+Kernel can access all of the memory, but it only does so using Global Mappings
+
+Page Directory and page table is present in kernel addressable memory
+
+Kernel code is also write protected, even by the kernel itself
+
+Non-overlapping page tables for different processes, means that although two or more processes can share a page, but they have separate page table entries for them
+
+
