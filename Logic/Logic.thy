@@ -191,7 +191,7 @@ done
 named_theorems vcg
 named_theorems vcg_pre
 
-method vcgm declares vcg = (rule vcg_pre, (rule vcg)+, (assumption|clarsimp split del: split_if)?)
+method vcgm declares vcg = (rule vcg_pre, (rule vcg)+, (assumption|clarsimp split del: if_split)?)
 
 
 lemma skip_sound[vcg]:

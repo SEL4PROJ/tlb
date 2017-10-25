@@ -29,7 +29,7 @@ lemma flush_ASID_mem_write':
 lemma [simp]:
   " mem_read_hp' (asid sa) (incon_set sa) (heap sa) (root sa) (mode sa)(Addr x2) = Some v
                 \<Longrightarrow> mem_read_hp' (asid sa) {av \<in> incon_set sa. fst av \<noteq> s \<and> snd av \<noteq> vp} (heap sa) (root sa) (mode sa) (Addr x2) = Some v"
- by (clarsimp simp: mem_read_hp'_def split: split_if_asm)
+ by (clarsimp simp: mem_read_hp'_def split: if_split_asm)
 
 lemma  [simp]:
   "aval e sa = Some v \<Longrightarrow> aval e (sa\<lparr>incon_set := {av \<in> incon_set sa. fst av \<noteq> s \<and> snd av \<noteq> vp}\<rparr>) = Some v "

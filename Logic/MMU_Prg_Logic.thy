@@ -261,7 +261,7 @@ lemma  [simp]:
 lemma  ptable_lift_m_user [simp]:
   "ptable_lift_m h r  User va = Some pa \<Longrightarrow>
   ptable_lift_m h r  User va =  ptable_lift' h r va"
-  by (clarsimp simp: ptable_lift_m_def ptable_lift'_def lookup_pde_perm_def filter_pde_def split: option.splits split_if_asm)
+  by (clarsimp simp: ptable_lift_m_def ptable_lift'_def lookup_pde_perm_def filter_pde_def split: option.splits if_split_asm)
 
 
 
@@ -278,7 +278,7 @@ lemma ptable_trace_preserved_m:
 lemma  ptable_lift_user_implies_ptable_lift:
   "ptable_lift_m h r User va = Some pa \<Longrightarrow> ptable_lift' h r va = Some pa"
   by (clarsimp simp: ptable_lift_m_def lookup_pde_perm_def filter_pde_def 
-         ptable_lift'_def split:option.splits split_if_asm)
+         ptable_lift'_def split:option.splits if_split_asm)
 
 
 lemma ptable_lift_preserved_m:
@@ -292,13 +292,13 @@ lemma ptable_lift_preserved_m:
       apply (clarsimp simp:  decode_heap_pde'_def)
       apply (clarsimp simp: ptable_lift_m_def lookup_pde'_def get_pde'_def decode_heap_pde'_def lookup_pde_perm_def filter_pde_def)
      apply (clarsimp simp:  ptable_lift_m_def lookup_pde'_def get_pde'_def lookup_pde_perm_def filter_pde_def lookup_pte'_def get_pte'_def decode_heap_pte'_def
-                            split:split_if_asm split: option.splits)
+                            split:if_split_asm split: option.splits)
      by (case_tac "decode_pte x2" ; clarsimp simp: decode_heap_pde'_def lookup_pte'_def get_pte'_def decode_heap_pte'_def)
 
 
 lemma ptable_lift_m_implies_ptlift:
   "ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some p \<Longrightarrow> ptable_lift' (heap s) (root s) (Addr vp) = Some p"
-  by (clarsimp simp: ptable_lift_m_def ptable_lift'_def lookup_pde_perm_def filter_pde_def user_perms_def split: option.splits split_if_asm)
+  by (clarsimp simp: ptable_lift_m_def ptable_lift'_def lookup_pde_perm_def filter_pde_def user_perms_def split: option.splits if_split_asm)
 
 
 lemma union_imp_all:
