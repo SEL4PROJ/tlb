@@ -4,8 +4,6 @@ imports MMU_Ops
 
 begin
 
-
-
 ML \<open>
 local 
 open L3 
@@ -10495,7 +10493,7 @@ val () = def
                               (var_w("v",64),
                                mb(mb(mb(mu(tp[var_w("v",64),
                                               ite(var_b"add",var_w("product",64),
-                                                  mop(FPNeg (true, false),var_w("product",64)))],qTy),
+                                                  mop(FPNeg true,var_w("product",64)))],qTy),
                                         close
                                           (var("v",@{typ "64 word \<times> 64 word"}),
                                            call
@@ -10531,7 +10529,7 @@ val () = def
                               (var_w("v",32),
                                mb(mb(mb(mu(tp[var_w("v",32),
                                               ite(var_b"add",var_w("product",32),
-                                                  mop(FPNeg (false, false),var_w("product",32)))],
+                                                  mop(FPNeg false, false),var_w("product",32)))],
                                            qTy),
                                         close
                                           (var("v",@{typ "32 word \<times> 32 word"}),
@@ -10584,11 +10582,11 @@ val () = def
                                     var_w("d",5),@{theory}),
                                  close
                                    (var_w("v",64),
-                                    mb(mb(mb(mb(mu(mop(FPNeg (true, false),var_w("v",64)),qTy),
+                                    mb(mb(mb(mb(mu(mop(FPNeg true,var_w("v",64)),qTy),
                                                 close
                                                   (var_w("v",64),
                                                    mu(tp[var_w("v",64),
-                                                         mop(FPNeg (true, false),var_w("product",64))],
+                                                         mop(FPNeg true,var_w("product",64))],
                                                       qTy))),
                                              close
                                                (var("v",@{typ "64 word \<times> 64 word"}),
@@ -10612,7 +10610,7 @@ val () = def
                                     var_w("d",5),@{theory}),
                                  close
                                    (var_w("v",64),
-                                    mb(mb(mb(mb(mu(mop(FPNeg (true, false),var_w("v",64)),qTy),
+                                    mb(mb(mb(mb(mu(mop(FPNeg true,var_w("v",64)),qTy),
                                                 close
                                                   (var_w("v",64),
                                                    mu(tp[var_w("v",64),var_w("product",64)],qTy))),
@@ -10659,11 +10657,11 @@ val () = def
                                     var_w("d",5),@{theory}),
                                  close
                                    (var_w("v",32),
-                                    mb(mb(mb(mb(mu(mop(FPNeg (false, false),var_w("v",32)),qTy),
+                                    mb(mb(mb(mb(mu(mop(FPNeg false),var_w("v",32)),qTy),
                                                 close
                                                   (var_w("v",32),
                                                    mu(tp[var_w("v",32),
-                                                         mop(FPNeg (false, false),
+                                                         mop(FPNeg false,
                                                              var_w("product",32))],qTy))),
                                              close
                                                (var("v",@{typ "32 word \<times> 32 word"}),
@@ -10687,7 +10685,7 @@ val () = def
                                     var_w("d",5),@{theory}),
                                  close
                                    (var_w("v",32),
-                                    mb(mb(mb(mb(mu(mop(FPNeg (false, false),var_w("v",32)),qTy),
+                                    mb(mb(mb(mb(mu(mop(FPNeg false,var_w("v",32)),qTy),
                                                 close
                                                   (var_w("v",32),
                                                    mu(tp[var_w("v",32),var_w("product",32)],qTy))),

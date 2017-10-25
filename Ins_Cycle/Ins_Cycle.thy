@@ -736,7 +736,7 @@ lemma fetch_ins:
        SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
        tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
   apply (clarsimp simp: Fetch_def CurrentInstrSet_def ISETSTATE_def word_cat_def
-                        tlb_state'_def CPSR'_def split:split_if_asm)
+                        tlb_state'_def CPSR'_def split:if_split_asm)
   apply (clarsimp simp: Reg_Bank_def MemA_MEM')
  done
 
@@ -854,7 +854,7 @@ lemma run_ins:
    apply (clarsimp simp: is_fault_def va_to_pa_def mask_def  mem_read1_def mem1_def MEM'_def)
    apply (clarsimp simp: UnalignedSupport_def ArchVersion_def write'R_def write'Rmode_def IsSecure_def HaveSecurityExt_def CurrentInstrSet_def ISETSTATE_def 
            LookUpRName_def IncPC_def ThisInstrLength_def BranchTo_def Reg_Bank_def)
-  apply (clarsimp simp: lookup_def entry_set_def split:split_if_asm)
+  apply (clarsimp simp: lookup_def entry_set_def split:if_split_asm)
    apply blast+
 done
 

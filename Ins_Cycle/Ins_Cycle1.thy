@@ -506,7 +506,7 @@ lemma fetch_ins1:
                             sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>,  CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
                  T = False, V = True, Z = True, psr'rst = 1\<rparr>,  CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
               REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>)"
-  apply (clarsimp simp: Fetch_def CurrentInstrSet_def ISETSTATE_def word_cat_def tlb_state'_def CPSR'_def split:split_if_asm)
+  apply (clarsimp simp: Fetch_def CurrentInstrSet_def ISETSTATE_def word_cat_def tlb_state'_def CPSR'_def split:if_split_asm)
   apply ( clarsimp simp:  Reg_Bank_def  MemA_def CurrentModeIsNotUser_def BadMode_def MemA_with_priv_def CP15'_def SCTLR'_def Aligned1_def Align1_def  mmu_read_size_tlb_state_ext_def)
   apply (subgoal_tac "mmu_translate (Addr 0xFC) \<lparr>Architecture = ARMv7_A, CP14 = CP14',  CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
    SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
@@ -643,7 +643,7 @@ lemma run_ins1:
    apply clarsimp
   apply (subgoal_tac "x3 = EntrySection 1 0 (Some 0) 0")
    apply (clarsimp simp: is_fault_def va_to_pa_def mask_def write'mem1_def IncPC_def ThisInstrLength_def BranchTo_def Reg_Bank_def)
-  apply (clarsimp simp: lookup_def entry_set_def split:split_if_asm)
+  apply (clarsimp simp: lookup_def entry_set_def split:if_split_asm)
    apply blast+
 done
 

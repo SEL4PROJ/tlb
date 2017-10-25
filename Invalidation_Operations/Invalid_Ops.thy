@@ -25,13 +25,13 @@ lemma lookup_incon_invalid_case:
   "\<lbrakk> lookup t a v = Incon  \<rbrakk> \<Longrightarrow> 
      lookup (a_va_sel_invalidate t a v) a v = Miss "
   by (clarsimp simp: lookup_def a_va_sel_invalidate_def entry_set_def
-                  split:split_if_asm)
+                  split:if_split_asm)
 
 
 lemma hit_invlaidate_miss:
   "lookup (state.more s) (ASID s) (addr_val va) = Hit x3 \<Longrightarrow>
            lookup (state.more s - {x3}) (ASID s) (addr_val va) = Miss"
-  apply (clarsimp simp: lookup_def split: split_if_asm)
+  apply (clarsimp simp: lookup_def split: if_split_asm)
   unfolding entry_set_def apply blast 
 done
 

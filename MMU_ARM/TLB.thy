@@ -101,7 +101,7 @@ theorem is_present_selective:
   "\<not>(is_a_va_present (a_va_sel_invalidate t a v) a v)"
   unfolding a_va_sel_invalidate_def
             lookup_def is_a_va_present_def entry_set_def a_va_set_def
-  by (fastforce split: split_if_asm)
+  by (fastforce split: if_split_asm)
 
 
 (* Block invalidation of a set of virtual addresses for an ASID *)
@@ -120,20 +120,20 @@ where
 theorem lookup_miss_case:
   "lookup t a v = Miss \<Longrightarrow> \<not>is_a_va_present t a v"
   unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
-  by (simp split: split_if_asm)
+  by (simp split: if_split_asm)
 
 
 (* Theorems for Block Invalidation *)
 theorem  lookup_incon_case:
   "lookup t a v = Incon \<Longrightarrow> \<not>is_a_va_present (t - entry_set t a v) a v"
   unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
-  by (simp split: split_if_asm)
+  by (simp split: if_split_asm)
 
 
 theorem lookup_hit_case:
   "lookup t a v = Hit x \<Longrightarrow> \<not>is_a_va_present (t - {x}) a v"
   unfolding lookup_def is_a_va_present_def entry_set_def a_va_set_def
-  by (force split: split_if_asm)
+  by (force split: if_split_asm)
 
 theorem member_selective_invalidation:
   "x \<in> a_va_sel_invalidate t a v \<Longrightarrow> (a,v) \<notin>  entry_range_asid_tags x"
@@ -232,18 +232,18 @@ where
 theorem lookup_miss_not_present_implies:
   "lookup t a v = Miss \<Longrightarrow> \<not>is_a_va_present t a v"
   unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
-  by (simp split: split_if_asm)
+  by (simp split: if_split_asm)
 
 theorem not_present_lookup_miss_implies:
   "\<not>is_a_va_present t a v \<Longrightarrow> lookup t a v = Miss"
   unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
-  by (simp split: split_if_asm)
+  by (simp split: if_split_asm)
 
 theorem lookup_miss_not_present:
   "(lookup t a v = Miss) = (\<not>is_a_va_present t a v)"
   apply (rule iffI)
   unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
-  by (simp split: split_if_asm)+
+  by (simp split: if_split_asm)+
 
 (* ---------------------------------------------------------------------*)
 
@@ -251,12 +251,12 @@ theorem is_present_look_up_not_miss_implies:
   "is_a_va_present t a v \<Longrightarrow> lookup t a v \<noteq> Miss "
   unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
   apply (safe)
-  by (simp split: split_if_asm)
+  by (simp split: if_split_asm)
 
 theorem look_up_not_miss_is_present_imples:
   "lookup t a v \<noteq> Miss \<Longrightarrow> is_a_va_present t a v"
   unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   by force+
 
 theorem is_present_look_up_not_miss:
@@ -264,7 +264,7 @@ theorem is_present_look_up_not_miss:
   apply (rule iffI)
   unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
   apply (safe)
-  by (simp split: split_if_asm ; force)+
+  by (simp split: if_split_asm ; force)+
 
 (* ---------------------------------------------------------------------*)
 
@@ -284,7 +284,7 @@ theorem is_okay_not_miss_exist:
   "\<lbrakk>is_okay t ; lookup t a v \<noteq> Miss  \<rbrakk> \<Longrightarrow>
                \<exists>x\<in>t. lookup t a v = Hit x"
   unfolding lookup_def
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   apply (unfold entry_set_def) [1]
   apply force
   apply (drule(1) is_okay_not_empty_exist)
@@ -296,7 +296,7 @@ theorem is_okay_is_present_not_incon:
   apply safe
   apply (drule is_present_look_up_not_miss_implies)
   unfolding lookup_def
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   unfolding is_okay_def overlapping_entries_def a_va_set_def entry_set_def
   apply clarsimp
   apply (drule_tac x="x" in spec)
@@ -309,7 +309,7 @@ theorem is_okay_not_incon:
   "is_okay t \<Longrightarrow>  \<forall>v a. lookup t a v \<noteq> Incon"
   apply safe
   unfolding lookup_def
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   unfolding is_okay_def overlapping_entries_def a_va_set_def entry_set_def
   apply clarsimp
   apply (drule_tac x="x" in spec)
@@ -369,7 +369,7 @@ theorem not_incon_is_okay:
   apply (frule entry_range_memeber_va_set)
   apply simp
   unfolding lookup_def
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   apply (drule entry_set_empty)
   apply (unfold a_va_set_def) [1]
   apply simp
@@ -391,7 +391,7 @@ theorem is_okay_not_hit_miss:
   "\<lbrakk>is_okay t ; (\<forall>x\<in>t. lookup t a v \<noteq> Hit x) \<rbrakk> \<Longrightarrow>
           lookup t a v = Miss "
   unfolding lookup_def
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   apply (unfold entry_set_def) [1]
   apply force
   apply (drule(1) is_okay_not_empty_exist)
@@ -417,7 +417,7 @@ theorem not_okay_lookup_incon:
   apply (clarsimp simp: entry_range_memeber_va_set)
 
   unfolding lookup_def
-  apply (simp split:split_if)
+  apply (simp split:if_split)
   apply (rule conjI)
   apply safe
   unfolding entry_set_def
@@ -475,7 +475,7 @@ theorem lookup_asid_inv_miss:
 theorem lookup_hit_is_present:
   "lookup t a v = Hit x \<Longrightarrow> is_a_va_present t a v"
   unfolding lookup_def is_a_va_present_def entry_set_def a_va_set_def
-  by (force split: split_if_asm)
+  by (force split: if_split_asm)
 
 theorem entry_ranhe_asid_entry:
   "(a2, v) \<in> entry_range_asid_tags x \<Longrightarrow> a2 = asid_entry x"
@@ -487,7 +487,7 @@ theorem lookup_asid_inv_hit:
          lookup (asid_invalidation t a1) a2 v = Hit x"
   apply (frule lookup_hit_is_present)
   unfolding asid_invalidation_def lookup_def
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   apply safe
     unfolding entry_set_def asid_entry_set_def a_va_set_def
     apply simp
@@ -522,7 +522,7 @@ theorem  lookup_asid_inv_incon:
   "\<lbrakk> a1 \<noteq> a2 ; lookup t a2 v = Incon \<rbrakk> \<Longrightarrow>
          lookup (asid_invalidation t a1) a2 v = Incon"
   unfolding asid_invalidation_def lookup_def
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   apply safe
   apply (clarsimp simp:for_incon)
   apply (subgoal_tac "entry_set t a2 v \<noteq> {}")
@@ -600,7 +600,7 @@ theorem entry_set_empty_va_inv:
 theorem lookup_va_invalid:
   "lookup (va_sel_invalidation t v) a v = Miss"
   apply (unfold lookup_def)
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   by (clarsimp simp: entry_set_empty_va_inv)
 
 

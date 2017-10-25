@@ -147,20 +147,20 @@ lemma lookup_hit_union_cases_rule:
     (lookup t2 a va = Hit x \<and> lookup t1 a va = Miss)  \<or>
     (lookup t1 a va = Hit x \<and> lookup t2 a va = Hit x) \<Longrightarrow>  lookup (t1 \<union> t2) a va = Hit x"
   apply safe
-    apply ((clarsimp simp: lookup_def entry_set_def split: split_if_asm,(safe ; force))+) [2]
-  apply (clarsimp simp: lookup_def entry_set_def split: split_if_asm)
+    apply ((clarsimp simp: lookup_def entry_set_def split: if_split_asm,(safe ; force))+) [2]
+  apply (clarsimp simp: lookup_def entry_set_def split: if_split_asm)
   apply rule
    by (clarsimp simp: entry_set_def, frule  entry_range_single_element, frule  entry_range_single_element, (safe ; force))+
 
 
 lemma lookup_not_miss_hit_incon:
   "\<lbrakk>lookup t a v \<noteq> Miss\<rbrakk> \<Longrightarrow> (\<exists>x. lookup t a v = Hit x) \<or> lookup t a v = Incon"
-  by (clarsimp simp: lookup_def split:split_if_asm)
+  by (clarsimp simp: lookup_def split:if_split_asm)
 
 
 lemma lookup_hit_mis_hit':
   "\<lbrakk>lookup (t1 \<union> t2) a va = Hit x ; lookup t1 a va = Miss\<rbrakk>  \<Longrightarrow> lookup t2 a va = Hit x   "
-  apply (clarsimp simp: lookup_def entry_set_def split: split_if_asm)
+  apply (clarsimp simp: lookup_def entry_set_def split: if_split_asm)
   by (safe ; force)
 
 
@@ -173,18 +173,18 @@ lemma lookup_union_miss_not_miss_cases:
    apply (rule_tac x = x in exI)
    apply (drule lookup_hit_mis_hit' ; clarsimp)
   apply (rule disjI2)
-  apply (clarsimp simp: lookup_def entry_set_def split: split_if_asm)
+  apply (clarsimp simp: lookup_def entry_set_def split: if_split_asm)
   by auto
 
 
 
 lemma lookup_not_incon_hit_miss:
   "\<lbrakk>lookup t a v \<noteq> Incon\<rbrakk> \<Longrightarrow> (\<exists>x. lookup t a v = Hit x) \<or> lookup t a v = Miss"
-  by (clarsimp simp: lookup_def split:split_if_asm)
+  by (clarsimp simp: lookup_def split:if_split_asm)
 
 lemma lookup_not_incon_hit_miss':
   "(\<exists>x. lookup t a v = Hit x) \<or> lookup t a v = Miss  \<Longrightarrow> lookup t a v \<noteq> Incon "
-  by (clarsimp simp: lookup_def split:split_if_asm)
+  by (clarsimp simp: lookup_def split:if_split_asm)
 
 
 

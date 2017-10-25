@@ -1720,9 +1720,6 @@ where
   return (word_cat (v::1 word) (v0::1 word))
 }"
 
-thm ISETSTATE_def
-
-value ISETSTATE
 
 ML \<open>
 local 
