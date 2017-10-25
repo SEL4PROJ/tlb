@@ -1,6 +1,6 @@
 theory RT_Map
 
-imports "./../Logic/Safe_Set"
+imports LOGIC.Safe_Set
 
 
 begin

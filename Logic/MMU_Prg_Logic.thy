@@ -1,8 +1,8 @@
 theory MMU_Prg_Logic
 
 imports
-     "~~/src/HOL/Word/Word" 
-     "./../Page_Tables/PageTable_seL4" 
+     "HOL-Word.Word" 
+     PTABLE.PageTable_seL4 
      "./../Eisbach/Rule_By_Method"
 
 

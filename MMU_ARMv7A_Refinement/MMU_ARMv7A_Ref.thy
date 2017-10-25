@@ -1,7 +1,7 @@
 theory MMU_ARMv7A_Ref
 
 
-imports "./../MMU_ARM/ARM_Monadic_Ops"  
+imports MMU_ARM.ARM_Monadic_Ops  
         PD_Cache
 
 begin               

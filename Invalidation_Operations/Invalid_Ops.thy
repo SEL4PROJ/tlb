@@ -1,6 +1,6 @@
 theory Invalid_Ops
 
-imports "./../MMU_ARMv7_Refinement/MMU_ARMv7_Ref"
+imports ARM_REF.MMU_ARMv7_Ref
 
 begin               
 

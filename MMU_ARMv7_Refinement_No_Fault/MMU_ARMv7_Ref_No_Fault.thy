@@ -1,6 +1,6 @@
 theory MMU_ARMv7_Ref_No_Fault
 
-imports  "./../MMU_ARM/ARM_Monadic_Ops"
+imports  MMU_ARM.ARM_Monadic_Ops
 
 begin               
 

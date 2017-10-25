@@ -22,7 +22,7 @@
 *)
 
 theory MachineARM
-imports Pointers "./../Word_Lib/Word_Lib"
+imports Pointers Word_Lib.Word_Lib
 begin
 
 text {* Address types *}

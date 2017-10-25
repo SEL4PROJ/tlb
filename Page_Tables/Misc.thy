@@ -7,7 +7,7 @@
 
 theory Misc
 imports
-  "./../Word_Lib/Word_Enum"
+  Word_Lib.Word_Enum
 
 begin
 

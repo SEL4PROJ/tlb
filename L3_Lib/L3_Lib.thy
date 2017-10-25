@@ -4,10 +4,10 @@
 L3 operations.
 *)
 theory L3_Lib
-imports "$ISABELLE_HOME/src/HOL/Word/Word"
-        "$ISABELLE_HOME/src/HOL/Library/Code_Target_Numeral"
-        "$ISABELLE_HOME/src/HOL/Library/Code_Char"
-        "~~/src/HOL/Library/Monad_Syntax"
+imports "HOL-Word.Word"
+        "HOL-Library.Code_Target_Numeral"
+        "HOL-Library.Code_Char"
+        "HOL-Library.Monad_Syntax"
 begin
 
 (* enable printing for do notation *)

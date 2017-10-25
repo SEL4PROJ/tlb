@@ -8,9 +8,9 @@
 
 theory TLB
 imports
-  "~~/src/HOL/Word/Word"
-  "./../Page_Tables/PageTable_seL4"
-  "./../L3_Lib/L3_Lib"
+  "HOL-Word.Word"
+  L3_LIB.PageTable_seL4
+  L3_LIB.L3_Lib
 begin
 
 type_synonym vSm = "20 word"

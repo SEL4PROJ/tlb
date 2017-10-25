@@ -6,7 +6,7 @@
 *)
 
 theory Pointers
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 text {* 

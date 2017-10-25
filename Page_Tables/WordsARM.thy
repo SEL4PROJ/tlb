@@ -1,7 +1,7 @@
 (* @LICENSE(NICTA_CORE) *)
 
 theory WordsARM
-imports "~~/src/HOL/Word/Word"
+imports "HOL-Word.Word"
 begin
 
 class word_len_1 = len +
