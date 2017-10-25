@@ -218,9 +218,7 @@ lemma root_map_upd'[simp]:
 
 lemma kernel_data_upd:
   "p \<notin> kernel_data_area s \<Longrightarrow> kernel_data (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = kernel_data s"
-  by (clarsimp simp: kernel_data_def)
-
-
+  by (clarsimp simp: kernel_data_def ptable_footprint_upd)
 
 lemma kernel_mapping_upd:
   "p \<notin> kernel_data_area s \<Longrightarrow> 
