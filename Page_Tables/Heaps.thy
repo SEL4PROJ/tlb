@@ -9,9 +9,9 @@ theory Heaps
 imports MemTypes WordTypes
 begin
 
-section {* Memory Views *}
+section \<open>Memory Views\<close>
 
-text {*
+text \<open>
   Apart from the heap, representing the physical machine memory, we recognise
   the virtual address map (mapping each virtual address to a physical one) and
   the virtual address space (mapping each virtual address to a byte).
@@ -26,7 +26,7 @@ text {*
   The heap is partial, defined on areas used by the program.
 
   A value space is a partial map from any kind of address to bytes.
-  *}
+\<close>
 type_synonym vmap = "vaddr \<rightharpoonup> paddr"
 type_synonym heap = "paddr \<rightharpoonup> byte"
 type_synonym addr_space = "vaddr \<rightharpoonup> byte"
@@ -39,9 +39,9 @@ translations
 type_synonym ('a,'p) value_space = "('a,'p) addr_t \<rightharpoonup> byte"
 
 
-section {* Object Loading *}
+section \<open>Object Loading\<close>
 
-text {* Obtaining a list of values (i.e. bytes) from a map with an addr_t domain. *}
+text \<open>Obtaining a list of values (i.e. bytes) from a map with an addr_t domain.\<close>
 
 primrec
   load_list_basic :: "(('a::semiring_1,'p) addr_t \<rightharpoonup> 'val) \<Rightarrow> nat 
@@ -62,9 +62,9 @@ lemma length_load_list_basic [simp]:
   by (induct sz arbitrary: p, auto)
 
 
-section {* Loading Objects from the Heap/Address Space *}
+section \<open>Loading Objects from the Heap/Address Space\<close>
 
-text {* Retrieving a stored value on the heap or addr\_space *}
+text \<open>Retrieving a stored value on the heap or addr\_space\<close>
 (* FIXME: ugly return-type overloading, improve? *)
 
 definition
@@ -84,7 +84,7 @@ definition
                         \<rightharpoonup> machine_word" where
   "load_machine_word \<equiv> load_value"
 
-subsection {* Loading Objects After Unrelated Heap Updates *}
+subsection \<open>Loading Objects After Unrelated Heap Updates\<close>
 
 lemma load_list_basic_update_eq:
   assumes p: "p \<notin> set (addr_seq start sz)"

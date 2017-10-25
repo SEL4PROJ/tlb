@@ -83,7 +83,7 @@ instance
                     div8_same some_bytes max_length size_dvd_memory)
 end
 
-text {* Size simplifications *}
+text \<open>Size simplifications\<close>
 
 lemma size_of_8 [simp]: "size_of TYPE(8 word) = 1"
   by (auto simp: size_of_word_def word_size)
@@ -96,7 +96,7 @@ lemma size_of_32 [simp]: "size_of TYPE(32 word) = 4"
 
 declare align_of_word_def [simp]
 
-text {* Simple tests checking little-endianess *}
+text \<open>Simple tests checking little-endianess\<close>
 
 lemma "to_bytes (0xAA :: byte) = [0xAA]"
   by (simp add: to_bytes_word_def machine_w2b_def)

@@ -16,7 +16,7 @@ type_synonym byte = "8 word"
 type_synonym type_tag = string
 (*TODO: when working on structure types, this should be moved to where all the other stuff is defined (atomic/structure types etc) (XXX or removed when dropping the tagged heap *)
 
-text {*
+text \<open>
   The @{text "mem_type"} class represents a C-like values storable in memory.
   They:
    * must be convertable to a series of bytes, reversibly
@@ -28,7 +28,7 @@ text {*
      and virtual address spaces
    * may require an alignment that divides the both the physical and virtual
      address space sizes
-*}
+\<close>
 class mem_type = 
   -- "size of value in bytes"
   fixes size_of :: "'a itself \<Rightarrow> nat"
@@ -64,7 +64,7 @@ lemma snd_mem_type_decode:
 
 end
 
-text {* Extra mem\_type lemmas. *}
+text \<open>Extra mem\_type lemmas.\<close>
 
 lemma to_bytes_nil_all:
   assumes a: "to_bytes (x::'a::mem_type) = []"
@@ -76,7 +76,7 @@ proof -
 qed
 
 
-text {* 
+text \<open>
   In order to make records mem_types, we need to disregard their ability to
   be extended. When we discard the @{text "more"} part of a record for 
   encoding, we must somehow still reconstruct it after decoding. What we
@@ -84,7 +84,7 @@ text {*
   only unit isn't possible, but a class of types with only one member is
   sufficient, as @{text "undefined"} is a reliable reconstruction of any
   discarded extension.
-*}
+\<close>
 class unitary =
   fixes the_value :: "'a" 
   assumes only_one_value: "(x::'a) = y" (* Unused. Required to fix 'a. *)

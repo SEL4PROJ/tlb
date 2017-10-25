@@ -9,7 +9,7 @@ theory Pointers
 imports Main
 begin
 
-text {* 
+text \<open>
   A machine has two types of addresses: virtual and physical.
   Since very often they are the same size (e.g. 32-bit wide) we wish to 
   differentiate them at the type level.
@@ -20,24 +20,24 @@ text {*
   their underlying widths are the same.
   Its parameters are the address size (such as "32 word") and the address 
   type (physical or virtual).
-  *}
+\<close>
 typedecl physical
 typedecl virtual
 datatype ('a, 'p) addr_t = Addr 'a
 
-text {*
+text \<open>
   Similarly to addr_t, we have pointers pointing to values of a specific 
   type. This type is denoted with an extra phantom type ('t).
   A typed pointer contains an addr_t.
-  *}
+\<close>
 datatype ('a, 'p, 't) ptr_t = Ptr "('a,'p) addr_t"
 
-text {* NULL pointer (mostly used in C) *}
+text \<open>NULL pointer (mostly used in C)\<close>
 definition 
   NULL :: "('a::zero, 'p, 't) ptr_t" where
   "NULL \<equiv> Ptr (Addr 0)"
 
-text {* Extraction of values/addresses from addresses/pointers. *}
+text \<open>Extraction of values/addresses from addresses/pointers.\<close>
 
 fun
   addr_val :: "('a, 'p) addr_t \<Rightarrow> 'a" where
@@ -46,8 +46,8 @@ fun
   ptr_val :: "('a, 'p, 't) ptr_t \<Rightarrow> ('a,'p) addr_t" where
   "ptr_val (Ptr a) = a"
 
-text {*
-  Extracting the address from a pointer contained within a typed pointer *}
+text \<open>
+  Extracting the address from a pointer contained within a typed pointer\<close>
 definition
   "ptr_addr x \<equiv> addr_val (ptr_val x)"
 
@@ -77,16 +77,16 @@ lemmas addr_splits = addr_split addr_split_asm
 lemmas ptr_splits = addr_splits ptr_split ptr_split_asm
 
 
-section {* Pointer Manipulation *}
+section \<open>Pointer Manipulation\<close>
 
-text {* Type coertion / casting *}
+text \<open>Type coertion / casting\<close>
 fun
   ptr_coerce :: "('a,'p,'t) ptr_t \<Rightarrow> ('a,'p,'t2) ptr_t" where
   "ptr_coerce (Ptr p) = Ptr p"
 
-text {* 
+text \<open>
   Addition of an offset to an address. Note: adding two addresses makes 
-  no sense. *}
+  no sense.\<close>
 definition
   addr_add :: "('a::semiring_1,'p) addr_t \<Rightarrow> 'a \<Rightarrow> ('a,'p) addr_t" (infixl "r+" 65) 
   where
@@ -105,7 +105,7 @@ lemma addr_addr_add [simp]:
   shows "Addr a r+ x = Addr (a + x)"
   by (simp add: addr_add_def field_simps)
 
-text {* Subtraction of an offset from an address. *}
+text \<open>Subtraction of an offset from an address.\<close>
 definition
   addr_sub :: "('a::minus,'p) addr_t \<Rightarrow> 'a \<Rightarrow> ('a,'p) addr_t" (infixl "r-" 65) 
   where
@@ -124,9 +124,9 @@ lemma addr_addr_sub [simp]:
   shows "Addr a r- x = Addr (a - x)"
   by (simp add: addr_sub_def)
 
-text {* 
+text \<open>
   A sequence of addresses of length n starting at a specific offset.
-  Wrapping permitted. *}
+  Wrapping permitted.\<close>
 primrec
   addr_seq :: "('a::semiring_1,'p) addr_t \<Rightarrow> nat \<Rightarrow> ('a,'p) addr_t list"
 where
@@ -139,7 +139,7 @@ lemma addr_seq_length [simp]:
   by (induct sz arbitrary: p, auto)
 
 
-text {* Ordering of addresses/pointers *}
+text \<open>Ordering of addresses/pointers\<close>
 
 instantiation addr_t :: (ord,type) ord
 begin
@@ -186,7 +186,7 @@ lemma Addr_less[simp]: "(Addr x < Addr y) = (x < y)"
 lemma Ptr_less[simp]: "(Ptr x < Ptr y) = (x < y)"
   by (simp add: ptr_less split: ptr_splits)
 
-text {* Finiteness of pointer sets *}
+text \<open>Finiteness of pointer sets\<close>
 
 lemma addr_t_UNIV: "(UNIV::('a,'p) addr_t set) = Addr ` UNIV"
   by (rule set_eqI, case_tac x, auto)
@@ -199,7 +199,7 @@ instance addr_t :: (finite,type) finite
 instance ptr_t :: (finite,type,type) finite
   by (intro_classes, simp add: ptr_t_UNIV)
 
-text {* Misc *}
+text \<open>Misc\<close>
 
 lemma addr_img[simp]: "(Addr x \<in> Addr ` xs) = (x \<in> xs)" by auto
 lemma ptr_img[simp]: "(Ptr x \<in> Ptr ` xs) = (x \<in> xs)" by auto

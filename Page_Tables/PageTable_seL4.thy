@@ -16,13 +16,13 @@ begin
 
 declare map_add_assoc [simp del] (* required for MapExtra *)
 
-text {* 
+text \<open>
   The base of the page table is one physical root. 
   This page table structure is the part after the ASID table lookup.
-  one for the user side *}
+  one for the user side\<close>
 type_synonym ptable_base = paddr
 
-text {*
+text \<open>
   ASSUMPTIONS:
 
   Things I think are always the case in seL4:
@@ -30,9 +30,9 @@ text {*
   - don't use extended physical addresses (40-bit address space)
   - don't use domains (domain is always 0)
 
-  *}
+\<close>
 
-text {*
+text \<open>
   Conventions:
   A Page Directory is the first level of a two-level page table.
   A Page Table is the second level of a two-level page table.
@@ -42,9 +42,9 @@ text {*
 
   The offset is the index into the structure we resolve to when looking up,
   i.e. page index for pages, section index for sections
-  *}
+\<close>
 
-text {* Supported page types *}
+text \<open>Supported page types\<close>
 
 datatype page_type =
    ArmSmallPage
@@ -62,7 +62,7 @@ definition
   "page_size page_type \<equiv> 2 ^ (page_bits page_type)"
 
 
-text {* Offset calculation common to all sizes *}
+text \<open>Offset calculation common to all sizes\<close>
 
 definition
   vaddr_offset :: "page_type \<Rightarrow> machine_word \<Rightarrow> machine_word" where
@@ -74,7 +74,7 @@ definition
 lemma "map (\<lambda>p. vaddr_offset p 0xFEDCBAAA) [ArmSmallPage, ArmSection] = [0xAAA, 0xCBAAA]"
   by (clarsimp simp: vaddr_offset_def mask_def)
 
-text {* Get the non-offset part of an address for a given page size *}
+text \<open>Get the non-offset part of an address for a given page size\<close>
 definition
   addr_base :: "page_type \<Rightarrow> machine_word \<Rightarrow> machine_word" where
   "addr_base sz w \<equiv> w AND (NOT mask (page_bits sz))"
@@ -83,13 +83,13 @@ lemma "addr_base ArmSmallPage 0xFFFFFFFF = 0xFFFFF000" (* sanity check *)
   unfolding addr_base_def mask_def by simp
 
 
-text {*
+text \<open>
   Permissions bits as per the reference manual. These are not translated into
   anything more abstract, because currently they aren't used in the logic.
   I suppose the best way to go about this is to add another "guard", like a
   permissions guard, rather than fiddling around with a set of flags, since
   on the ARM the permissions decoding is not so straightforward.
-  *}
+\<close>
 
 record arm_perm_bits =
     arm_p_APX :: "1 word"
@@ -103,7 +103,7 @@ record arm_perm_bits =
 
 
 
-section {* Page Directory Entry (PDE) Decoding *}
+section \<open>Page Directory Entry (PDE) Decoding\<close>
 
 datatype pde =
    InvalidPDE
@@ -157,7 +157,7 @@ definition
 
 
 
-section {* Page Table Entry (PTE) Decoding *}
+section \<open>Page Table Entry (PTE) Decoding\<close>
 
 datatype pte =
    InvalidPTE
@@ -202,10 +202,10 @@ definition
   "decode_heap_pte h p \<equiv> map_option decode_pte (load_machine_word h p)"
 
 
-section {* Performing a Lookup *}
+section \<open>Performing a Lookup\<close>
 
-text {*
-  Bits 20-31 of virtual addresses represent an index into the page directory.*}
+text \<open>
+  Bits 20-31 of virtual addresses represent an index into the page directory.\<close>
 definition
   vaddr_pd_index :: "machine_word \<Rightarrow> machine_word" where
   "vaddr_pd_index w \<equiv> (w >> 20) AND mask 12"
@@ -215,19 +215,19 @@ lemma vaddr_pd_index_simp: "((w::machine_word) >> 20) AND mask 12 = w >> 20"
                      le_mask_iff[symmetric])
      (unfold mask_def, rule order_trans, rule word_n1_ge, simp)
 
-text {*
-  Bits 12-19 of virtual addresses represent an index into the page table. *}
+text \<open>
+  Bits 12-19 of virtual addresses represent an index into the page table.\<close>
 definition
   vaddr_pt_index :: "machine_word \<Rightarrow> machine_word" where
   "vaddr_pt_index w \<equiv> (w >> 12) AND mask 8"
 
 
-subsection {* Get Frame *}
+subsection \<open>Get Frame\<close>
 
-text {*
+text \<open>
   Decode the correct page directory entry from the page directory at some
   physical location given a virtual address to look up.
-*}
+\<close>
 definition
   get_pde :: "heap \<Rightarrow> paddr \<Rightarrow> vaddr \<rightharpoonup> pde" where
   "get_pde h root vp \<equiv>
@@ -236,10 +236,10 @@ definition
      in
        decode_heap_pde h (root r+ pd_idx_offset)"
 
-text {*                  
+text \<open>
   Decode the correct page table entry from a page table at some
   physical location given a virtual address to look up.
-*}
+\<close>
 definition
   get_pte :: "heap \<Rightarrow> paddr \<Rightarrow> vaddr \<rightharpoonup> pte" where
   "get_pte h pt_base vp \<equiv> 
@@ -248,11 +248,11 @@ definition
      in
        decode_heap_pte h (pt_base r+ pt_idx_offset)"
 
-text {*
+text \<open>
   The basic lookup mechanism we perform is figuring out the size of the page
   a virtual address is on, then figuring out where in physical memory that
   page maps to.
-  *}
+\<close>
 
 definition
   lookup_pte :: "heap \<Rightarrow> paddr \<Rightarrow> vaddr \<rightharpoonup> (paddr \<times> page_type \<times> arm_perm_bits)"
@@ -277,16 +277,16 @@ definition
     (get_pde h root vp)"
 
 
-subsection {* Get Page *}
+subsection \<open>Get Page\<close>
 
-text {*
+text \<open>
   Find out which page a virtual address is on, along with permissions.
 
   Getting a page is a bit more complicated with superpages, as we can't really
   ``get a *page*''. So we get the virtual base address of the page *and* 
   the page size. For that, we need to essentially perform a lookup. 
   Once we know the page size, we can just mask it out of the virtual pointer.
-  *}
+\<close>
 
 definition
   get_page :: "heap \<Rightarrow> paddr \<Rightarrow> vaddr \<rightharpoonup> (vaddr \<times> page_type \<times> arm_perm_bits)"
@@ -301,14 +301,14 @@ definition
          (lookup_pde h root vp)"
 
 
-subsection {* Lookup *}
+subsection \<open>Lookup\<close>
 
-text {*
+text \<open>
   Lookup of a virtual pointer in a Page Table given its base address.
   To obtain the physical address, we get the frame and the page size, 
   then mask in offset bits from the virtual pointer into the frame base
   address.
-  *}
+\<close>
 definition
   ptable_lift :: "heap \<Rightarrow> paddr \<Rightarrow> vaddr \<rightharpoonup> paddr" where
   "ptable_lift h pt_root vp \<equiv>
@@ -321,11 +321,11 @@ definition
          (lookup_pde h pt_root vp)"
 
 
-subsection {* Trace *}
+subsection \<open>Trace\<close>
 
-text {*
+text \<open>
   Trace of looking up a virtual pointer in a Page Directory given its base 
-  address. *}
+  address.\<close>
 definition
   ptable_trace :: "heap \<Rightarrow> paddr \<Rightarrow> vaddr \<Rightarrow> paddr set" where
   "ptable_trace h root vp \<equiv>
@@ -344,9 +344,9 @@ definition
           | None \<Rightarrow> {})"
 
 
-section {* Properties, Instantiation to pagetable Locale *}
+section \<open>Properties, Instantiation to pagetable Locale\<close>
 
-text {* Heap monotonicity and Frame monotonicity for on option result *}
+text \<open>Heap monotonicity and Frame monotonicity for on option result\<close>
 
 definition
   heap_mono_option :: "(('a \<rightharpoonup> 'b) \<Rightarrow> 'c option) \<Rightarrow> bool" where
@@ -371,7 +371,7 @@ lemma frame_mono_optionE:
   unfolding frame_mono_option_def by fastforce
 
 
-subsection {* Heap monotonicity *}
+subsection \<open>Heap monotonicity\<close>
 
 lemma load_list_basic_heap_mono_simp:
   assumes disj: "h \<bottom> h'"
@@ -461,8 +461,8 @@ lemma get_page_heap_mono_option:
 lemmas get_page_disj_heap_mono_simp = heap_mono_option_simp[OF get_page_heap_mono_option]
 lemmas get_page_disj_heap_mono = heap_mono_optionE[OF get_page_heap_mono_option]
 
-text {* Heap monotonicity of ptable_trace works a bit differently as it just
-  returns a set, so it depends on ptable_lift's monotonicity *}
+text \<open>Heap monotonicity of ptable_trace works a bit differently as it just
+  returns a set, so it depends on ptable_lift's monotonicity\<close>
 
 (*XXX: fold into not_in_trace_not_in_pde?*)
 lemma lift_valid_pde_valid:
@@ -483,7 +483,7 @@ lemma ptable_trace_heap_mono_simp:
 (*XXX: any set-like monotonicity properties can be derived from this*)
 
 
-subsection {* Frame Monotonicity *}
+subsection \<open>Frame Monotonicity\<close>
 
 lemma load_list_frame_mono_option:
   "frame_mono_option (\<lambda>h. load_list h n p)"
@@ -562,7 +562,7 @@ lemma get_page_frame_mono_option:
 lemmas get_page_frame_mono = frame_mono_optionE[OF get_page_frame_mono_option]
 
 
-subsection {* Preservation of trace and lift During Updates Outside a Trace  *}
+subsection \<open>Preservation of trace and lift During Updates Outside a Trace\<close>
 
 lemma decode_pde_update_eq:
   "\<lbrakk> p \<notin> set (addr_seq start 4) \<rbrakk>

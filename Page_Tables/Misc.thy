@@ -30,7 +30,7 @@ where
 definition "K \<equiv> \<lambda>x y. x"
 
 
-text {* Reversed composition of partial functions *}
+text \<open>Reversed composition of partial functions\<close>
 definition
   fun_rcomp_option :: "('a \<rightharpoonup> 'b) \<Rightarrow> ('b \<rightharpoonup> 'c) \<Rightarrow> ('a \<rightharpoonup> 'c)" (infixl "\<rhd>o" 55)
 where
@@ -45,7 +45,7 @@ lemma rco_middle_exists:
 lemma rco_dom_left: "(vs \<rhd>o hs) v = Some val \<Longrightarrow> v \<in> dom vs"
   by (clarsimp simp add: rco_def cong: option.case_cong split: option.splits)
 
-text {* Option magic *}
+text \<open>Option magic\<close>
 
 lemma None_not_eq [simp]: "(None \<noteq> x) = (\<exists>y. x = Some y)" by (cases x) auto
 lemma None_com: "(None = x) = (x = None)" by fast
@@ -108,7 +108,7 @@ lemma list_index_in_list:
   "lst ! i = v \<Longrightarrow> i < length lst \<Longrightarrow> v \<in> set lst"
   by auto
 
-text {* Drop first or second part of pairs in the range of a map. *}
+text \<open>Drop first or second part of pairs in the range of a map.\<close>
 
 definition
   fst_all_opt :: "('a \<rightharpoonup> 'b \<times> 'c) \<Rightarrow> ('a \<rightharpoonup> 'b)" where
@@ -118,7 +118,7 @@ definition
   snd_all_opt :: "('a \<rightharpoonup> 'b \<times> 'c) \<Rightarrow> ('a \<rightharpoonup> 'c)" where
   "snd_all_opt m \<equiv> (map_option snd) \<circ> m"
 
-text {* List take/drop folding, useful when (un)serialising serialisables  *}
+text \<open>List take/drop folding, useful when (un)serialising serialisables\<close>
 
 lemma list_take_take_drop: 
   "take i x @ take j (drop i x) = take (i+j) x"

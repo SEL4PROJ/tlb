@@ -25,7 +25,7 @@ theory MachineARM
 imports Pointers Word_Lib.Word_Lib
 begin
 
-text {* Address types *}
+text \<open>Address types\<close>
 
 type_synonym machine_word = "32 word"
 type_synonym vaddr_word = "32 word"
@@ -39,7 +39,7 @@ translations
   (type) "vaddr" <=(type) "(32 word,virtual) addr_t"
   (*XXX: these can be derived, but you'd have to expand vaddr_word etc.*)
 
-text {* Memory size *}
+text \<open>Memory size\<close>
 
 definition
   memory_size :: nat where
@@ -54,7 +54,7 @@ lemma memory_size: "memory_size = 2 ^ 32" (*XXX: used to be [simp]*)
 lemma addr_space_size: "addr_space_size = 2 ^ 32" (*XXX: used to be [simp]*)
   by (simp add: addr_space_size_def word_size)
 
-text {* Endianness setup *}
+text \<open>Endianness setup\<close>
 
 definition
   machine_w2b :: "'a::len0 word \<Rightarrow> 8 word list" where

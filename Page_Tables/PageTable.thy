@@ -9,7 +9,7 @@ theory PageTable
 imports MapExtra
 begin
 
-text {*
+text \<open>
   The information on how the virtual address space is laid out is contained in
   the heap itself in the form of a page table. The page table has a base, which
   consists of one or more entrypoints (e.g. a page table root).
@@ -38,7 +38,7 @@ text {*
   Not all bases are valid (e.g. due to address space overflow given a 
   too-large root). Implemenations of page tables should supply their own 
   version and assume the property holds. In proofs, it should be a guard. 
-*}
+\<close>
 locale pagetable =
   -- "Obtaining the virtual map"
   fixes ptable_lift :: "('paddr \<rightharpoonup> 'val) \<Rightarrow> 'base \<Rightarrow> 'vaddr \<rightharpoonup> 'paddr"

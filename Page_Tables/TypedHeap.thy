@@ -15,11 +15,11 @@ begin
   better. Best to leave it for now, then rename if it's really necessary.
 *)
 
-section {* Types *}
+section \<open>Types\<close>
 
-text {* A pointer type is a mem_type if its address type is a mem_type  *}
+text \<open>A pointer type is a mem_type if its address type is a mem_type\<close>
 
-text {* Can I be more specific than mem_type for addrs here? *}
+text \<open>Can I be more specific than mem_type for addrs here?\<close>
 instantiation ptr_t :: (mem_type, type, type) mem_type
 begin
 definition
@@ -47,7 +47,7 @@ declare size_of_ptr_t_def[simp]
 declare align_of_ptr_t_def[simp]
 
 
-text {* Instantiations of typed pointers based on instantiated address types *}
+text \<open>Instantiations of typed pointers based on instantiated address types\<close>
 
 type_synonym 't pptr = "(paddr_word,physical,'t) ptr_t"
 type_synonym 't vptr = "(vaddr_word,virtual,'t) ptr_t"
@@ -56,31 +56,31 @@ translations
   (type) "'t vptr" <= (type) "(32 word,virtual,'t) ptr_t"
   (type) "'t pptr" <= (type) "(32 word,physical,'t) ptr_t"
 
-text {* 
+text \<open>
   For virtual/physical agnostic operations, such as loading an value from
-  an address space or heap. *}
+  an address space or heap.\<close>
 type_synonym ('a,'p) value_space = "('a,'p) addr_t \<rightharpoonup> byte"
 
-text {* 
+text \<open>
   Pointers can be valid with respect to specific criteria enforced by guards, 
   e.g. disallowing null pointers. 
-  *}
+\<close>
 type_synonym ('a,'p,'t) ptr_guard = "('a,'p,'t) ptr_t \<Rightarrow> bool"
 type_synonym 't pptr_guard = "(paddr_word,physical,'t) ptr_t \<Rightarrow> bool"
 type_synonym 't vptr_guard = "(vaddr_word,virtual,'t) ptr_t \<Rightarrow> bool"
 
-section {* Typed Pointer Manipulation *}
+section \<open>Typed Pointer Manipulation\<close>
 
-text {*
-  Incrementing an address in a typed pointer by a specific number of bytes *}
+text \<open>
+  Incrementing an address in a typed pointer by a specific number of bytes\<close>
 definition
   ptr_raw_add :: "('a::semiring_1,'p,'t::mem_type) ptr_t \<Rightarrow> 'a
               \<Rightarrow> ('a,'p,'t) ptr_t" where
   "ptr_raw_add p x \<equiv> Ptr (ptr_val p r+ x)"
 
-text {*
+text \<open>
    Incrementing an address in a typed pointer by multiples of the size of what
-   it points to (in bytes). E.g. adding an int to a pointer in C. *}
+   it points to (in bytes). E.g. adding an int to a pointer in C.\<close>
 definition
   ptr_add :: "('a::semiring_1,'p,'t::mem_type) ptr_t \<Rightarrow> 'a
               \<Rightarrow> ('a,'p,'t) ptr_t"
@@ -101,16 +101,16 @@ lemma ptr_add_add:
   by (clarsimp simp: addr_add_add field_simps)
 
 
-text {*
-  Decrementing an address in a typed pointer by a specific number of bytes *}
+text \<open>
+  Decrementing an address in a typed pointer by a specific number of bytes\<close>
 definition
   ptr_raw_sub :: "('a::{minus},'p,'t::mem_type) ptr_t \<Rightarrow> 'a
               \<Rightarrow> ('a,'p,'t) ptr_t" where
   "ptr_raw_sub p x \<equiv> Ptr (ptr_val p r- x)"
 
-text {*
+text \<open>
    Decrementing an address in a typed pointer by multiples of the size of what
-   it points to (in bytes). E.g. subtracting an int from a pointer in C. *}
+   it points to (in bytes). E.g. subtracting an int from a pointer in C.\<close>
 definition
   ptr_sub :: "('a::{minus,semiring_1},'p,'t::mem_type) ptr_t \<Rightarrow> 'a
               \<Rightarrow> ('a,'p,'t) ptr_t"
@@ -120,14 +120,14 @@ definition
 notation (latex output)
   ptr_sub (infixl "-" 65)
 
-text {* Pointer to type 't aligned as required by type 't. *}
+text \<open>Pointer to type 't aligned as required by type 't.\<close>
 definition
   ptr_aligned :: "('a::len word,'p,'t::mem_type) ptr_t \<Rightarrow> bool" where
   "ptr_aligned p \<equiv> align_of TYPE('t) dvd unat (ptr_addr p)"
 
-text {* 
+text \<open>
   A sequence of typed pointers of length n starting at a specific offset.
-  Wrapping permitted. *}
+  Wrapping permitted.\<close>
 fun
   ptr_seq :: "('a::semiring_1, 'p, 't::mem_type) ptr_t \<Rightarrow> nat \<Rightarrow> ('a, 'p, 't) ptr_t list" where
   "ptr_seq p 0 = []" |
