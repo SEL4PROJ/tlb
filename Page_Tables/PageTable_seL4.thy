@@ -400,7 +400,7 @@ lemma load_list_heap_mono_option:
   "heap_mono_option (\<lambda>h. load_list h n p)"
   unfolding heap_mono_option_def load_list_def
   by (clarify, subst load_list_basic_heap_mono_simp)
-     (auto simp: deoption_list_def elim!: Some_set_member split: split_if_asm)
+     (auto simp: deoption_list_def elim!: Some_set_member split: if_split_asm)
 
 lemmas load_list_heap_mono_simp = heap_mono_option_simp[OF load_list_heap_mono_option]
 lemmas load_list_heap_mono = heap_mono_optionE[OF load_list_heap_mono_option]
