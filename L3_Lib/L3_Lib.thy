@@ -6,9 +6,10 @@ L3 operations.
 *)
 
 theory L3_Lib
-imports "$ISABELLE_HOME/src/HOL/Word/Word"
-        "$ISABELLE_HOME/src/HOL/Library/Code_Target_Numeral"
-        "$ISABELLE_HOME/src/HOL/Library/Code_Char"
+imports "HOL-Word.Word"
+        "HOL-Library.Code_Target_Numeral"
+        "HOL-Library.Code_Char"
+        "HOL-Library.Monad_Syntax"
 begin
 
 (* basic state Monad *)
@@ -19,6 +20,10 @@ definition bind :: "('state \<Rightarrow> ('a \<times> 'state)) \<Rightarrow>
                     ('a \<Rightarrow> 'state \<Rightarrow> ('b \<times> 'state)) \<Rightarrow>
                     ('state \<Rightarrow> ('b \<times> 'state))" where
   "bind f g = (\<lambda>s. let (a, s') = f s in g a s')"
+
+(* use do syntax for this state monad *)
+adhoc_overloading
+  Monad_Syntax.bind bind 
 
 definition read_state :: "('state \<Rightarrow> 'a) \<Rightarrow> 'state \<Rightarrow> 'a \<times> 'state" where
   "read_state f = (\<lambda>s. (f s, s))"
