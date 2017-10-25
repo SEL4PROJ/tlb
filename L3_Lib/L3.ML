@@ -17,26 +17,36 @@ sig
     | Drop
     | Element
     | Flat
-    | FPAbs of bool * bool
+    | FPAbs of bool
     | FPAdd of bool
+    | FPAdd_ of bool
     | FPCompare of bool
     | FPDiv of bool
+    | FPDiv_ of bool
     | FPEqual of bool
     | FPFromInt of bool
     | FPGreaterThan of bool
     | FPGreaterEqual of bool
+    | FPIsIntegral of bool
     | FPIsFinite of bool
     | FPIsNan of bool
     | FPIsNormal of bool
+    | FPIsSignallingNan of bool
     | FPIsSubnormal of bool
     | FPLessThan of bool
     | FPLessEqual of bool
     | FPMul of bool
+    | FPMul_ of bool
     | FPMulAdd of bool
+    | FPMulAdd_ of bool
     | FPMulSub of bool
-    | FPNeg of bool * bool
+    | FPMulSub_ of bool
+    | FPNeg of bool
+    | FPRoundToIntegral of bool
     | FPSqrt of bool
+    | FPSqrt_ of bool
     | FPSub of bool
+    | FPSub_ of bool
     | FPToInt of bool
     | FP32To64
     | FP64To32
@@ -112,6 +122,8 @@ sig
     | Rep
     | Rol
     | Ror
+    | SDiv
+    | SMod
     | Splitl
     | Splitr
     | Sub
@@ -203,26 +215,36 @@ datatype monop =
   | Drop
   | Element
   | Flat
-  | FPAbs of bool * bool
+  | FPAbs of bool
   | FPAdd of bool
-  | FPDiv of bool
+  | FPAdd_ of bool
   | FPCompare of bool
+  | FPDiv of bool
+  | FPDiv_ of bool
   | FPEqual of bool
   | FPFromInt of bool
   | FPGreaterThan of bool
   | FPGreaterEqual of bool
+  | FPIsIntegral of bool
   | FPIsFinite of bool
   | FPIsNan of bool
   | FPIsNormal of bool
+  | FPIsSignallingNan of bool
   | FPIsSubnormal of bool
   | FPLessThan of bool
   | FPLessEqual of bool
   | FPMul of bool
+  | FPMul_ of bool
   | FPMulAdd of bool
+  | FPMulAdd_ of bool
   | FPMulSub of bool
-  | FPNeg of bool * bool
+  | FPMulSub_ of bool
+  | FPNeg of bool
+  | FPRoundToIntegral of bool
   | FPSqrt of bool
+  | FPSqrt_ of bool
   | FPSub of bool
+  | FPSub_ of bool
   | FPToInt of bool
   | FP32To64
   | FP64To32
@@ -298,6 +320,8 @@ datatype binop =
   | Rep
   | Rol
   | Ror
+  | SDiv
+  | SMod
   | Splitl
   | Splitr
   | Sub
@@ -350,18 +374,8 @@ fun lw (i, n) = HOLogic.mk_number (Word_Lib.mk_wordT n) i
 fun ly (i, n) = HOLogic.mk_number (wordT n) i
 
 (* character and string literals *)
-local
-  fun mk_nib i = Term.Const ("String.nibble.Nibble" ^ Int.fmt StringCvt.HEX i, HOLogic.nibbleT)
-in
-  fun lsc c =
-    let
-      val (hi, lo) = IntInf.divMod (Char.ord c, 16)
-    in
-      Const(@{const_name String.Char}, HOLogic.nibbleT --> (HOLogic.nibbleT --> HOLogic.charT)) $
-            mk_nib hi $ mk_nib lo
-    end
-  fun ls s = HOLogic.mk_list HOLogic.charT (map lsc (String.explode s))
-end
+val lsc = HOLogic.mk_char o Char.ord
+fun ls s = HOLogic.mk_list HOLogic.charT (map lsc (String.explode s))
 
 (* enumerated type constant *)
 fun lc (name, ty, thy) =
@@ -388,16 +402,20 @@ fun lnl ty = Term.Const (@{const_name List.list.Nil}, HOLogic.listT ty)
 (* none option *)
 fun lo ty = Term.Const (@{const_name None}, optionT ty)
 
-(* local constant *)
+(* local constant or flag constant from L3_Lib *)
 fun const (f, ty, thy) =
   let
-    val binding =
+    val name =
       case String.fields (fn c => c = #".") f of
-         [_] => Binding.make (f, Position.none)
-       | [t, n] => Binding.qualify false t (Binding.make (n, Position.none))
+         [_] => Sign.full_name thy (Binding.make (f, Position.none))
+       | [t as "ieee_flags", n] =>
+            Sign.full_name @{theory "L3_Lib"}
+              (Binding.qualify false t (Binding.make (n, Position.none)))
+       | [t, n] =>
+            Sign.full_name thy (Binding.qualify false t (Binding.make (n, Position.none)))
        | _ => raise Fail "const: too many qualifiers"
   in
-    Term.Const (Sign.full_name thy binding, ty)
+    Term.Const (name, ty)
   end
 
 (* function application *)
@@ -759,9 +777,10 @@ local
       in
         inst [(@{typ 'a}, ty)] update_tm $ tm
       end
+  fun flags_ty ty = HOLogic.mk_prodT (@{typ "ieee_flags"}, ty)
   fun mk_int_abs tm = @{term "abs::int => int"} $ tm
   val mk_word_abs = mk_comb "L3_Lib.word_abs" Library.I
-  val mk_word_1comp = mk_comb @{const_name uminus} Library.I
+  val mk_word_1comp = mk_comb @{const_name bitNOT} Library.I
   val mk_some = mk_comb @{const_name Some} (fn ty => optionT ty)
   val mk_the = mk_comb @{const_name the} (fn ty => dest_optionT ty)
   val mk_is_some = mk_comb "L3_Lib.is_some" (fn _ => HOLogic.boolT)
@@ -794,6 +813,7 @@ local
   val mk_nat_to_bitstring = mk_comb "L3_Lib.nat_to_bitstring" (fn _ => bitstringT)
   val mk_bitstring_to_nat = mk_comb "L3_Lib.bitstring_to_nat" (fn _ => HOLogic.natT)
   fun mk_bitstring_to_word ty tm = Term.Const (@{const_name of_bl}, bitstringT --> ty) $ tm
+  val mk_to_bl = mk_comb @{const_name to_bl} (fn _ => bitstringT)
   fun mk_word_of_int ty tm =
     Term.Const (@{const_name word_of_int}, HOLogic.intT --> ty) $ tm
   val mk_uint = mk_comb @{const_name uint} (fn _ => HOLogic.intT)
@@ -809,11 +829,13 @@ local
   fun mk_string_to_enum (p, s) =
     mk_comb (p ^ "." ^ "string_to_" ^ s) (fn _ => Term.Type (p ^ "." ^ s, []))
   fun fp_prefix b s = "L3_Lib.fp" ^ (if b then "64_" else "32_") ^ s
-  fun mk_fp_abs (b, old) = mk_comb (fp_prefix b (if old then "abs1985" else "abs")) Library.I
-  fun mk_fp_negate (b, old) = mk_comb (fp_prefix b (if old then "negate1985" else "negate")) Library.I
+  fun mk_fp_abs b = mk_comb (fp_prefix b "abs") Library.I
+  fun mk_fp_negate b = mk_comb (fp_prefix b "negate") Library.I
+  fun mk_fp_is_integral b = mk_comb (fp_prefix b "is_integral") (fn _ => HOLogic.boolT)
   fun mk_fp_is_finite b = mk_comb (fp_prefix b "is_finite") (fn _ => HOLogic.boolT)
   fun mk_fp_is_nan b = mk_comb (fp_prefix b "is_nan") (fn _ => HOLogic.boolT)
   fun mk_fp_is_normal b = mk_comb (fp_prefix b "is_normal") (fn _ => HOLogic.boolT)
+  fun mk_fp_is_signalling_nan b = mk_comb (fp_prefix b "is_signalling_nan") (fn _ => HOLogic.boolT)
   fun mk_fp_is_subnormal b = mk_comb (fp_prefix b "is_subnormal") (fn _ => HOLogic.boolT)
   fun mk_fp_compare b = mk_split2 (fp_prefix b "compare") (Library.K @{typ "ieee_compare"})
   fun mk_fp_equal b = mk_split2 (fp_prefix b "equal") (Library.K HOLogic.boolT)
@@ -825,13 +847,21 @@ local
   fun mk_fp_from_int b =
     mk_split2 (fp_prefix b "from_int") (Library.K (if b then @{typ "64 word"} else @{typ "32 word"}))
   val mk_fp64_to_fp32 = mk_split2 "L3_Lib.fp64_to_fp32" (Library.K w32)
+  fun mk_fp_round_to_integral b = mk_split2 (fp_prefix b "round_to_integral") snd
   fun mk_fp_sqrt b = mk_split2 (fp_prefix b "sqrt") snd
+  fun mk_fp_sqrt_ b = mk_split2 (fp_prefix b "sqrt_with_flags") (flags_ty o snd)
   fun mk_fp_add b = mk_split3 (fp_prefix b "add") (fn (_, ty, _) => ty)
+  fun mk_fp_add_ b = mk_split3 (fp_prefix b "add_with_flags") (fn (_, ty, _) => flags_ty ty)
   fun mk_fp_sub b = mk_split3 (fp_prefix b "sub") (fn (_, ty, _) => ty)
+  fun mk_fp_sub_ b = mk_split3 (fp_prefix b "sub_with_flags") (fn (_, ty, _) => flags_ty ty)
   fun mk_fp_mul b = mk_split3 (fp_prefix b "mul") (fn (_, ty, _) => ty)
+  fun mk_fp_mul_ b = mk_split3 (fp_prefix b "mul_with_flags") (fn (_, ty, _) => flags_ty ty)
   fun mk_fp_mul_add b = mk_split4 (fp_prefix b "mul_add") (fn (_, ty, _, _) => ty)
+  fun mk_fp_mul_add_ b = mk_split4 (fp_prefix b "mul_add_with_flags") (fn (_, ty, _, _) => flags_ty ty)
   fun mk_fp_mul_sub b = mk_split4 (fp_prefix b "mul_sub") (fn (_, ty, _, _) => ty)
+  fun mk_fp_mul_sub_ b = mk_split4 (fp_prefix b "mul_sub_with_flags") (fn (_, ty, _, _) => flags_ty ty)
   fun mk_fp_div b = mk_split3 (fp_prefix b "div") (fn (_, ty, _) => ty)
+  fun mk_fp_div_ b = mk_split3 (fp_prefix b "div_with_flags") (fn (_, ty, _) => flags_ty ty)
   fun pick_cast ty tm =
     let
       val ty1 = Term.type_of tm
@@ -855,7 +885,7 @@ local
              | Nat => mk_ord tm
              | Int => @{term "int::nat => int"} $ mk_ord tm
              | Bitstring => mk_nat_to_bitstring (mk_ord tm)
-             | String => @{term "Cons::char => string => string"} $ tm $ @{term "''''"}
+             | String => @{term "Cons::char => string => string"} $ tm $ @{term "[]::string"}
              | Other s => mk_nat_to_enum s (mk_ord tm))
        | Word =>
            (case l3_prim_type ty of
@@ -864,7 +894,7 @@ local
              | Word => mk_word_of_int ty (mk_uint tm)
              | Nat => mk_word_to_nat tm
              | Int => mk_sint tm
-             | Bitstring => mk_nat_to_bitstring (mk_word_to_nat tm)
+             | Bitstring => mk_to_bl tm
              | String => mk_nat_to_hex_string (mk_word_to_nat tm)
              | Other s => mk_nat_to_enum s (mk_word_to_nat tm))
        | Nat =>
@@ -938,9 +968,11 @@ in
       | FPFromInt double => mk_fp_from_int double
       | FPToInt double => mk_fp_to_int double
       | FPAbs x => mk_fp_abs x
+      | FPIsIntegral double => mk_fp_is_integral double
       | FPIsFinite double => mk_fp_is_finite double
       | FPIsNan double => mk_fp_is_nan double
       | FPIsNormal double => mk_fp_is_normal double
+      | FPIsSignallingNan double => mk_fp_is_signalling_nan double
       | FPIsSubnormal double => mk_fp_is_subnormal double
       | FPCompare double => mk_fp_compare double
       | FPEqual double => mk_fp_equal double
@@ -950,12 +982,20 @@ in
       | FPGreaterEqual double => mk_fp_greater_equal double
       | FPNeg x => mk_fp_negate x
       | FPAdd double => mk_fp_add double
+      | FPAdd_ double => mk_fp_add_ double
       | FPSub double => mk_fp_sub double
+      | FPSub_ double => mk_fp_sub_ double
       | FPMul double => mk_fp_mul double
+      | FPMul_ double => mk_fp_mul_ double
       | FPMulAdd double => mk_fp_mul_add double
+      | FPMulAdd_ double => mk_fp_mul_add_ double
       | FPMulSub double => mk_fp_mul_sub double
+      | FPMulSub_ double => mk_fp_mul_sub_ double
       | FPDiv double => mk_fp_div double
+      | FPDiv_ double => mk_fp_div_ double
+      | FPRoundToIntegral double => mk_fp_round_to_integral double
       | FPSqrt double => mk_fp_sqrt double
+      | FPSqrt_ double => mk_fp_sqrt_ double
       | Fst => HOLogic.mk_fst
       | Head => mk_hd
       | Hex => mk_nat_from_string "hex"
@@ -1044,11 +1084,13 @@ local
   val mk_plus = mk_comb2 @{const_name plus} fst
   val mk_times = mk_comb2 @{const_name times} fst
   val mk_div = mk_comb2 @{const_name divide} fst
-  val mk_mod = mk_comb2 @{const_name mod} fst
+  val mk_mod = mk_comb2 @{const_name modulo} fst
   val mk_quot = mk_comb2 "L3_Lib.quot" fst
   val mk_rem = mk_comb2 "L3_Lib.rem" fst
   val mk_word_quot = mk_comb2 "L3_Lib.word_quot" fst
   val mk_word_rem = mk_comb2 "L3_Lib.word_rem" fst
+  val mk_word_sdiv = mk_comb2 "L3_Lib.word_sdiv" fst
+  val mk_word_smod = mk_comb2 "L3_Lib.word_smod" fst
   val mk_power = mk_comb2 @{const_name power} fst
   val mk_less = mk_comb2 @{const_name less} (fn _ => HOLogic.boolT)
   val mk_less_eq = mk_comb2 @{const_name less_eq} (fn _ => HOLogic.boolT)
@@ -1092,6 +1134,8 @@ in
     | Mod => mk_mod
     | Quot => pick (mk_word_quot, NONE, NONE, SOME mk_quot)
     | Rem => pick (mk_word_rem, NONE, NONE, SOME mk_rem)
+    | SDiv => mk_word_sdiv
+    | SMod => mk_word_smod
     | Asr => shift mk_word_sshiftr
     | Rol => shift mk_word_rotl
     | Lsl => shift2 (mk_bitstring_shiftl, mk_word_shiftl)
@@ -1107,7 +1151,7 @@ local
   fun prim_add_fun s tm =
     Named_Target.init ""
     #> Function.add_function [(Binding.make (s, Position.none), NONE, Mixfix.NoSyn)]
-         [(Attrib.empty_binding, HOLogic.mk_Trueprop tm)] Function_Common.default_config
+         [((Binding.empty_atts, HOLogic.mk_Trueprop tm), [], [])] Function_Common.default_config
          (fn ctxt => Pat_Completeness.pat_completeness_tac ctxt 1
                      THEN Classical.clarify_tac ctxt 1
                      THEN Clasimp.auto_tac ctxt)
@@ -1128,7 +1172,7 @@ end
 local
   fun prim_add_def s tm =
     Named_Target.init ""
-    #> Specification.definition (NONE, ((Thm.def_binding (Binding.make (s, Position.none)), []), tm))
+    #> Specification.definition NONE [] [] (((Thm.def_binding (Binding.make (s, Position.none)), []), tm))
     #> snd
     #> Local_Theory.exit_global
   fun define s tm = Context.>> (Context.map_theory (prim_add_def s tm))
