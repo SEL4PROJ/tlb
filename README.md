@@ -5,11 +5,11 @@ This folder contains .thy files for the project
 ##  Program Verification in the Presence of Cached Address Translation
 
 
-The theories files in this repository are for *Isabelle2016*.
+The theories files in this repository are for [Isabelle2017][1].
 
 To check the proofs, run
 
-    Isabelle2016/bin/isabelle build -bv -d . CASE_STUDY
+    Isabelle2017/bin/isabelle build -bv -d . CASE_STUDY
 
 
 Folder Information:
@@ -57,3 +57,7 @@ Folder Information:
           os memory layout, reasoning for kernel- and 
           user-level executions, context switching 
           and page table operations
+
+
+
+[1]: http://isabelle.in.tum.de "Isabelle Website"
