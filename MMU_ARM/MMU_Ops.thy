@@ -5,6 +5,7 @@ imports ARM_Monadic
 begin
 
 
+
 class mmu =
   fixes mmu_translate :: "vaddr \<Rightarrow> 'a state_scheme \<Rightarrow> paddr \<times> 'a state_scheme" 
 

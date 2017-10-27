@@ -12,9 +12,20 @@ imports "HOL-Word.Word"
         "HOL-Library.Monad_Syntax"
 begin
 
+
+translations
+  "_do_block (_do_cons (_do_bind p t) (_do_final e))"
+    <= "CONST bind t (\<lambda>p. e)"
+
+(* avoid syntax clash with shift-right operation *)
+no_syntax
+  "_thenM" :: "['a, 'b] \<Rightarrow> 'c" (infixr ">>" 54)
+
+
 (* basic state Monad *)
 
 definition "return = Pair"
+
 
 definition bind :: "('state \<Rightarrow> ('a \<times> 'state)) \<Rightarrow>
                     ('a \<Rightarrow> 'state \<Rightarrow> ('b \<times> 'state)) \<Rightarrow>
@@ -23,7 +34,7 @@ definition bind :: "('state \<Rightarrow> ('a \<times> 'state)) \<Rightarrow>
 
 (* use do syntax for this state monad *)
 adhoc_overloading
-  Monad_Syntax.bind bind 
+  Monad_Syntax.bind bind
 
 definition read_state :: "('state \<Rightarrow> 'a) \<Rightarrow> 'state \<Rightarrow> 'a \<times> 'state" where
   "read_state f = (\<lambda>s. (f s, s))"
