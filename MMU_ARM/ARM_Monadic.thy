@@ -396,6 +396,7 @@ datatype exception =
   | PAGE_FAULT string (* MMU *)
 
 
+
 record state =
   Architecture :: Architecture
   CP14 :: CP14
@@ -422,6 +423,20 @@ record state =
   TTBR0 :: paddr 
   ASID :: asid
   (* for program 'b state_scheme *)
+
+
+
+
+class mmu =
+  fixes mmu_translate :: "vaddr \<Rightarrow> 'a state_scheme \<Rightarrow> paddr \<times> 'a state_scheme" 
+
+
+class mem_op =
+  fixes mmu_read :: "vaddr \<Rightarrow> 'a::mmu state_scheme \<Rightarrow> bool list \<times> 'a::mmu state_scheme"
+  fixes mmu_read_size :: "vaddr \<times> nat  \<Rightarrow> 'a::mmu state_scheme \<Rightarrow> bool list \<times> 'a::mmu state_scheme"
+  fixes mmu_write_size :: "bool list \<times> vaddr \<times> nat \<Rightarrow> 'a::mmu state_scheme \<Rightarrow> unit \<times> 'a::mmu state_scheme"
+
+
 
 
 fun nat_to_Architecture :: "nat \<Rightarrow> Architecture" where
@@ -4776,19 +4791,7 @@ where
                   else raise'exception (ASSERT ''mem: size in {1, 2, 4, 8}'') "
 
 
-
-class mmu =
-  fixes mmu_translate :: "vaddr \<Rightarrow> 'a state_scheme \<Rightarrow> paddr \<times> 'a state_scheme" 
-
-
-class mem_op =
-  fixes mmu_read :: "vaddr \<Rightarrow> 'a::mmu state_scheme \<Rightarrow> bool list \<times> 'a::mmu state_scheme"
-  fixes mmu_read_size :: "vaddr \<times> nat  \<Rightarrow> 'a::mmu state_scheme \<Rightarrow> bool list \<times> 'a::mmu state_scheme"
-  fixes mmu_write_size :: "bool list \<times> vaddr \<times> nat \<Rightarrow> 'a::mmu state_scheme \<Rightarrow> unit \<times> 'a::mmu state_scheme"
-
-
-
-
+(* ARM_MONADIC OPS from here *)
 
 ML \<open>
 local 

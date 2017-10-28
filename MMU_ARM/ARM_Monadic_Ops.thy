@@ -3,14 +3,17 @@ theory ARM_Monadic_Ops
 imports MMU_Ops
 
 begin
-
+thm raise'exception_def
 
 ML \<open>
-val prev_thy = @{theory ARM_Monadic}  
+val prev_thy =  @{theory ARM_Monadic} 
+val abc1 =  @{theory ARM_Monadic} 
+val abc = Sign.full_name @{theory} (Binding.make ("raise'exception", Position.start))
   
+
 \<close>
 
-
+print_theory
 ML \<open>
 local 
 open L3 
