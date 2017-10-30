@@ -37,8 +37,8 @@ lemma mmu_layout_pt_walk':
 
 lemma mmu_layout_ptable_comp':
   "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s \<rbrakk> \<Longrightarrow> 
-        pde_comp' (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s) = {}"
-  apply (simp add: pde_comp'_def)
+        ptable_comp (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s) = {}"
+  apply (simp add: ptable_comp_def)
   apply (subgoal_tac "root s \<in> root_log s")
    apply (simp add: mmu_layout_pt_walk')
   by (simp add: mmu_layout_def)

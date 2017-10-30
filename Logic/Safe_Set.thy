@@ -31,11 +31,11 @@ where
 lemma cons_set_preserved:
   "\<lbrakk> \<forall>va\<in>SM. \<exists>p.  ptable_lift_m (heap s) (root s) (mode s) va = Some p \<and> p \<notin> ptrace_set SM s;
           \<forall>va\<in>SM. (asid s, va) \<notin> incon_set s; p \<notin> ptrace_set SM s; va \<in> SM\<rbrakk>  \<Longrightarrow> 
-              (asid s, va) \<notin> pde_comp' (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s)"
+              (asid s, va) \<notin> ptable_comp (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s)"
   apply (case_tac "mode s")
    apply (drule_tac x = va in bspec ; clarsimp)
    apply (drule_tac x = va in bspec , simp)
-   apply (clarsimp simp: pde_comp'_def pt_walk_def is_fault_def ptrace_set_def)
+   apply (clarsimp simp: ptable_comp_def pt_walk_def is_fault_def ptrace_set_def)
    apply (drule_tac x = va in bspec , simp)
    apply (clarsimp simp: ptable_trace'_def  Let_def lookup_pde'_def  get_pde'_def decode_heap_pde'_def
                         lookup_pte'_def get_pte'_def decode_heap_pte'_def
@@ -43,7 +43,7 @@ lemma cons_set_preserved:
   apply (drule_tac x = va in bspec ; clarsimp)
   apply (frule ptable_lift_m_user)
   apply (drule_tac x = va in bspec , simp)
-  apply (clarsimp simp: pde_comp'_def pt_walk_def is_fault_def ptrace_set_def)
+  apply (clarsimp simp: ptable_comp_def pt_walk_def is_fault_def ptrace_set_def)
   apply (drule_tac x = va in bspec , simp)
   by (clarsimp simp: ptable_trace'_def  Let_def lookup_pde'_def  get_pde'_def decode_heap_pde'_def 
                         lookup_pte'_def get_pte'_def decode_heap_pte'_def
@@ -73,7 +73,7 @@ done
 lemma safe_set_preserved':
   " \<Turnstile> \<lbrace>\<lambda>s. safe_set SM s \<and> (\<exists>vp v. aval lval s = Some vp \<and> aval rval s = Some v \<and> Addr vp \<in> SM \<and>
      Q (s\<lparr>heap := heap s(the ( ptable_lift_m (heap s) (root s) (mode s) (Addr vp)) \<mapsto> v), 
-            incon_set := incon_set s \<union> pde_comp' (asid s) (heap s) (heap s(the ( ptable_lift_m (heap s) (root s) 
+            incon_set := incon_set s \<union> ptable_comp (asid s) (heap s) (heap s(the ( ptable_lift_m (heap s) (root s) 
     (mode s) (Addr vp)) \<mapsto> v)) (root s) (root s)\<rparr>)) \<rbrace>
                        lval ::= rval \<lbrace>\<lambda>s. safe_set SM s \<rbrace>"
   by (rule weak_pre, rule safe_set_preserved, force)
@@ -82,7 +82,7 @@ lemma safe_set_preserved':
 lemma weak_pre_write:
   "\<Turnstile> \<lbrace> \<lambda>s. safe_set SM s \<and> (\<exists>vp v. aval lval s = Some vp \<and> aval rval s = Some v \<and> Addr vp \<in> SM \<and> 
      Q (s \<lparr> heap := heap s (the (ptable_lift_m (heap s) (root s) (mode s) (Addr vp)) \<mapsto> v),
-             incon_set := incon_set s \<union> pde_comp' (asid s) (heap s) 
+             incon_set := incon_set s \<union> ptable_comp (asid s) (heap s) 
    (heap s(the (ptable_lift_m (heap s) (root s) (mode s) (Addr vp)) \<mapsto> v)) (root s) (root s)\<rparr>)) \<rbrace> 
            lval ::= rval  \<lbrace>Q\<rbrace>"
   apply (vcgm , clarsimp simp: safe_set_def safe_memory_def con_set_def)
@@ -100,7 +100,7 @@ lemma hoare_post_conj:
 lemma weak_pre_write':
   "\<Turnstile> \<lbrace> \<lambda>s. safe_set SM s \<and> (\<exists>vp v. aval lval s = Some vp \<and> aval rval s = Some v \<and> Addr vp \<in> SM \<and> 
      Q (s \<lparr>heap := heap s (the ( ptable_lift_m (heap s) (root s) (mode s) (Addr vp)) \<mapsto> v),
-             incon_set := incon_set s \<union> pde_comp' (asid s) (heap s) (heap s(the (ptable_lift_m (heap s)
+             incon_set := incon_set s \<union> ptable_comp (asid s) (heap s) (heap s(the (ptable_lift_m (heap s)
                            (root s) (mode s) (Addr vp)) \<mapsto> v)) (root s) (root s)\<rparr>)) \<rbrace>
              lval ::= rval  \<lbrace>\<lambda>s. safe_set SM s \<and> Q s \<rbrace>"
   by (rule hoare_post_conj, rule safe_set_preserved', rule weak_pre_write)
@@ -121,10 +121,10 @@ lemma weak_pre_write'_user:
   apply clarsimp
   apply (clarsimp simp: safe_set_def con_set_def safe_memory_def)
   apply (drule_tac x = "Addr vp" in bspec; clarsimp)
-  apply (subgoal_tac "incon_set s = incon_set s \<union> pde_comp' (asid s) (heap s)
+  apply (subgoal_tac "incon_set s = incon_set s \<union> ptable_comp (asid s) (heap s)
                      (heap s(the (ptable_lift_m (heap s) (root s) (mode s) (Addr vp)) \<mapsto> v)) (root s) (root s)")
    apply (clarsimp simp: safe_set_def con_set_def safe_memory_def)
-  apply (subgoal_tac "pde_comp' (asid s) (heap s) (heap s(the (ptable_lift_m (heap s) (root s)
+  apply (subgoal_tac "ptable_comp (asid s) (heap s) (heap s(the (ptable_lift_m (heap s) (root s)
                       (mode s) (Addr vp)) \<mapsto> v)) (root s) (root s)= {}")
    apply clarsimp
   apply (drule_tac x = "Addr vp" in bspec , clarsimp)

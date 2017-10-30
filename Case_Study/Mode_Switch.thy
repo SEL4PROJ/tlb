@@ -86,8 +86,8 @@ interpretation kernel_mappings: heap_only global_mappings_of_all_processes
   by unfold_locales (rule kernel_mappings_heap_eq)
 
 lemma ptable_comp_asid:
-  "\<lbrakk> (a, v) \<in> pde_comp' b hp hp' rt rt'; a \<noteq> b \<rbrakk> \<Longrightarrow> False"
-  by (auto simp: pde_comp'_def)
+  "\<lbrakk> (a, v) \<in> ptable_comp b hp hp' rt rt'; a \<noteq> b \<rbrakk> \<Longrightarrow> False"
+  by (auto simp: ptable_comp_def)
 
 lemma asids_consistentD:
   "\<lbrakk> asids_consistent {} s; root_map s (Addr r) = Some a \<rbrakk> \<Longrightarrow> (a, v) \<notin> incon_set s"
@@ -96,18 +96,18 @@ lemma asids_consistentD:
 
 
 lemma pde_comp_def_x:
- "pde_comp' a hp hp' rt rt' =
+ "ptable_comp a hp hp' rt rt' =
   (let walk = pt_walk a hp rt; walk' = pt_walk a hp' rt'
   in {a} \<times>
      {va. \<not>is_fault (walk va) \<and> \<not> is_fault (walk' va) \<and> walk va \<noteq> walk' va \<or> 
           \<not>is_fault (walk va) \<and> is_fault (walk' va)})"
- by (auto simp add: pde_comp'_def Let_def)
+ by (auto simp add: ptable_comp_def Let_def)
 
 
 
 
 lemma pde_comp_def:
- "pde_comp' a hp hp' rt rt' \<equiv>
+ "ptable_comp a hp hp' rt rt' \<equiv>
   let walk = pt_walk a hp rt; walk' = pt_walk a hp' rt'
   in {a} \<times>
      {va. \<not>is_fault (walk va) \<and> \<not> is_fault (walk' va) \<and> walk va \<noteq> walk' va \<or> 

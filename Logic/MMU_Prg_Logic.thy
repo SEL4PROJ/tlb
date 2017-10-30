@@ -434,17 +434,17 @@ definition
 
 
 definition
-  pde_comp' :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> paddr \<Rightarrow> (asid \<times> vaddr) set"
+  ptable_comp :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> paddr \<Rightarrow> (asid \<times> vaddr) set"
 where
-  "pde_comp' a hp1 hp2 rt1 rt2 \<equiv>
+  "ptable_comp a hp1 hp2 rt1 rt2 \<equiv>
          (\<lambda>x. (a, x)) ` {va. (\<exists>e1 e2. pt_walk a hp1 rt1 va = e1 \<and> pt_walk a hp2 rt2 va = e2  \<and> \<not>is_fault e1 \<and> \<not>is_fault e2 \<and> e1 \<noteq> e2 )  \<or>
                 (\<exists>e1 e2. pt_walk a hp1 rt1 va = e1 \<and> pt_walk a hp2 rt2 va = e2  \<and> \<not>is_fault e1 \<and> is_fault e2 )}"
 
 
 
 lemma ptable_trace_pde_comp:
-  "\<forall>x. p \<notin> ptable_trace' h r x \<Longrightarrow> pde_comp' a  h (h(p \<mapsto> v)) r  r= {}"
-  apply (clarsimp simp: ptable_trace'_def pde_comp'_def Let_def)
+  "\<forall>x. p \<notin> ptable_trace' h r x \<Longrightarrow> ptable_comp a  h (h(p \<mapsto> v)) r  r= {}"
+  apply (clarsimp simp: ptable_trace'_def ptable_comp_def Let_def)
   apply (drule_tac x = x in spec)
 
  apply (clarsimp simp: pt_walk_def is_fault_def lookup_pde'_def get_pde'_def decode_heap_pde'_def decode_heap_pte'_def vaddr_pt_index_def vaddr_pd_index_def lookup_pte'_def
@@ -453,7 +453,7 @@ lemma ptable_trace_pde_comp:
 
 
 lemma pde_comp_empty:
-  "p \<notin> \<Union>(ptable_trace' h r ` UNIV) \<Longrightarrow> pde_comp' a  h (h(p \<mapsto> v)) r r = {}"
+  "p \<notin> \<Union>(ptable_trace' h r ` UNIV) \<Longrightarrow> ptable_comp a  h (h(p \<mapsto> v)) r r = {}"
   apply (drule union_imp_all)
   by (clarsimp simp: ptable_trace_pde_comp)
 
@@ -461,8 +461,8 @@ lemma pde_comp_empty:
 
 lemma plift_equal_not_in_pde_comp [simp]:
   "\<lbrakk> pt_walk a h1 r va =  e ; pt_walk a h2 r va = e \<rbrakk> \<Longrightarrow>
-            (a, va) \<notin> pde_comp' a h1 h2 r r"
-  by (clarsimp simp: pde_comp'_def)
+            (a, va) \<notin> ptable_comp a h1 h2 r r"
+  by (clarsimp simp: ptable_comp_def)
 
 
 lemma pt_walk_pt_trace_upd:

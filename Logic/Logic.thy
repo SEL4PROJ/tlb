@@ -76,7 +76,7 @@ where
   Assign:          "\<lbrakk>aval lval s = Some vp ; aval rval s = Some v ; (asid s, Addr vp) \<notin> incon_set s;
                          ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some pp \<rbrakk>  \<Longrightarrow>
                           (lval ::= rval , s) \<Rightarrow> Some (s \<lparr> heap := heap s (pp \<mapsto> v) ,
-                            incon_set := incon_set s \<union>  pde_comp' (asid s)  (heap s)  (heap s (pp \<mapsto> v)) (root s) (root s) \<rparr>)"
+                            incon_set := incon_set s \<union>  ptable_comp (asid s)  (heap s)  (heap s (pp \<mapsto> v)) (root s) (root s) \<rparr>)"
 |
   Seq:             "\<lbrakk>(c1,s1) \<Rightarrow> Some s2;  (c2,s2) \<Rightarrow> s3 \<rbrakk> \<Longrightarrow> (c1;;c2, s1) \<Rightarrow> s3"
 |
@@ -103,7 +103,7 @@ where
   UpdateTTBR0Fail: "mode s = User \<or> aval rt s = None \<Longrightarrow> (UpdateTTBR0 rt, s) \<Rightarrow>  None"
 |
   UpdateTTBR0:     "mode s = Kernel \<and> aval rte s = Some rt \<Longrightarrow> (UpdateTTBR0 rte, s) \<Rightarrow>  Some (s \<lparr>root := Addr rt ,
-                            incon_set := incon_set s \<union>  pde_comp' (asid s)  (heap s) (heap s) (root s) (Addr rt) \<rparr>)"
+                            incon_set := incon_set s \<union>  ptable_comp (asid s)  (heap s) (heap s) (root s) (Addr rt) \<rparr>)"
 |
   UpdateASID:      "mode s = Kernel \<Longrightarrow> (UpdateASID a , s) \<Rightarrow>  Some (s \<lparr>asid := a\<rparr>)"
 |
@@ -201,7 +201,7 @@ lemma skip_sound[vcg]:
 lemma  assign_sound[vcg]:
   " \<Turnstile> \<lbrace>\<lambda>s. \<exists>vp v pp. aval l s = Some vp \<and> aval r s = Some v \<and> (asid s , Addr vp) \<notin> incon_set s \<and>
    P (s \<lparr>heap := heap s (pp \<mapsto> v) , incon_set := incon_set s \<union>
-            pde_comp' (asid s)  (heap s)  (heap s (pp \<mapsto> v)) (root s) (root s)\<rparr>)
+            ptable_comp (asid s)  (heap s)  (heap s (pp \<mapsto> v)) (root s) (root s)\<rparr>)
       \<and>   ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some pp\<rbrace>  l ::= r \<lbrace>P\<rbrace>"
   apply (clarsimp simp: hoare_valid_def)
   apply auto
@@ -249,7 +249,7 @@ lemma  flush_sound[vcg]:
 lemma updateTTBR0_sound[vcg]:
   "\<Turnstile>\<lbrace>\<lambda>s.  mode s = Kernel \<and> (\<exists>rt. aval ttbr0 s = Some rt \<and> P (s \<lparr>root := Addr rt ,
        incon_set := incon_set s \<union>
-            pde_comp' (asid s)  (heap s)  (heap s) (root s) (Addr rt)\<rparr>))\<rbrace>  UpdateTTBR0 ttbr0 \<lbrace>P\<rbrace>"
+            ptable_comp (asid s)  (heap s)  (heap s) (root s) (Addr rt)\<rparr>))\<rbrace>  UpdateTTBR0 ttbr0 \<lbrace>P\<rbrace>"
   apply (clarsimp simp: hoare_valid_def)
   by auto
 

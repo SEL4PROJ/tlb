@@ -26,7 +26,7 @@ lemma remap_section_current_asid:
   apply (clarsimp simp: asids_consistent_def)
   apply (subgoal_tac "root_map (s\<lparr> heap := heap s(Addr (vp - global_offset) \<mapsto> pde')\<rparr>) = root_map s")
    apply clarsimp
-   apply (clarsimp simp: pde_comp'_def)
+   apply (clarsimp simp: ptable_comp_def)
    apply (clarsimp simp: ran_def)
    apply blast
   apply (clarsimp simp: kernel_data_def )

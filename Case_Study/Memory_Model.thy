@@ -178,8 +178,8 @@ lemma mmu_layout_pt_walk:
   done
 
 lemma mmu_layout_ptable_comp:
-  "\<lbrakk> mmu_layout s; p \<notin> kernel_phy_mem \<rbrakk> \<Longrightarrow> pde_comp' (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s) = {}"
-  apply (simp add: pde_comp'_def)
+  "\<lbrakk> mmu_layout s; p \<notin> kernel_phy_mem \<rbrakk> \<Longrightarrow> ptable_comp (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s) = {}"
+  apply (simp add: ptable_comp_def)
   apply (subgoal_tac "root s \<in> root_log s")
    apply (simp add: mmu_layout_pt_walk)
   apply (simp add: mmu_layout_def)
@@ -297,10 +297,10 @@ lemma mmu_layout_upd:
 
 
 lemma pde_comp_asid_incon:
-  "{av. (av \<in> incon_set s \<or> av \<in> pde_comp' (asid s) (heap s) (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) 
+  "{av. (av \<in> incon_set s \<or> av \<in> ptable_comp (asid s) (heap s) (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) 
       (root s)) \<and> fst av \<noteq> asid s} =
    {av. av \<in> incon_set s  \<and> fst av \<noteq> asid s}"
-  apply (clarsimp simp: pde_comp'_def)
+  apply (clarsimp simp: ptable_comp_def)
   apply force
 done
 
