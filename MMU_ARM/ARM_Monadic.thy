@@ -128,7 +128,6 @@ record CP15 =
 datatype InstrSet = InstrSet_ARM | InstrSet_Thumb | InstrSet_Jazelle | InstrSet_ThumbEE
 
 datatype Encoding = Encoding_Thumb | Encoding_Thumb2 | Encoding_ARM
-
 datatype RName = RName_0usr | RName_1usr | RName_2usr | RName_3usr | RName_4usr | RName_5usr |
   RName_6usr | RName_7usr | RName_8usr | RName_8fiq | RName_9usr | RName_9fiq | RName_10usr |
   RName_10fiq | RName_11usr | RName_11fiq | RName_12usr | RName_12fiq | RName_SPusr | RName_SPfiq |
@@ -416,7 +415,7 @@ record state =
   SPSR_mon :: PSR
   SPSR_svc :: PSR
   SPSR_und :: PSR
-  VFPExtension :: VFPExtension
+  VFPExtension :: VFPExtension (* update *)
   exception :: exception
   undefined :: bool
  (* additional MMU 'b state_scheme *)
@@ -15915,7 +15914,7 @@ val () = def
                   ("D",@{typ "'b state_scheme \<Rightarrow> (64 word \<times> 'b state_scheme)"},var_w("m",5),@{theory }),
                 close
                   (var_w("v",64),
-                   mb(mb(mu(mop(FPAbs (true, false),var_w("v",64)),qTy),
+                   mb(mb(mu(mop(FPAbs (true),var_w("v",64)),qTy),
                          close(var_w("v",64),mu(tp[var_w("v",64),var_w("d",5)],qTy))),
                       close
                         (var("v",@{typ "64 word \<times> 5 word"}),
@@ -15926,7 +15925,7 @@ val () = def
                   ("S",@{typ "'b state_scheme \<Rightarrow> (32 word \<times> 'b state_scheme)"},var_w("m",5),@{theory}),
                 close
                   (var_w("v",32),
-                   mb(mb(mu(mop(FPAbs (false, false),var_w("v",32)),qTy),
+                   mb(mb(mu(mop(FPAbs (false),var_w("v",32)),qTy),
                          close(var_w("v",32),mu(tp[var_w("v",32),var_w("d",5)],qTy))),
                       close
                         (var("v",@{typ "32 word \<times> 5 word"}),
@@ -15953,7 +15952,7 @@ val () = def
                   ("D",@{typ "'b state_scheme \<Rightarrow> (64 word \<times> 'b state_scheme)"},var_w("m",5),@{theory }),
                 close
                   (var_w("v",64),
-                   mb(mb(mu(mop(FPNeg (true, false),var_w("v",64)),qTy),
+                   mb(mb(mu(mop(FPNeg (true),var_w("v",64)),qTy),
                          close(var_w("v",64),mu(tp[var_w("v",64),var_w("d",5)],qTy))),
                       close
                         (var("v",@{typ "64 word \<times> 5 word"}),
@@ -15964,7 +15963,7 @@ val () = def
                   ("S",@{typ "'b state_scheme \<Rightarrow> (32 word \<times> 'b state_scheme)"},var_w("m",5),@{theory}),
                 close
                   (var_w("v",32),
-                   mb(mb(mu(mop(FPNeg (false, false),var_w("v",32)),qTy),
+                   mb(mb(mu(mop(FPNeg (false),var_w("v",32)),qTy),
                          close(var_w("v",32),mu(tp[var_w("v",32),var_w("d",5)],qTy))),
                       close
                         (var("v",@{typ "32 word \<times> 5 word"}),
@@ -16851,7 +16850,7 @@ val () = def
                               (var_w("v",64),
                                mb(mb(mb(mu(tp[var_w("v",64),
                                               ite(var_b"add",var_w("product",64),
-                                                  mop(FPNeg (true, false),var_w("product",64)))],qTy),
+                                                  mop(FPNeg (true),var_w("product",64)))],qTy),
                                         close
                                           (var("v",@{typ "64 word \<times> 64 word"}),
                                            call
@@ -16887,7 +16886,7 @@ val () = def
                               (var_w("v",32),
                                mb(mb(mb(mu(tp[var_w("v",32),
                                               ite(var_b"add",var_w("product",32),
-                                                  mop(FPNeg (false, false),var_w("product",32)))],
+                                                  mop(FPNeg (false),var_w("product",32)))],
                                            qTy),
                                         close
                                           (var("v",@{typ "32 word \<times> 32 word"}),
@@ -16944,7 +16943,7 @@ val () = def
                                               close
                                                 (var("v",@{typ "64 word \<times> 64 word"}),
                                                  mu(tp[ite(var_b"add",var_w("op64",64),
-                                                           mop(FPNeg (true, false),var_w("op64",64))),
+                                                           mop(FPNeg (true),var_w("op64",64))),
                                                        var("v",@{typ "64 word \<times> 64 word"})],
                                                     qTy))),
                                            close
@@ -16997,7 +16996,7 @@ val () = def
                                               close
                                                 (var("v",@{typ "32 word \<times> 32 word"}),
                                                  mu(tp[ite(var_b"add",var_w("op32",32),
-                                                           mop(FPNeg (false, false),var_w("op32",32))),
+                                                           mop(FPNeg (false),var_w("op32",32))),
                                                        var("v",@{typ "32 word \<times> 32 word"})],
                                                     qTy))),
                                            close
@@ -17062,7 +17061,7 @@ val () = def
                                                     var_w("d",5),@{theory}),
                                                  close
                                                    (var_w("v1",64),
-                                                    mb(mu(mop(FPNeg (true, false),var_w("v1",64)),
+                                                    mb(mu(mop(FPNeg (true),var_w("v1",64)),
                                                           qTy),
                                                        close
                                                          (var_w("v1",64),
@@ -17070,7 +17069,7 @@ val () = def
                                               close
                                                 (var("v",@{typ "64 word \<times> 64 word"}),
                                                  mu(tp[ite(var_b"add",var_w("op64",64),
-                                                           mop(FPNeg (true, false),var_w("op64",64))),
+                                                           mop(FPNeg (true),var_w("op64",64))),
                                                        var("v",@{typ "64 word \<times> 64 word"})],
                                                     qTy))),
                                            close
@@ -17119,7 +17118,7 @@ val () = def
                                                     var_w("d",5),@{theory}),
                                                  close
                                                    (var_w("v1",32),
-                                                    mb(mu(mop(FPNeg (false, false),var_w("v1",32)),
+                                                    mb(mu(mop(FPNeg (false),var_w("v1",32)),
                                                           qTy),
                                                        close
                                                          (var_w("v1",32),
@@ -17127,7 +17126,7 @@ val () = def
                                               close
                                                 (var("v",@{typ "32 word \<times> 32 word"}),
                                                  mu(tp[ite(var_b"add",var_w("op32",32),
-                                                           mop(FPNeg (false, false),var_w("op32",32))),
+                                                           mop(FPNeg (false),var_w("op32",32))),
                                                        var("v",@{typ "32 word \<times> 32 word"})],
                                                     qTy))),
                                            close
@@ -17192,11 +17191,11 @@ val () = def
                                     var_w("d",5),@{theory}),
                                  close
                                    (var_w("v",64),
-                                    mb(mb(mb(mb(mu(mop(FPNeg (true, false),var_w("v",64)),qTy),
+                                    mb(mb(mb(mb(mu(mop(FPNeg (true),var_w("v",64)),qTy),
                                                 close
                                                   (var_w("v",64),
                                                    mu(tp[var_w("v",64),
-                                                         mop(FPNeg (true, false),var_w("product",64))],
+                                                         mop(FPNeg (true),var_w("product",64))],
                                                       qTy))),
                                              close
                                                (var("v",@{typ "64 word \<times> 64 word"}),
@@ -17220,7 +17219,7 @@ val () = def
                                     var_w("d",5),@{theory}),
                                  close
                                    (var_w("v",64),
-                                    mb(mb(mb(mb(mu(mop(FPNeg (true, false),var_w("v",64)),qTy),
+                                    mb(mb(mb(mb(mu(mop(FPNeg (true),var_w("v",64)),qTy),
                                                 close
                                                   (var_w("v",64),
                                                    mu(tp[var_w("v",64),var_w("product",64)],qTy))),
@@ -17243,7 +17242,7 @@ val () = def
                              (lc("VFPNegMul_VNMUL","VFPNegMul",@{theory}),
                               call
                                 ("write'D",@{typ "'b state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},
-                                 tp[mop(FPNeg (true, false),var_w("product",64)),var_w("d",5)],
+                                 tp[mop(FPNeg (true),var_w("product",64)),var_w("d",5)],
                                  @{theory}))],@{context}))))),
              mb(call
                   ("S",@{typ "'b state_scheme \<Rightarrow> (32 word \<times> 'b state_scheme)"},var_w("n",5),@{theory}),
@@ -17267,11 +17266,11 @@ val () = def
                                     var_w("d",5),@{theory}),
                                  close
                                    (var_w("v",32),
-                                    mb(mb(mb(mb(mu(mop(FPNeg (false, false),var_w("v",32)),qTy),
+                                    mb(mb(mb(mb(mu(mop(FPNeg (false),var_w("v",32)),qTy),
                                                 close
                                                   (var_w("v",32),
                                                    mu(tp[var_w("v",32),
-                                                         mop(FPNeg (false, false),
+                                                         mop(FPNeg (false),
                                                              var_w("product",32))],qTy))),
                                              close
                                                (var("v",@{typ "32 word \<times> 32 word"}),
@@ -17295,7 +17294,7 @@ val () = def
                                     var_w("d",5),@{theory}),
                                  close
                                    (var_w("v",32),
-                                    mb(mb(mb(mb(mu(mop(FPNeg (false, false),var_w("v",32)),qTy),
+                                    mb(mb(mb(mb(mu(mop(FPNeg (false),var_w("v",32)),qTy),
                                                 close
                                                   (var_w("v",32),
                                                    mu(tp[var_w("v",32),var_w("product",32)],qTy))),
@@ -17318,7 +17317,7 @@ val () = def
                              (lc("VFPNegMul_VNMUL","VFPNegMul",@{theory}),
                               call
                                 ("write'S",@{typ "'b state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},
-                                 tp[mop(FPNeg (false, false),var_w("product",32)),var_w("d",5)],
+                                 tp[mop(FPNeg (false),var_w("product",32)),var_w("d",5)],
                                  @{theory}))],@{context})))))),
          close
            (var_a HOLogic.unitT,
@@ -17539,11 +17538,6 @@ definition
    }"
 
 
-declare [[show_types ]]
-
-term dfn'vstm
-
-thm dfn'vstm_def
 
 ML \<open>
 local 
@@ -26562,119 +26556,67 @@ definition
 "Run"
   :: "instruction \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> unit \<times> 'b state_scheme"
 where  
-"Run \<equiv> \<lambda>v0::instruction.
-          case v0 of Branch (BranchExchange (v2::4 word)) \<Rightarrow> dfn'BranchExchange v2
-          | Branch (BranchLinkExchangeImmediate (v3::InstrSet \<times> 32 word)) \<Rightarrow> dfn'BranchLinkExchangeImmediate v3
-          | Branch (BranchLinkExchangeRegister (v4::4 word)) \<Rightarrow> dfn'BranchLinkExchangeRegister v4 | Branch (BranchTarget (v5::32 word)) \<Rightarrow> dfn'BranchTarget v5
-          | Branch (CheckArray (v6::4 word \<times> 4 word)) \<Rightarrow> dfn'CheckArray v6 | Branch (CompareBranch (v7::bool \<times> 4 word \<times> 32 word)) \<Rightarrow> dfn'CompareBranch v7
-          | Branch (HandlerBranchLink (v8::bool \<times> 32 word)) \<Rightarrow> dfn'HandlerBranchLink v8
-          | Branch (HandlerBranchLinkParameter (v9::32 word \<times> 32 word)) \<Rightarrow> dfn'HandlerBranchLinkParameter v9
-          | Branch (HandlerBranchParameter (v10::32 word \<times> 32 word)) \<Rightarrow> dfn'HandlerBranchParameter v10
-          | Branch (TableBranchByte (v11::bool \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'TableBranchByte v11 | ClearExclusive \<Rightarrow> dfn'ClearExclusive
-          | Data (AddSub (v13::bool \<times> 4 word \<times> 4 word \<times> 12 word)) \<Rightarrow> dfn'AddSub v13
-          | Data (ArithLogicImmediate (v14::4 word \<times> bool \<times> 4 word \<times> 4 word \<times> 12 word)) \<Rightarrow> dfn'ArithLogicImmediate v14
-          | Data (CountLeadingZeroes (v15::4 word \<times> 4 word)) \<Rightarrow> dfn'CountLeadingZeroes v15 | Data (Move (v16::bool \<times> bool \<times> 4 word \<times> 12 word)) \<Rightarrow> dfn'Move v16
-          | Data (MoveHalfword (v17::bool \<times> 4 word \<times> 16 word)) \<Rightarrow> dfn'MoveHalfword v17
-          | Data (Register (v18::4 word \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> SRType \<times> nat)) \<Rightarrow> dfn'Register v18
-          | Data (RegisterShiftedRegister (v19::4 word \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> SRType \<times> 4 word)) \<Rightarrow> dfn'RegisterShiftedRegister v19
-          | Data (ShiftImmediate (v20::bool \<times> bool \<times> 4 word \<times> 4 word \<times> SRType \<times> nat)) \<Rightarrow> dfn'ShiftImmediate v20
-          | Data (ShiftRegister (v21::bool \<times> bool \<times> 4 word \<times> 4 word \<times> SRType \<times> 4 word)) \<Rightarrow> dfn'ShiftRegister v21
-          | Data (TestCompareImmediate (v22::2 word \<times> 4 word \<times> 12 word)) \<Rightarrow> dfn'TestCompareImmediate v22
-          | Data (TestCompareRegister (v23::2 word \<times> 4 word \<times> 4 word \<times> SRType \<times> nat)) \<Rightarrow> dfn'TestCompareRegister v23
-          | Divide (v152::bool \<times> 4 word \<times> 4 word \<times> 4 word) \<Rightarrow> dfn'Divide v152 | Hint (Breakpoint (v25::32 word)) \<Rightarrow> dfn'Breakpoint v25
-          | Hint (DataMemoryBarrier (v26::4 word)) \<Rightarrow> dfn'DataMemoryBarrier v26 | Hint (DataSynchronizationBarrier (v27::4 word)) \<Rightarrow> dfn'DataSynchronizationBarrier v27
-          | Hint (Debug (v28::4 word)) \<Rightarrow> dfn'Debug v28 | Hint (InstructionSynchronizationBarrier (v29::4 word)) \<Rightarrow> dfn'InstructionSynchronizationBarrier v29
-          | Hint (PreloadData (v30::bool \<times> bool \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'PreloadData v30 | Hint (PreloadDataLiteral (v31::bool \<times> 32 word)) \<Rightarrow> dfn'PreloadDataLiteral v31
-          | Hint (PreloadInstruction (v32::bool \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'PreloadInstruction v32 | Hint SendEvent \<Rightarrow> dfn'SendEvent | Hint WaitForEvent \<Rightarrow> dfn'WaitForEvent
-          | Hint WaitForInterrupt \<Rightarrow> dfn'WaitForInterrupt | Hint Yield \<Rightarrow> dfn'Yield | IfThen (v153::4 word \<times> 4 word) \<Rightarrow> dfn'IfThen v153
-          | Load (LoadByte (v34::bool \<times> bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'LoadByte v34
-          | Load (LoadByteLiteral (v35::bool \<times> bool \<times> 4 word \<times> 32 word)) \<Rightarrow> dfn'LoadByteLiteral v35
-          | Load (LoadByteUnprivileged (v36::bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'LoadByteUnprivileged v36
-          | Load (LoadDual (v37::bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> offset2)) \<Rightarrow> dfn'LoadDual v37
-          | Load (LoadDualLiteral (v38::bool \<times> 4 word \<times> 4 word \<times> 32 word)) \<Rightarrow> dfn'LoadDualLiteral v38
-          | Load (LoadExclusive (v39::4 word \<times> 4 word \<times> 32 word)) \<Rightarrow> dfn'LoadExclusive v39 | Load (LoadExclusiveByte (v40::4 word \<times> 4 word)) \<Rightarrow> dfn'LoadExclusiveByte v40
-          | Load (LoadExclusiveDoubleword (v41::4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'LoadExclusiveDoubleword v41
-          | Load (LoadExclusiveHalf (v42::4 word \<times> 4 word)) \<Rightarrow> dfn'LoadExclusiveHalf v42
-          | Load (LoadHalf (v43::bool \<times> bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'LoadHalf v43
-          | Load (LoadHalfLiteral (v44::bool \<times> bool \<times> 4 word \<times> 32 word)) \<Rightarrow> dfn'LoadHalfLiteral v44
-          | Load (LoadHalfUnprivileged (v45::bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset2)) \<Rightarrow> dfn'LoadHalfUnprivileged v45
-          | Load (LoadLiteral (v46::bool \<times> 4 word \<times> 32 word)) \<Rightarrow> dfn'LoadLiteral v46 | Load (LoadMultiple (v47::bool \<times> bool \<times> bool \<times> 4 word \<times> 16 word)) \<Rightarrow> dfn'LoadMultiple v47
-          | Load (LoadMultipleExceptionReturn (v48::bool \<times> bool \<times> bool \<times> 4 word \<times> 15 word)) \<Rightarrow> dfn'LoadMultipleExceptionReturn v48
-          | Load (LoadMultipleUserRegisters (v49::bool \<times> bool \<times> 4 word \<times> 15 word)) \<Rightarrow> dfn'LoadMultipleUserRegisters v49
-          | Load (LoadSignedByteUnprivileged (v50::bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset2)) \<Rightarrow> dfn'LoadSignedByteUnprivileged v50
-          | Load (LoadUnprivileged (v51::bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'LoadUnprivileged v51
-          | Load (LoadWord (v52::bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'LoadWord v52
-          | Media (BitFieldClearOrInsert (v54::4 word \<times> 4 word \<times> nat \<times> nat)) \<Rightarrow> dfn'BitFieldClearOrInsert v54
-          | Media (BitFieldExtract (v55::bool \<times> 4 word \<times> 4 word \<times> nat \<times> nat)) \<Rightarrow> dfn'BitFieldExtract v55 | Media (ByteReverse (v56::4 word \<times> 4 word)) \<Rightarrow> dfn'ByteReverse v56
-          | Media (ByteReversePackedHalfword (v57::4 word \<times> 4 word)) \<Rightarrow> dfn'ByteReversePackedHalfword v57
-          | Media (ByteReverseSignedHalfword (v58::4 word \<times> 4 word)) \<Rightarrow> dfn'ByteReverseSignedHalfword v58
-          | Media (ExtendByte (v59::bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> nat)) \<Rightarrow> dfn'ExtendByte v59
-          | Media (ExtendByte16 (v60::bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> nat)) \<Rightarrow> dfn'ExtendByte16 v60
-          | Media (ExtendHalfword (v61::bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> nat)) \<Rightarrow> dfn'ExtendHalfword v61
-          | Media (PackHalfword (v62::SRType \<times> nat \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'PackHalfword v62 | Media (ReverseBits (v63::4 word \<times> 4 word)) \<Rightarrow> dfn'ReverseBits v63
-          | Media (Saturate (v64::SRType \<times> nat \<times> nat \<times> bool \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'Saturate v64 | Media (Saturate16 (v65::nat \<times> bool \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'Saturate16 v65
-          | Media (SaturatingAddSubtract (v66::2 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SaturatingAddSubtract v66
-          | Media (SelectBytes (v67::4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SelectBytes v67 | Multiply (Multiply32 (v69::bool \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'Multiply32 v69
-          | Multiply (MultiplyAccumulate (v70::bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'MultiplyAccumulate v70
-          | Multiply (MultiplyAccumulateAccumulate (v71::4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'MultiplyAccumulateAccumulate v71
-          | Multiply (MultiplyLong (v72::bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'MultiplyLong v72
-          | Multiply (MultiplySubtract (v73::4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'MultiplySubtract v73
-          | Multiply (Signed16Multiply32Accumulate (v74::bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'Signed16Multiply32Accumulate v74
-          | Multiply (Signed16Multiply32Result (v75::bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'Signed16Multiply32Result v75
-          | Multiply (Signed16Multiply64Accumulate (v76::bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'Signed16Multiply64Accumulate v76
-          | Multiply (Signed16x32Multiply32Accumulate (v77::bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'Signed16x32Multiply32Accumulate v77
-          | Multiply (Signed16x32Multiply32Result (v78::bool \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'Signed16x32Multiply32Result v78
-          | Multiply (SignedMostSignificantMultiply (v79::bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SignedMostSignificantMultiply v79
-          | Multiply (SignedMostSignificantMultiplySubtract (v80::bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SignedMostSignificantMultiplySubtract v80
-          | Multiply (SignedMultiplyDual (v81::bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SignedMultiplyDual v81
-          | Multiply (SignedMultiplyLongDual (v82::bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SignedMultiplyLongDual v82 | NoOperation \<Rightarrow> dfn'NoOperation
-          | SIMD (SignedAddSub16 (v84::2 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SignedAddSub16 v84
-          | SIMD (SignedAddSub8 (v85::bool \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SignedAddSub8 v85
-          | SIMD (SignedHalvingAddSub16 (v86::2 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SignedHalvingAddSub16 v86
-          | SIMD (SignedHalvingAddSub8 (v87::bool \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SignedHalvingAddSub8 v87
-          | SIMD (SignedSaturatingAddSub16 (v88::2 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SignedSaturatingAddSub16 v88
-          | SIMD (SignedSaturatingAddSub8 (v89::bool \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'SignedSaturatingAddSub8 v89
-          | SIMD (UnsignedAddSub16 (v90::2 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'UnsignedAddSub16 v90
-          | SIMD (UnsignedAddSub8 (v91::bool \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'UnsignedAddSub8 v91
-          | SIMD (UnsignedHalvingAddSub16 (v92::2 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'UnsignedHalvingAddSub16 v92
-          | SIMD (UnsignedHalvingAddSub8 (v93::bool \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'UnsignedHalvingAddSub8 v93
-          | SIMD (UnsignedSaturatingAddSub16 (v94::2 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'UnsignedSaturatingAddSub16 v94
-          | SIMD (UnsignedSaturatingAddSub8 (v95::bool \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'UnsignedSaturatingAddSub8 v95
-          | SIMD (UnsignedSumAbsoluteDifferences (v96::4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'UnsignedSumAbsoluteDifferences v96
-          | Store (StoreByte (v98::bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'StoreByte v98
-          | Store (StoreByteUnprivileged (v99::bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'StoreByteUnprivileged v99
-          | Store (StoreDual (v100::bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> 4 word \<times> offset2)) \<Rightarrow> dfn'StoreDual v100
-          | Store (StoreExclusive (v101::4 word \<times> 4 word \<times> 4 word \<times> 32 word)) \<Rightarrow> dfn'StoreExclusive v101
-          | Store (StoreExclusiveByte (v102::4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'StoreExclusiveByte v102
-          | Store (StoreExclusiveDoubleword (v103::4 word \<times> 4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'StoreExclusiveDoubleword v103
-          | Store (StoreExclusiveHalf (v104::4 word \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'StoreExclusiveHalf v104
-          | Store (StoreHalf (v105::bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'StoreHalf v105
-          | Store (StoreHalfUnprivileged (v106::bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset2)) \<Rightarrow> dfn'StoreHalfUnprivileged v106
-          | Store (StoreMultiple (v107::bool \<times> bool \<times> bool \<times> 4 word \<times> 16 word)) \<Rightarrow> dfn'StoreMultiple v107
-          | Store (StoreMultipleUserRegisters (v108::bool \<times> bool \<times> 4 word \<times> 16 word)) \<Rightarrow> dfn'StoreMultipleUserRegisters v108
-          | Store (StoreUnprivileged (v109::bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'StoreUnprivileged v109
-          | Store (StoreWord (v110::bool \<times> bool \<times> bool \<times> 4 word \<times> 4 word \<times> offset1)) \<Rightarrow> dfn'StoreWord v110 | Swap (v154::bool \<times> 4 word \<times> 4 word \<times> 4 word) \<Rightarrow> dfn'Swap v154
-          | System (ChangeProcessorState (v112::bool \<times> bool \<times> bool \<times> bool \<times> bool \<times> 5 word option)) \<Rightarrow> dfn'ChangeProcessorState v112
-          | System (EnterxLeavex (v113::bool)) \<Rightarrow> dfn'EnterxLeavex v113 | System ExceptionReturn \<Rightarrow> dfn'ExceptionReturn
-          | System (HypervisorCall (v114::16 word)) \<Rightarrow> dfn'HypervisorCall v114
-          | System (MoveToBankedOrSpecialRegister (v115::bool \<times> 5 word \<times> 4 word)) \<Rightarrow> dfn'MoveToBankedOrSpecialRegister v115
-          | System (MoveToRegisterFromBankedOrSpecial (v116::bool \<times> 5 word \<times> 4 word)) \<Rightarrow> dfn'MoveToRegisterFromBankedOrSpecial v116
-          | System (MoveToRegisterFromSpecial (v117::bool \<times> 4 word)) \<Rightarrow> dfn'MoveToRegisterFromSpecial v117
-          | System (MoveToSpecialFromImmediate (v118::bool \<times> 32 word \<times> 4 word)) \<Rightarrow> dfn'MoveToSpecialFromImmediate v118
-          | System (MoveToSpecialFromRegister (v119::bool \<times> 4 word \<times> 4 word)) \<Rightarrow> dfn'MoveToSpecialFromRegister v119
-          | System (ReturnFromException (v120::bool \<times> bool \<times> bool \<times> 4 word)) \<Rightarrow> dfn'ReturnFromException v120 | System (SecureMonitorCall (v121::4 word)) \<Rightarrow> dfn'SecureMonitorCall v121
-          | System (Setend (v122::bool)) \<Rightarrow> dfn'Setend v122 | System (StoreReturnState (v123::bool \<times> bool \<times> bool \<times> 5 word)) \<Rightarrow> dfn'StoreReturnState v123
-          | System (SupervisorCall (v124::32 word)) \<Rightarrow> dfn'SupervisorCall v124 | Undefined (v155::32 word) \<Rightarrow> dfn'Undefined v155
-          | VFP (vadd (v127::bool \<times> 5 word \<times> 5 word \<times> 5 word)) \<Rightarrow> dfn'vadd v127 | VFP (vcmp (v128::bool \<times> 5 word \<times> 5 word option)) \<Rightarrow> dfn'vcmp v128
-          | VFP (vcvt_float (v129::bool \<times> 5 word \<times> 5 word)) \<Rightarrow> dfn'vcvt_float v129 | VFP (vcvt_from_integer (v130::bool \<times> bool \<times> 5 word \<times> 5 word)) \<Rightarrow> dfn'vcvt_from_integer v130
-          | VFP (vcvt_to_integer (v131::bool \<times> bool \<times> bool \<times> 5 word \<times> 5 word)) \<Rightarrow> dfn'vcvt_to_integer v131 | VFP (vdiv (v132::bool \<times> 5 word \<times> 5 word \<times> 5 word)) \<Rightarrow> dfn'vdiv v132
-          | VFP (vldm (v135::bool \<times> bool \<times> bool \<times> 5 word \<times> 4 word \<times> 8 word)) \<Rightarrow> dfn'vldm v135 | VFP (vldr (v136::bool \<times> bool \<times> 5 word \<times> 4 word \<times> 32 word)) \<Rightarrow> dfn'vldr v136
-          | VFP (vmov (v138::bool \<times> 5 word \<times> 5 word)) \<Rightarrow> dfn'vmov v138 | VFP (vmov_double (v139::bool \<times> 4 word \<times> 4 word \<times> 5 word)) \<Rightarrow> dfn'vmov_double v139
-          | VFP (vmov_imm (v140::bool \<times> 5 word \<times> 64 word)) \<Rightarrow> dfn'vmov_imm v140 | VFP (vmov_single (v141::bool \<times> 4 word \<times> 5 word)) \<Rightarrow> dfn'vmov_single v141
-          | VFP (vmov_two_singles (v142::bool \<times> 4 word \<times> 4 word \<times> 5 word)) \<Rightarrow> dfn'vmov_two_singles v142 | VFP (vmrs (v143::4 word)) \<Rightarrow> dfn'vmrs v143
-          | VFP (vmsr (v144::4 word)) \<Rightarrow> dfn'vmsr v144 | VFP (vmul (v145::bool \<times> 5 word \<times> 5 word \<times> 5 word)) \<Rightarrow> dfn'vmul v145
-          | VFP (vsqrt (v148::bool \<times> 5 word \<times> 5 word)) \<Rightarrow> dfn'vsqrt v148 | VFP (vstm (v149::bool \<times> bool \<times> bool \<times> 5 word \<times> 4 word \<times> 8 word)) \<Rightarrow> dfn'vstm v149 
-          | VFP (vstr (v150::bool \<times> bool \<times> 5 word \<times> 4 word \<times> 32 word)) \<Rightarrow> dfn'vstr v150 | VFP (vsub (v151::bool \<times> 5 word \<times> 5 word \<times> 5 word)) \<Rightarrow> dfn'vsub v151"
+"Run \<equiv> \<lambda>v0. case v0 of Branch (BranchExchange v2) \<Rightarrow> dfn'BranchExchange v2 | Branch (BranchLinkExchangeImmediate v3) \<Rightarrow> dfn'BranchLinkExchangeImmediate v3
+            | Branch (BranchLinkExchangeRegister v4) \<Rightarrow> dfn'BranchLinkExchangeRegister v4 | Branch (BranchTarget v5) \<Rightarrow> dfn'BranchTarget v5
+            | Branch (CheckArray v6) \<Rightarrow> dfn'CheckArray v6 | Branch (CompareBranch v7) \<Rightarrow> dfn'CompareBranch v7 | Branch (HandlerBranchLink v8) \<Rightarrow> dfn'HandlerBranchLink v8
+            | Branch (HandlerBranchLinkParameter v9) \<Rightarrow> dfn'HandlerBranchLinkParameter v9 | Branch (HandlerBranchParameter v10) \<Rightarrow> dfn'HandlerBranchParameter v10
+            | Branch (TableBranchByte v11) \<Rightarrow> dfn'TableBranchByte v11 | ClearExclusive \<Rightarrow> dfn'ClearExclusive | Data (AddSub v13) \<Rightarrow> dfn'AddSub v13
+            | Data (ArithLogicImmediate v14) \<Rightarrow> dfn'ArithLogicImmediate v14 | Data (CountLeadingZeroes v15) \<Rightarrow> dfn'CountLeadingZeroes v15 | Data (Move v16) \<Rightarrow> dfn'Move v16
+            | Data (MoveHalfword v17) \<Rightarrow> dfn'MoveHalfword v17 | Data (Register v18) \<Rightarrow> dfn'Register v18 | Data (RegisterShiftedRegister v19) \<Rightarrow> dfn'RegisterShiftedRegister v19
+            | Data (ShiftImmediate v20) \<Rightarrow> dfn'ShiftImmediate v20 | Data (ShiftRegister v21) \<Rightarrow> dfn'ShiftRegister v21 | Data (TestCompareImmediate v22) \<Rightarrow> dfn'TestCompareImmediate v22
+            | Data (TestCompareRegister v23) \<Rightarrow> dfn'TestCompareRegister v23 | Divide v152 \<Rightarrow> dfn'Divide v152 | Hint (Breakpoint v25) \<Rightarrow> dfn'Breakpoint v25
+            | Hint (DataMemoryBarrier v26) \<Rightarrow> dfn'DataMemoryBarrier v26 | Hint (DataSynchronizationBarrier v27) \<Rightarrow> dfn'DataSynchronizationBarrier v27
+            | Hint (Debug v28) \<Rightarrow> dfn'Debug v28 | Hint (InstructionSynchronizationBarrier v29) \<Rightarrow> dfn'InstructionSynchronizationBarrier v29
+            | Hint (PreloadData v30) \<Rightarrow> dfn'PreloadData v30 | Hint (PreloadDataLiteral v31) \<Rightarrow> dfn'PreloadDataLiteral v31 | Hint (PreloadInstruction v32) \<Rightarrow> dfn'PreloadInstruction v32
+            | Hint SendEvent \<Rightarrow> dfn'SendEvent | Hint WaitForEvent \<Rightarrow> dfn'WaitForEvent | Hint WaitForInterrupt \<Rightarrow> dfn'WaitForInterrupt | Hint Yield \<Rightarrow> dfn'Yield
+            | IfThen v153 \<Rightarrow> dfn'IfThen v153 | Load (LoadByte v34) \<Rightarrow> dfn'LoadByte v34 | Load (LoadByteLiteral v35) \<Rightarrow> dfn'LoadByteLiteral v35
+            | Load (LoadByteUnprivileged v36) \<Rightarrow> dfn'LoadByteUnprivileged v36 | Load (LoadDual v37) \<Rightarrow> dfn'LoadDual v37 | Load (LoadDualLiteral v38) \<Rightarrow> dfn'LoadDualLiteral v38
+            | Load (LoadExclusive v39) \<Rightarrow> dfn'LoadExclusive v39 | Load (LoadExclusiveByte v40) \<Rightarrow> dfn'LoadExclusiveByte v40
+            | Load (LoadExclusiveDoubleword v41) \<Rightarrow> dfn'LoadExclusiveDoubleword v41 | Load (LoadExclusiveHalf v42) \<Rightarrow> dfn'LoadExclusiveHalf v42
+            | Load (LoadHalf v43) \<Rightarrow> dfn'LoadHalf v43 | Load (LoadHalfLiteral v44) \<Rightarrow> dfn'LoadHalfLiteral v44 | Load (LoadHalfUnprivileged v45) \<Rightarrow> dfn'LoadHalfUnprivileged v45
+            | Load (LoadLiteral v46) \<Rightarrow> dfn'LoadLiteral v46 | Load (LoadMultiple v47) \<Rightarrow> dfn'LoadMultiple v47
+            | Load (LoadMultipleExceptionReturn v48) \<Rightarrow> dfn'LoadMultipleExceptionReturn v48 | Load (LoadMultipleUserRegisters v49) \<Rightarrow> dfn'LoadMultipleUserRegisters v49
+            | Load (LoadSignedByteUnprivileged v50) \<Rightarrow> dfn'LoadSignedByteUnprivileged v50 | Load (LoadUnprivileged v51) \<Rightarrow> dfn'LoadUnprivileged v51
+            | Load (LoadWord v52) \<Rightarrow> dfn'LoadWord v52 | Media (BitFieldClearOrInsert v54) \<Rightarrow> dfn'BitFieldClearOrInsert v54 | Media (BitFieldExtract v55) \<Rightarrow> dfn'BitFieldExtract v55
+            | Media (ByteReverse v56) \<Rightarrow> dfn'ByteReverse v56 | Media (ByteReversePackedHalfword v57) \<Rightarrow> dfn'ByteReversePackedHalfword v57
+            | Media (ByteReverseSignedHalfword v58) \<Rightarrow> dfn'ByteReverseSignedHalfword v58 | Media (ExtendByte v59) \<Rightarrow> dfn'ExtendByte v59
+            | Media (ExtendByte16 v60) \<Rightarrow> dfn'ExtendByte16 v60 | Media (ExtendHalfword v61) \<Rightarrow> dfn'ExtendHalfword v61 | Media (PackHalfword v62) \<Rightarrow> dfn'PackHalfword v62
+            | Media (ReverseBits v63) \<Rightarrow> dfn'ReverseBits v63 | Media (Saturate v64) \<Rightarrow> dfn'Saturate v64 | Media (Saturate16 v65) \<Rightarrow> dfn'Saturate16 v65
+            | Media (SaturatingAddSubtract v66) \<Rightarrow> dfn'SaturatingAddSubtract v66 | Media (SelectBytes v67) \<Rightarrow> dfn'SelectBytes v67 | Multiply (Multiply32 v69) \<Rightarrow> dfn'Multiply32 v69
+            | Multiply (MultiplyAccumulate v70) \<Rightarrow> dfn'MultiplyAccumulate v70 | Multiply (MultiplyAccumulateAccumulate v71) \<Rightarrow> dfn'MultiplyAccumulateAccumulate v71
+            | Multiply (MultiplyLong v72) \<Rightarrow> dfn'MultiplyLong v72 | Multiply (MultiplySubtract v73) \<Rightarrow> dfn'MultiplySubtract v73
+            | Multiply (Signed16Multiply32Accumulate v74) \<Rightarrow> dfn'Signed16Multiply32Accumulate v74 | Multiply (Signed16Multiply32Result v75) \<Rightarrow> dfn'Signed16Multiply32Result v75
+            | Multiply (Signed16Multiply64Accumulate v76) \<Rightarrow> dfn'Signed16Multiply64Accumulate v76
+            | Multiply (Signed16x32Multiply32Accumulate v77) \<Rightarrow> dfn'Signed16x32Multiply32Accumulate v77
+            | Multiply (Signed16x32Multiply32Result v78) \<Rightarrow> dfn'Signed16x32Multiply32Result v78 | Multiply (SignedMostSignificantMultiply v79) \<Rightarrow> dfn'SignedMostSignificantMultiply v79
+            | Multiply (SignedMostSignificantMultiplySubtract v80) \<Rightarrow> dfn'SignedMostSignificantMultiplySubtract v80 | Multiply (SignedMultiplyDual v81) \<Rightarrow> dfn'SignedMultiplyDual v81
+            | Multiply (SignedMultiplyLongDual v82) \<Rightarrow> dfn'SignedMultiplyLongDual v82 | NoOperation \<Rightarrow> dfn'NoOperation | SIMD (SignedAddSub16 v84) \<Rightarrow> dfn'SignedAddSub16 v84
+            | SIMD (SignedAddSub8 v85) \<Rightarrow> dfn'SignedAddSub8 v85 | SIMD (SignedHalvingAddSub16 v86) \<Rightarrow> dfn'SignedHalvingAddSub16 v86
+            | SIMD (SignedHalvingAddSub8 v87) \<Rightarrow> dfn'SignedHalvingAddSub8 v87 | SIMD (SignedSaturatingAddSub16 v88) \<Rightarrow> dfn'SignedSaturatingAddSub16 v88
+            | SIMD (SignedSaturatingAddSub8 v89) \<Rightarrow> dfn'SignedSaturatingAddSub8 v89 | SIMD (UnsignedAddSub16 v90) \<Rightarrow> dfn'UnsignedAddSub16 v90
+            | SIMD (UnsignedAddSub8 v91) \<Rightarrow> dfn'UnsignedAddSub8 v91 | SIMD (UnsignedHalvingAddSub16 v92) \<Rightarrow> dfn'UnsignedHalvingAddSub16 v92
+            | SIMD (UnsignedHalvingAddSub8 v93) \<Rightarrow> dfn'UnsignedHalvingAddSub8 v93 | SIMD (UnsignedSaturatingAddSub16 v94) \<Rightarrow> dfn'UnsignedSaturatingAddSub16 v94
+            | SIMD (UnsignedSaturatingAddSub8 v95) \<Rightarrow> dfn'UnsignedSaturatingAddSub8 v95 | SIMD (UnsignedSumAbsoluteDifferences v96) \<Rightarrow> dfn'UnsignedSumAbsoluteDifferences v96
+            | Store (StoreByte v98) \<Rightarrow> dfn'StoreByte v98 | Store (StoreByteUnprivileged v99) \<Rightarrow> dfn'StoreByteUnprivileged v99 | Store (StoreDual v100) \<Rightarrow> dfn'StoreDual v100
+            | Store (StoreExclusive v101) \<Rightarrow> dfn'StoreExclusive v101 | Store (StoreExclusiveByte v102) \<Rightarrow> dfn'StoreExclusiveByte v102
+            | Store (StoreExclusiveDoubleword v103) \<Rightarrow> dfn'StoreExclusiveDoubleword v103 | Store (StoreExclusiveHalf v104) \<Rightarrow> dfn'StoreExclusiveHalf v104
+            | Store (StoreHalf v105) \<Rightarrow> dfn'StoreHalf v105 | Store (StoreHalfUnprivileged v106) \<Rightarrow> dfn'StoreHalfUnprivileged v106
+            | Store (StoreMultiple v107) \<Rightarrow> dfn'StoreMultiple v107 | Store (StoreMultipleUserRegisters v108) \<Rightarrow> dfn'StoreMultipleUserRegisters v108
+            | Store (StoreUnprivileged v109) \<Rightarrow> dfn'StoreUnprivileged v109 | Store (StoreWord v110) \<Rightarrow> dfn'StoreWord v110 | Swap v154 \<Rightarrow> dfn'Swap v154
+            | System (ChangeProcessorState v112) \<Rightarrow> dfn'ChangeProcessorState v112 | System (EnterxLeavex v113) \<Rightarrow> dfn'EnterxLeavex v113 | System ExceptionReturn \<Rightarrow> dfn'ExceptionReturn
+            | System (HypervisorCall v114) \<Rightarrow> dfn'HypervisorCall v114 | System (MoveToBankedOrSpecialRegister v115) \<Rightarrow> dfn'MoveToBankedOrSpecialRegister v115
+            | System (MoveToRegisterFromBankedOrSpecial v116) \<Rightarrow> dfn'MoveToRegisterFromBankedOrSpecial v116
+            | System (MoveToRegisterFromSpecial v117) \<Rightarrow> dfn'MoveToRegisterFromSpecial v117 | System (MoveToSpecialFromImmediate v118) \<Rightarrow> dfn'MoveToSpecialFromImmediate v118
+            | System (MoveToSpecialFromRegister v119) \<Rightarrow> dfn'MoveToSpecialFromRegister v119 | System (ReturnFromException v120) \<Rightarrow> dfn'ReturnFromException v120
+            | System (SecureMonitorCall v121) \<Rightarrow> dfn'SecureMonitorCall v121 | System (Setend v122) \<Rightarrow> dfn'Setend v122 | System (StoreReturnState v123) \<Rightarrow> dfn'StoreReturnState v123
+            | System (SupervisorCall v124) \<Rightarrow> dfn'SupervisorCall v124 | Undefined v155 \<Rightarrow> dfn'Undefined v155 | VFP (vabs v126) \<Rightarrow> dfn'vabs v126 | VFP (vadd v127) \<Rightarrow> dfn'vadd v127
+            | VFP (vcmp v128) \<Rightarrow> dfn'vcmp v128 | VFP (vcvt_float v129) \<Rightarrow> dfn'vcvt_float v129 | VFP (vcvt_from_integer v130) \<Rightarrow> dfn'vcvt_from_integer v130
+            | VFP (vcvt_to_integer v131) \<Rightarrow> dfn'vcvt_to_integer v131 | VFP (vdiv v132) \<Rightarrow> dfn'vdiv v132 | VFP (vfma_vfms v133) \<Rightarrow> dfn'vfma_vfms v133
+            | VFP (vfnma_vfnms v134) \<Rightarrow> dfn'vfnma_vfnms v134 | VFP (vldm v135) \<Rightarrow> dfn'vldm v135 | VFP (vldr v136) \<Rightarrow> dfn'vldr v136 | VFP (vmla_vmls v137) \<Rightarrow> dfn'vmla_vmls v137
+            | VFP (vmov v138) \<Rightarrow> dfn'vmov v138 | VFP (vmov_double v139) \<Rightarrow> dfn'vmov_double v139 | VFP (vmov_imm v140) \<Rightarrow> dfn'vmov_imm v140
+            | VFP (vmov_single v141) \<Rightarrow> dfn'vmov_single v141 | VFP (vmov_two_singles v142) \<Rightarrow> dfn'vmov_two_singles v142 | VFP (vmrs v143) \<Rightarrow> dfn'vmrs v143
+            | VFP (vmsr v144) \<Rightarrow> dfn'vmsr v144 | VFP (vmul v145) \<Rightarrow> dfn'vmul v145 | VFP (vneg v146) \<Rightarrow> dfn'vneg v146 | VFP (vneg_mul v147) \<Rightarrow> dfn'vneg_mul v147
+            | VFP (vsqrt v148) \<Rightarrow> dfn'vsqrt v148 | VFP (vstm v149) \<Rightarrow> dfn'vstm v149 | VFP (vstr v150) \<Rightarrow> dfn'vstr v150 | VFP (vsub v151) \<Rightarrow> dfn'vsub v151"
 
 
 
@@ -48982,20 +48924,20 @@ open L3
 in
 val () = def
   ("Next",
-   mb(const("Fetch",@{typ "'b state_scheme \<Rightarrow> (MachineCode \<times> 'b state_scheme)"},@{theory} ),
+   mb(const("Fetch",@{typ "'b::mem_op state_scheme \<Rightarrow> (MachineCode \<times> 'b state_scheme)"},@{theory} ),
       close
         (var("v",@{typ MachineCode}),
          mb(mb(call
-                 ("Decode",@{typ "'b state_scheme \<Rightarrow> (instruction \<times> 'b state_scheme)"},
+                 ("Decode",@{typ "'b::mem_op state_scheme \<Rightarrow> (instruction \<times> 'b state_scheme)"},
                   var("v",@{typ MachineCode}),@{theory} ),
                close
                  (var("v",@{typ instruction}),
                   call
-                    ("Run",@{typ "'b state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},
+                    ("Run",@{typ "'b::mem_op state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},
                      var("v",@{typ instruction}),@{theory} ))),
             close
               (var_a HOLogic.unitT,
-               call("ITAdvance",@{typ "'b state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},lu,@{theory}))))))
+               call("ITAdvance",@{typ "'b::mem_op state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},lu,@{theory}))))))
 end
 \<close>
 end

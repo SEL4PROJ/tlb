@@ -1,6 +1,6 @@
 theory MMU_ARMv7_Ref_No_Fault
 
-imports  MMU_ARM.ARM_Monadic_Ops
+imports  MMU_ARM.ARM_Monadic
 
 begin               
 
@@ -171,6 +171,13 @@ where
 
 consts tlb_evict :: "tlb_entry set state_scheme \<Rightarrow> tlb_entry set"
 
+
+declare return_def [simp add]
+declare bind_def [simp add]
+declare read_state_def [simp add]
+declare update_state_def [simp add]
+declare extend_state_def [simp add]
+declare trim_state_def [simp add]
 
 
 instantiation tlb_state_ext :: (type) mmu   

@@ -1,7 +1,7 @@
 theory MMU_ARMv7A_Ref
 
 
-imports MMU_ARM.ARM_Monadic_Ops  
+imports MMU_ARM.ARM_Monadic 
         PD_Cache
 
 begin               
@@ -133,6 +133,15 @@ lemma typ_incon_prim_parameter [simp]:
   "ASID (typ_incon s) = ASID s \<and> TTBR0 (typ_incon s) =  TTBR0 s \<and> MEM (typ_incon s) = MEM s \<and>
       exception (typ_incon s) = exception s"
   by (clarsimp simp: typ_incon_def state.defs)
+
+
+declare return_def [simp add]
+declare bind_def [simp add]
+declare read_state_def [simp add]
+declare update_state_def [simp add]
+declare extend_state_def [simp add]
+declare trim_state_def [simp add]
+
 
 
 definition
@@ -722,8 +731,8 @@ lemma to_do:
 lemma pde_entry_pt_walk:
   "pde_tlb_entry (pde_walk (ASID s) (MEM s) (TTBR0 s) va) (MEM s) va =
        pt_walk (ASID s) (MEM s) (TTBR0 s) va "
-  apply ((clarsimp simp: pde_walk_def pt_walk_def, cases "get_pde (MEM s) (TTBR0 s) va" ; clarsimp), (case_tac a ; clarsimp simp: mask_def))
-  by ((case_tac "get_pte (MEM s) x3 va" ; clarsimp simp: pte_tlb_entry_def), word_bitwise)
+  apply ((clarsimp simp: pde_walk_def pt_walk_def, cases "get_pde (MEM s) (TTBR0 s) va" ; clarsimp), (case_tac a ; clarsimp simp: word_extract_def word_bits_def mask_def))
+  by ((case_tac "get_pte (MEM s) x3 va" ; clarsimp simp:pte_tlb_entry_def), word_bitwise)
 
 
 definition

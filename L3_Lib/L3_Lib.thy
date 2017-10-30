@@ -25,7 +25,7 @@ no_syntax
 (* basic state Monad *)
 
 definition "return = Pair"
-
+(*declare return_def [simp add]*)
 
 definition bind :: "('state \<Rightarrow> ('a \<times> 'state)) \<Rightarrow>
                     ('a \<Rightarrow> 'state \<Rightarrow> ('b \<times> 'state)) \<Rightarrow>

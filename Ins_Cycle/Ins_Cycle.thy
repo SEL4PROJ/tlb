@@ -4,6 +4,9 @@ imports ARM_REF.MMU_ARMv7_Ref
 
 begin               
 
+declare word_extract_def [simp add]
+declare word_bits_def [simp add]
+declare nat_to_bitstring_def [simp add]
 
 definition 
  CP14' :: "CP14"
@@ -410,6 +413,7 @@ where
     SPSR_mon          =     SPSR_mon' ,
     SPSR_svc          =     SPSR_svc',
     SPSR_und          =     SPSR_und',
+    VFPExtension      =     NoVFP,
     exception         =     NoException,
     undefined         =     False,
     TTBR0             =     (Addr 0)::paddr,
@@ -437,6 +441,7 @@ where
     SPSR_mon          =     SPSR_mon' ,
     SPSR_svc          =     SPSR_svc',
     SPSR_und          =     SPSR_und',
+    VFPExtension      =     NoVFP,
     exception         =     NoException,
     undefined         =     False,
     TTBR0             =     (Addr 0)::paddr,
@@ -488,8 +493,6 @@ lemma mmu_translate_MEM':
   apply (clarsimp simp: va_to_pa_def pt_walk_section_MEM' mask_def)
 done
 
-
-
 lemma mem1_read_MEM'1:
   " mem1 (Addr 0xFF)
            \<lparr>Architecture = ARMv7_A, CP14 = CP14', CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
@@ -500,7 +503,7 @@ lemma mem1_read_MEM'1:
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False,
               TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> = 
        ([True, True, True, False, False, True, False, True] , \<lparr>Architecture = ARMv7_A, CP14 = CP14',
               CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
@@ -511,13 +514,12 @@ lemma mem1_read_MEM'1:
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False,
               TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
-  apply (clarsimp simp: mem1_def MEM'_def)
+  apply (clarsimp simp: mem1_def MEM'_def )
   apply (subgoal_tac "229 = Suc (228)")
-   apply (simp only:)
-   apply (simp only:"nat_to_bitstring.simps")
-   apply (clarsimp simp:)
+  apply (clarsimp simp:"log2.simps" )
+  apply (clarsimp simp: bitstring_field_def bitstring_shiftr_def fixwidth_def)
   by simp
 
 
@@ -532,7 +534,7 @@ lemma  mem1_read_MEM'2:
                              Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
                    CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
                    MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-                   SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+                   SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False,
                    TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> = 
                ([True, False, False, True, False, False, True, False] , \<lparr>Architecture = ARMv7_A, CP14 = CP14',
               CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
@@ -543,13 +545,12 @@ lemma  mem1_read_MEM'2:
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False,
               TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
   apply (clarsimp simp: mem1_def MEM'_def)
   apply (subgoal_tac "146 = Suc (145)")
-   apply (simp only:)
-   apply (simp only:"nat_to_bitstring.simps")
-   apply (clarsimp simp:)
+    apply (clarsimp simp:"log2.simps" )
+  apply (clarsimp simp: bitstring_field_def bitstring_shiftr_def fixwidth_def)
   by simp
 
 lemma mem1_read_MEM'3:
@@ -562,7 +563,7 @@ lemma mem1_read_MEM'3:
                                   Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
                         CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
                         MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp',
-                        SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',
+                        SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',VFPExtension = NoVFP, 
                         exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
                         tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> =
                      ([False, False, False, True, False, False, False, False], \<lparr>Architecture = ARMv7_A, CP14 = CP14',
@@ -574,13 +575,13 @@ lemma mem1_read_MEM'3:
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False,
               TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
   apply (clarsimp simp: mem1_def MEM'_def)
   apply (subgoal_tac "16 = Suc (15)")
    apply (simp only:)
-   apply (simp only:"nat_to_bitstring.simps")
-   apply (clarsimp simp:)
+   apply (clarsimp simp:"log2.simps" )
+  apply (clarsimp simp: bitstring_field_def bitstring_shiftr_def fixwidth_def pad_left_def)
   by simp
 
 lemma  mem1_read_MEM'4:
@@ -593,7 +594,7 @@ lemma  mem1_read_MEM'4:
                                        N = True, Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
                              CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization},
                              FP = FP', MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp',
-                             SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',
+                             SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',VFPExtension = NoVFP, 
                              exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
                              tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> =
                           ([False, False, False, False, False, True, False, False], \<lparr>Architecture = ARMv7_A, CP14 = CP14',
@@ -605,13 +606,13 @@ lemma  mem1_read_MEM'4:
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False,
               TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
   apply (clarsimp simp: mem1_def MEM'_def)
   apply (subgoal_tac "4 = Suc (3)")
    apply (simp only:)
-   apply (simp only:"nat_to_bitstring.simps")
-   apply (clarsimp simp:)
+   apply (clarsimp simp:"log2.simps" )
+  apply (clarsimp simp: bitstring_field_def bitstring_shiftr_def fixwidth_def pad_left_def)
   by simp
 
 lemma mmu_read_size_MEM':
@@ -625,7 +626,7 @@ lemma mmu_read_size_MEM':
             Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
             CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
             MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp',
-            SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',
+            SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',VFPExtension = NoVFP, 
             exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr> =
          ([True, True, True, False, False, True, False, True, True, False, False, True, False, False, True, False,
                 False, False, False, True, False, False, False, False, False, False, False, False, False, True, False,
@@ -636,7 +637,7 @@ lemma mmu_read_size_MEM':
                    sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>, CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
                    T = False, V = True, Z = True, psr'rst = 1\<rparr>, CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
                    REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-                   SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+                   SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False,
                    TTBR0 = Addr 0, ASID = 1, tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>)"
   apply (clarsimp simp: mmu_read_size_tlb_state_ext_def)
   apply (subgoal_tac " mmu_translate (Addr 0xFC)
@@ -647,7 +648,7 @@ lemma mmu_read_size_MEM':
              sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>, CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
              T = False, V = True, Z = True, psr'rst = 1\<rparr>, CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
              MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-             SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+             SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False,
              TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr>
              =  ((Addr 0xFC), \<lparr>Architecture = ARMv7_A, CP14 = CP14',
                   CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
@@ -656,7 +657,7 @@ lemma mmu_read_size_MEM':
                   sctlr'rst = 1\<rparr>, VBAR = 1\<rparr>, CPSR = \<lparr>PSR.A = True, C = True, E = False, F = True, GE = 1, I = True, IT = 0, J = False, M = 0x10, N = True, Q = True,
                   T = False, V = True, Z = True, psr'rst = 1\<rparr>,  CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
                   MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-                  SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+                  SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False,
                   TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr> \<lparr> tlb_set := {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)} \<rparr> ) ")
    prefer 2
    apply (clarsimp simp:  mmu_translate_tlb_state_ext_def)
@@ -665,7 +666,7 @@ lemma mmu_read_size_MEM':
    apply (clarsimp simp: va_to_pa_def pt_walk_section_MEM' mask_def)
   apply clarsimp
   apply (clarsimp simp: mem_read1_def Let_def)
-  apply (clarsimp simp: mem1_read_MEM'1 mem1_read_MEM'2 mem1_read_MEM'3 mem1_read_MEM'4)
+  apply (clarsimp simp: mem1_read_MEM'1 mem1_read_MEM'2 mem1_read_MEM'3 mem1_read_MEM'4 bitstring_field_def bitstring_shiftr_def fixwidth_def)
 done
 
 
@@ -677,7 +678,7 @@ lemma MemA_with_priv_MEM':
                   T = False, V = True, Z = True, psr'rst = 1\<rparr>,
         CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
         REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
-        SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+        SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
            tlb_set = {}\<rparr> =
         (0xE5921004, \<lparr>Architecture = ARMv7_A, CP14 = CP14',
           CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
@@ -687,7 +688,7 @@ lemma MemA_with_priv_MEM':
                  T = False, V = True, Z = True, psr'rst = 1\<rparr>,
        CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
        REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
-       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
        tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>)"
   apply (clarsimp simp: MemA_with_priv_def CP15'_def SCTLR'_def)
   apply (clarsimp simp: Aligned1_def Align1_def )
@@ -702,7 +703,7 @@ lemma MemA_MEM':
                         T = False, V = True, Z = True, psr'rst = 1\<rparr>,
               CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
               MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+              SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',VFPExtension = NoVFP,  exception = NoException, undefined = False,
               TTBR0 = Addr 0, ASID = 1, tlb_set = {}\<rparr> = (0xE5921004,  \<lparr>Architecture = ARMv7_A, CP14 = CP14',
            CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
                  SCTLR = \<lparr>SCTLR.A = True, B = True, BR = True, C = True, DZ = True, EE = True, FI = True, I = True, IE = True,
@@ -711,7 +712,7 @@ lemma MemA_MEM':
                  T = False, V = True, Z = True, psr'rst = 1\<rparr>,
        CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
        REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
-       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
        tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>)"
   apply (clarsimp simp: MemA_def)
   apply (clarsimp simp: CurrentModeIsNotUser_def BadMode_def)
@@ -733,7 +734,7 @@ lemma fetch_ins:
                  T = False, V = True, Z = True, psr'rst = 1\<rparr>,
        CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
        REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
-       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
        tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> )"
   apply (clarsimp simp: Fetch_def CurrentInstrSet_def ISETSTATE_def word_cat_def
                         tlb_state'_def CPSR'_def split:if_split_asm)
@@ -754,7 +755,7 @@ lemma decode_ins:
                  T = False, V = True, Z = True, psr'rst = 1\<rparr>,
        CurrentCondition = 1, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
        REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
-       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
        tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr> = 
      ( Load (LoadWord (True, True, False, 1, 2, immediate_form1 4)) , \<lparr>Architecture = ARMv7_A, CP14 = CP14',
        CP15 = \<lparr>HCR = HCR', HSCTLR = HSCTLR', HSR = HSR', MVBAR = 1, NSACR = NSACR', SCR = SCR',
@@ -765,7 +766,7 @@ lemma decode_ins:
                  T = False, V = True, Z = True, psr'rst = 1\<rparr>,
        CurrentCondition = 0xE, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
        REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
-       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',VFPExtension = NoVFP,  exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
        tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>  )"
   apply (clarsimp simp: Decode_def)
   apply (clarsimp simp: DecodeARM_def Let_def)
@@ -797,7 +798,7 @@ lemma pt_walk_section_MEM'_new:
 done
   
 
-
+declare nat_to_bitstring_def [simp del]
 
 lemma run_ins:
   "\<lbrakk>lookup ({EntrySection 1 0 (Some 0) 0} -
@@ -812,7 +813,7 @@ lemma run_ins:
                            Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
                  CurrentCondition = 0xE, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
                  MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq',
-                 SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False,
+                 SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException, undefined = False,
                  TTBR0 = Addr 0, ASID = 1, \<dots> = {EntrySection 1 0 (Some 0) 0}\<rparr>)
       1 4 \<noteq>
      Incon ; Run (Load (LoadWord (True, True, False, 1, 2, immediate_form1 4)))
@@ -826,7 +827,7 @@ lemma run_ins:
                  T = False, V = True, Z = True, psr'rst = 1\<rparr>,
        CurrentCondition = 0xE, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP', MEM = MEM',
        REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp', SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon',
-       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
+       SPSR_svc = SPSR_svc', SPSR_und = SPSR_und',VFPExtension = NoVFP,  exception = NoException, undefined = False, TTBR0 = Addr 0, ASID = 1,
        tlb_set = {pt_walk 1 MEM' (Addr 0) (Addr 0xFC)}\<rparr>  = (() , s')\<rbrakk> \<Longrightarrow>
     REG s' =  Reg_Bank(RName_1usr := of_bl (nat_to_bitstring 16843009), RName_PC := 0x100)"
   apply (clarsimp simp: Run_def dfn'LoadWord_def NullCheckIfThumbEE_def CurrentInstrSet_def ISETSTATE_def word_cat_def R_def Rmode_def IsSecure_def HaveSecurityExt_def LookUpRName_def Let_def
@@ -843,20 +844,44 @@ lemma run_ins:
     Q = True, T = False, V = True, Z = True, psr'rst = 1\<rparr>,
     CurrentCondition = 0xE, ELR_hyp = 1, Encoding = Encoding_ARM, Extensions = {Extension_Virtualization}, FP = FP',
     MEM = MEM', REG = Reg_Bank, SPSR_abt = SPSR_abt', SPSR_fiq = SPSR_fiq', SPSR_hyp = SPSR_hyp',
-    SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', exception = NoException,
+    SPSR_irq = SPSR_irq', SPSR_mon = SPSR_mon', SPSR_svc = SPSR_svc', SPSR_und = SPSR_und', VFPExtension = NoVFP, exception = NoException,
     undefined = False, TTBR0 = Addr 0, ASID = 1, \<dots> = {EntrySection 1 0 (Some 0) 0}\<rparr>)   1 4 ")
     apply (clarsimp simp: Let_def is_fault_def  va_to_pa_def pt_walk_section_MEM'_new mask_def mem_read1_def   mem1_def MEM'_def)
-    apply (clarsimp simp: UnalignedSupport_def ArchVersion_def write'R_def write'Rmode_def  IsSecure_def HaveSecurityExt_def CurrentInstrSet_def  ISETSTATE_def LookUpRName_def IncPC_def ThisInstrLength_def BranchTo_def Reg_Bank_def)
+  apply (clarsimp simp: UnalignedSupport_def ArchVersion_def write'R_def write'Rmode_def  IsSecure_def HaveSecurityExt_def CurrentInstrSet_def  
+         ISETSTATE_def LookUpRName_def IncPC_def ThisInstrLength_def BranchTo_def Reg_Bank_def)
+  apply (subgoal_tac "nat_to_bitstring (Suc 0) = [True] ")
+  apply clarsimp
+     apply (subgoal_tac "bitstring_field 7 0 [True] = [False, False, False, False, False, False, False, True]")
+  apply clarsimp
+  apply (subgoal_tac "bitstring_field 31 0
+     [False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, True, False, False, False, False,
+                                              False, False, False, True] = [False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, True, False, False, 
+      False, False, False, False, False, True, False, False, False, False, False, False, False, True]")
+       apply clarsimp
+      apply (clarsimp simp: bitstring_field_def  bitstring_shiftr_def fixwidth_def pad_left_def Let_def)
+     apply (clarsimp simp: bitstring_field_def  bitstring_shiftr_def fixwidth_def pad_left_def Let_def)
+    apply (clarsimp simp:  nat_to_bitstring_def log2.simps)
    apply clarsimp
   apply clarsimp
   apply (subgoal_tac "x3 = EntrySection 1 0 (Some 0) 0")
    apply clarsimp
    apply (clarsimp simp: is_fault_def va_to_pa_def mask_def  mem_read1_def mem1_def MEM'_def)
    apply (clarsimp simp: UnalignedSupport_def ArchVersion_def write'R_def write'Rmode_def IsSecure_def HaveSecurityExt_def CurrentInstrSet_def ISETSTATE_def 
-           LookUpRName_def IncPC_def ThisInstrLength_def BranchTo_def Reg_Bank_def)
+      LookUpRName_def IncPC_def ThisInstrLength_def BranchTo_def Reg_Bank_def) apply (subgoal_tac "nat_to_bitstring (Suc 0) = [True] ")
+    apply clarsimp
+    apply (subgoal_tac "bitstring_field 7 0 [True] = [False, False, False, False, False, False, False, True]")
+     apply clarsimp
+     apply (subgoal_tac "bitstring_field 31 0
+     [False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, True, False, False, False, False,
+                                              False, False, False, True] = [False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, True, False, False, 
+      False, False, False, False, False, True, False, False, False, False, False, False, False, True]")
+      apply clarsimp
+     apply (clarsimp simp: bitstring_field_def  bitstring_shiftr_def fixwidth_def pad_left_def Let_def)
+    apply (clarsimp simp: bitstring_field_def  bitstring_shiftr_def fixwidth_def pad_left_def Let_def)
+   apply (clarsimp simp:  nat_to_bitstring_def log2.simps)
   apply (clarsimp simp: lookup_def entry_set_def split:if_split_asm)
-   apply blast+
-done
+   apply blast+ 
+  done
 
 
 

@@ -1,9 +1,8 @@
 theory MMU_ARMv7_Ref
 
-imports MMU_ARM.ARM_Monadic_Ops
+imports MMU_ARM.ARM_Monadic
 
 begin               
-
 
 
 record tlb_state = state + 
@@ -421,6 +420,16 @@ find_theorems mmu_translate
 
 thm state.defs [simp]
 
+
+
+declare return_def [simp add]
+declare bind_def [simp add]
+declare read_state_def [simp add]
+declare update_state_def [simp add]
+declare extend_state_def [simp add]
+declare trim_state_def [simp add]
+
+
 (* refinement between two deterministic TLB lookups, tlb_rel states that TLBs don't store page faults  *)
 lemma  mmu_translate_det_refine:
   "\<lbrakk> mmu_translate va s = (pa, s'); consistent (typ_det_tlb t) va;  tlb_rel (typ_det_tlb s) (typ_det_tlb t) \<rbrakk> \<Longrightarrow>
@@ -431,10 +440,10 @@ lemma  mmu_translate_det_refine:
   apply (subgoal_tac "lookup (tlb_det_set s) (ASID s) (addr_val va) \<le> lookup (tlb_det_set t) (ASID s) (addr_val va)")
    prefer 2
    apply (simp add: tlb_mono)
-  apply (clarsimp simp: mmu_translate_tlb_det_state_ext_def split_def Let_def split: if_split_asm)
+  apply (clarsimp simp: mmu_translate_tlb_det_state_ext_def split_def Let_def  split: if_split_asm )
   apply (cases "lookup (tlb_det_set t) (ASID s) (addr_val va)")
     apply clarsimp
-    apply (simp add: Let_def raise'exception_def typ_det_tlb_def state.defs tlb_rel_def split: if_split_asm)
+    apply (simp add: Let_def raise'exception_def typ_det_tlb_def state.defs tlb_rel_def split: if_split_asm )
      apply (cases s, cases t, clarsimp)
     apply (cases s, cases t)
     apply (clarsimp simp: no_faults_def)
@@ -2924,6 +2933,5 @@ lemma incon_safe_writes:
   apply (auto simp: ptable_comp_def)
   done
 
-     
 
 end

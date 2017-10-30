@@ -30,7 +30,7 @@ session L3_LIB = Word_Lib +
 (* MMU_ARM *)
 session MMU_ARM = L3_LIB +
   theories
-    "MMU_ARM/ARM_Monadic_Ops"
+    "MMU_ARM/ARM_Monadic"
      
 
 (* Refinement *)
@@ -38,7 +38,7 @@ session ARM_REF = MMU_ARM +
   theories
     "MMU_ARMv7_Refinement/MMU_ARMv7_Ref"
     "MMU_ARMv7_Refinement_No_Fault/Update_ASID_Refine"
-    "MMU_ARMv7_Refinement_No_Fault//Update_TTBR0_Refine"
+    "MMU_ARMv7_Refinement_No_Fault/Update_TTBR0_Refine"
     "MMU_ARMv7A_Refinement/MMU_ARMv7A_Ref"
         
 
