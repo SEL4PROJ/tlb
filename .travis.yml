@@ -5,12 +5,12 @@ before_install:
   - sudo apt-get -qq install lib32stdc++6
 
 install:
-  - wget http://isabelle.in.tum.de/website-Isabelle2016/dist/Isabelle2016_app.tar.gz
-  - tar -xzvf Isabelle2016_app.tar.gz
+  - wget http://isabelle.in.tum.de/dist/Isabelle2017_app.tar.gz
+  - tar -xzvf Isabelle2017_app.tar.gz
 
 cache:
   directories:
     - $HOME/.isabelle
 
 script:
-  Isabelle2016/bin/isabelle build -v -D .
+  Isabelle2017/bin/isabelle build -v -D .
