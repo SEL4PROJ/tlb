@@ -375,16 +375,6 @@ lemma update_asid_sat_no_flt_abs_refine':
   by (clarsimp simp: asid_unequal_miss'')
 
 
-oops
-
-
-
-
-
-
-
-
-
 
 
 
