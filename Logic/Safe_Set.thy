@@ -168,7 +168,19 @@ lemma [simp]:
   apply (clarsimp simp: SM_user_def)
    apply (clarsimp simp: ptrace_set_def)
 done
-  
+
+
+lemma [simp]:
+  "safe_memory (SM_user (heap s) (Addr rt))
+                 (s\<lparr>root := Addr rt, asid := a, incon_set := is', ptable_snapshot :=  snp',   mode := User\<rparr>)"
+ apply (clarsimp simp: safe_memory_def)
+  apply (subst (asm) SM_user_def)
+  apply simp
+  apply (erule exE)
+  apply simp
+  apply (clarsimp simp: SM_user_def)
+   apply (clarsimp simp: ptrace_set_def)
+done
 
 lemma  user_safe_set_established:
   "\<Turnstile> \<lbrace> \<lambda>s. \<exists>rt. aval ttbr0 s = Some rt \<and>  mode s = Kernel\<rbrace>  
@@ -176,7 +188,8 @@ lemma  user_safe_set_established:
            \<lbrace>\<lambda>s. safe_set (SM_user (heap s) (root s)) s\<rbrace>"
   apply vcgm
   by (clarsimp simp: safe_set_def con_set_def)
-  
+ 
+
 lemma [simp]:
   "safe_memory va (s\<lparr>heap := hp , incon_set := iset , mode := m\<rparr>) =  safe_memory va (s\<lparr>heap := hp , mode := m\<rparr>)"
   by (clarsimp simp: safe_memory_def ptrace_set_def)

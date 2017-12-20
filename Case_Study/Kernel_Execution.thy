@@ -187,7 +187,7 @@ lemma kernel_exec2:
    prefer 2
    apply (rule_tac a = xa in UN_I  , clarsimp)
    apply (subgoal_tac "ptable_trace' (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) xa =
-    ptable_trace' (heap s) (root s) xa")
+                       ptable_trace' (heap s) (root s) xa")
     apply clarsimp
    prefer 2
    apply (subgoal_tac "ptable_trace' (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) xa =

@@ -5,7 +5,7 @@ imports
      PTABLE.PageTable_seL4 
      "./../Eisbach/Rule_By_Method"
 
-
+             
 begin
 
 type_synonym val         = "32 word"
@@ -14,14 +14,34 @@ type_synonym word_t      = "32 word"
 type_synonym heap        = "paddr \<rightharpoonup> word_t"
 type_synonym incon_set   = "(asid \<times> vaddr) set"
 
+
 datatype mode_t = Kernel | User
 
+
+
+type_synonym vSm = "20 word"
+type_synonym pSm = "20 word"
+
+type_synonym vSe = "12 word"
+type_synonym pSe = "12 word"
+
+type_synonym fl     = "8 word"
+
+
+datatype tlb_entry =
+    EntrySmall   asid vSm "pSm option" fl
+  | EntrySection asid vSe "pSe option" fl
+
+
+datatype lookup_type  =  Miss  | Incon  |  Hit "tlb_entry"
+type_synonym ptable_snapshot   = "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
 
 record p_state =
   heap      :: heap
   asid      :: asid
   root      :: paddr
   incon_set :: incon_set
+  ptable_snapshot :: ptable_snapshot
   mode      :: mode_t
 
   
@@ -381,19 +401,11 @@ where
 
 
 
+
+
+
 (* ptable_comp function *)
 
-type_synonym vSm = "20 word"
-type_synonym pSm = "20 word"
-type_synonym vSe = "12 word"
-type_synonym pSe = "12 word"
-type_synonym fl     = "8 word"
-type_synonym va    = "32 word"
-
-
-datatype tlb_entry =
-    EntrySmall   asid vSm "pSm option" fl
-  | EntrySection asid vSe "pSe option" fl
 
 fun word_bits :: "nat \<Rightarrow> nat \<Rightarrow> 'a::len word \<Rightarrow> 'a::len word" where
   "word_bits h l w = (w >> l) AND mask (Suc h - l)"
@@ -505,6 +517,80 @@ lemma pt_walk_pt_trace_upd':
   using pt_walk_pt_trace_upd by auto
 
 
+
+(* snapshot functions *)
+
+definition 
+  incon_load :: "ptable_snapshot \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> incon_set"
+  where
+  "incon_load snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
+                            {v. \<exists>x. snp a v = Hit x \<and> x \<noteq> pt_walk a m rt v}"
+
+
+definition 
+  snapshot_update_current :: "incon_set \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> ptable_snapshot"
+where
+  "snapshot_update_current iset mem ttbr0  \<equiv> (\<lambda>x y. if (x,y) \<in>  iset then Incon else 
+                                                if (\<not>is_fault (pt_walk x mem ttbr0 y)) then  Hit (pt_walk x mem ttbr0 y) else Miss)"
+
+
+definition 
+  snapshot_update_current' :: "ptable_snapshot \<Rightarrow> incon_set \<Rightarrow>  heap \<Rightarrow> paddr \<Rightarrow> asid \<Rightarrow> ptable_snapshot"
+where
+  "snapshot_update_current' snp iset mem ttbr0 a \<equiv> snp (a := snapshot_update_current iset mem ttbr0 a)"
+
+
+
+definition
+  incon_for_snapshot :: "incon_set \<Rightarrow> ptable_snapshot \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> incon_set"
+  where
+  "incon_for_snapshot iset snp a hp rt =  ({a} \<times> UNIV) \<inter> iset \<union>  incon_load snp a hp rt"
+
+
+
+
+definition 
+  miss_to_hit :: "ptable_snapshot \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> incon_set"
+ where
+  "miss_to_hit snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
+                              {v. snp a v = Miss \<and>  \<not>is_fault (pt_walk a m rt v)}"
+
+definition 
+  consistent_hit :: "ptable_snapshot\<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> paddr  \<Rightarrow> incon_set"
+ where
+  "consistent_hit snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
+                                 {v. snp a v = Hit (pt_walk a m rt v)}"
+
+
+
+definition 
+  snapshot_update_new :: "(asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> 
+                          heap \<Rightarrow> paddr \<Rightarrow>  ptable_snapshot"
+where
+  "snapshot_update_new iset m_to_h h_to_h hp ttbr0 \<equiv> (\<lambda>x y. if (x,y) \<in>  iset then Incon 
+                                                     else if (x,y) \<in> m_to_h then Hit (pt_walk x hp ttbr0 y) 
+                                                     else if (x,y) \<in> h_to_h then Hit (pt_walk x hp ttbr0 y) 
+                                                     else Miss)"
+
+definition 
+  snapshot_update_new' :: "ptable_snapshot \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> 
+                              heap \<Rightarrow> paddr \<Rightarrow> asid \<Rightarrow> ptable_snapshot"
+where
+  "snapshot_update_new' snp iset m_to_h h_to_h hp ttbr0 a \<equiv> 
+                               snp (a := snapshot_update_new iset m_to_h h_to_h hp ttbr0 a)"
+
+
+
+fun
+  flush_effect_snp :: "flush_type \<Rightarrow> ptable_snapshot \<Rightarrow> ptable_snapshot"
+where
+  "flush_effect_snp flushTLB  snp = (\<lambda>a v. Miss)"
+|
+  "flush_effect_snp (flushASID a) snp = snp (a := (\<lambda>a v. Miss) a)"
+|
+  "flush_effect_snp (flushvarange vset) snp = (\<lambda>x y. if (x,y) \<in> \<Union> ((\<lambda>v. UNIV \<times> {v}) ` vset) then Miss else snp x y)"
+|
+  "flush_effect_snp (flushASIDvarange a vset) snp = (\<lambda>x y. if (x,y) \<in> (\<lambda>v. (a, v)) ` vset then Miss else snp x y)"
 
 
 end

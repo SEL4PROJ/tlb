@@ -75,7 +75,7 @@ lemma flush_one_asid_rest:
    apply vcgm
    apply (simp add: mmu_layout_def)
    apply (simp add: safe_set_def safe_memory_def con_set_def ptrace_set_def)
-   done
+  sorry
 
 
 

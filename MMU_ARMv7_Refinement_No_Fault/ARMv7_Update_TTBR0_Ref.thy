@@ -1,7 +1,7 @@
-theory Update_TTBR0_Refine
+theory  ARMv7_Update_TTBR0_Ref
 
 imports 
-  MMU_ARMv7_Ref_No_Fault
+  ARMv7_Mem_Write_Read_Ref
 
 begin               
 
@@ -161,11 +161,6 @@ lemma sat_no_flt_miss_fault:
   using sat_state_tlb' by force
 
 
-lemma asid_unequal_miss'':
-  " a \<noteq> a1 \<Longrightarrow>
-   lookup {e \<in> range (pt_walk a1 m r). \<not> is_fault e} a bb = Miss"
-  apply (clarsimp simp:  lookup_def entry_set_def entry_range_asid_tags_def) 
-  by force
 
 
 
@@ -179,7 +174,6 @@ lemma lookup_miss_snapshot:
 
 lemma update_asid_sat_no_flt_abs_refine':
   "\<lbrakk> update_TTBR0 r (s::tlb_sat_no_flt_state) = ((), s') ;  update_TTBR0 r (t::tlb_incon_state') = ((), t'); 
-     saturated_no_flt  (typ_sat_no_flt_tlb s) ; no_faults (tlb_sat_no_flt_set s); 
              tlb_rel_abs' (typ_sat_no_flt_tlb s) (typ_incon' t) \<rbrakk> \<Longrightarrow> 
                      tlb_rel_abs' (typ_sat_no_flt_tlb s') (typ_incon' t')"
   apply (clarsimp simp: update_TTBR0_tlb_sat_no_flt_state_ext_def update_TTBR0_tlb_incon_state'_ext_def tlb_rel_abs'_def)
@@ -367,13 +361,19 @@ lemma update_asid_sat_no_flt_abs_refine':
     apply blast
    apply clarsimp
    apply (clarsimp simp: lookup_no_flt_range_pt_walk_not_incon)
+  apply (rule conjI)
+   apply (clarsimp simp:  saturated_no_flt_def)
+  apply (rule conjI)
+   apply (clarsimp simp: no_faults_def)
+  apply (rule conjI)
+   apply (clarsimp)
+   apply (subgoal_tac "snapshot_of_tlb (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk (ASID s) (MEM s) r). \<not> is_fault e}) a v = snapshot_of_tlb  (tlb_sat_no_flt_set s) a v")
+    apply clarsimp
+   apply (rule lookup_miss_snapshot)
+   apply (clarsimp simp: asid_unequal_miss'')
   apply clarsimp
-  apply rule
-  apply (subgoal_tac " snapshot_of_tlb (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk (ASID s) (MEM s) r). \<not> is_fault e}) a x = snapshot_of_tlb  (tlb_sat_no_flt_set s) a x")
-  apply clarsimp
-  apply (rule lookup_miss_snapshot)
-  by (clarsimp simp: asid_unequal_miss'')
-
+  apply blast
+  done
 
 
 

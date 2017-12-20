@@ -36,10 +36,16 @@ lemma  [simp]:
   by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
 
 
+lemma  [simp]:
+  "aval e sa = Some v \<Longrightarrow> aval e (sa\<lparr>incon_set := {av \<in> incon_set sa. fst av \<noteq> s \<and> snd av \<noteq> vp} , 
+         ptable_snapshot := \<lambda>x y. if x = s \<and> y =  vp then Miss else ptable_snapshot sa x y\<rparr>) = Some v "
+  by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
+
+
 lemma flush_ASID_va_mem_write':
   "\<Turnstile> \<lbrace> \<lambda>s. aval lval s = Some vp \<and> aval rval s = Some v \<and> asid s = a \<and> Addr vp \<notin> SA \<and> con_set SA s \<and> mode s = Kernel \<and> 
       ptable_lift_m (heap s) (root s) (mode s)(Addr vp) = Some pp \<rbrace>  Flush (flushASIDvarange s  {Addr vp}) ;; lval ::= rval \<lbrace>\<lambda>s. heap s pp = Some v \<rbrace>"
-   by vcgm
+  by vcgm
 
 
 lemma [simp]:

@@ -96,7 +96,8 @@ where
 |
   WhileFail2:      "bval b s = None \<Longrightarrow> (WHILE b DO c , s) \<Rightarrow> None"
 |
-  Flush:           "mode s = Kernel \<Longrightarrow> (Flush f, s) \<Rightarrow>  Some (s \<lparr>incon_set := flush_effect f (incon_set s)\<rparr>)"
+  Flush:           "mode s = Kernel \<Longrightarrow> (Flush f, s) \<Rightarrow>  Some (s \<lparr>incon_set := flush_effect f (incon_set s) , 
+                                                                  ptable_snapshot := flush_effect_snp f (ptable_snapshot s) \<rparr>)"
 |
   FlushFail:       "mode s = User \<Longrightarrow> (Flush f, s) \<Rightarrow>  None"
 |
@@ -105,15 +106,21 @@ where
   UpdateTTBR0:     "mode s = Kernel \<and> aval rte s = Some rt \<Longrightarrow> (UpdateTTBR0 rte, s) \<Rightarrow>  Some (s \<lparr>root := Addr rt ,
                             incon_set := incon_set s \<union>  ptable_comp (asid s)  (heap s) (heap s) (root s) (Addr rt) \<rparr>)"
 |
-  UpdateASID:      "mode s = Kernel \<Longrightarrow> (UpdateASID a , s) \<Rightarrow>  Some (s \<lparr>asid := a\<rparr>)"
+  UpdateASID:      " \<lbrakk>snp_cur  = snapshot_update_current' (ptable_snapshot s) (({asid s} \<times> UNIV) \<inter> incon_set s) (heap s) (root s) (asid s) ; 
+                              il       = incon_load snp_cur a (heap s) (root s) ; 
+                              iset'    = ({a} \<times> UNIV) \<inter> (incon_set s); 
+                              m_to_h   = miss_to_hit  snp_cur a (heap s) (root s) ;
+                              h_to_h   = consistent_hit snp_cur a (heap s) (root s);  
+                         mode s = Kernel\<rbrakk> \<Longrightarrow> 
+                                 (UpdateASID a , s) \<Rightarrow>  Some (s \<lparr>asid := a , incon_set := incon_set s \<union> il , ptable_snapshot := snapshot_update_new'  snp_cur (iset' \<union> il) m_to_h h_to_h (heap s) (root s) a \<rparr>)"
+   (* 'let' gives this error:
+      "Conclusion of introduction rule must be an inductive predicate" *)
 |
   UpdateASIDFail:  "mode s = User \<Longrightarrow> (UpdateASID a , s) \<Rightarrow>  None"
 |
   SetMode:          "mode s = Kernel \<Longrightarrow> (SetMode m, s) \<Rightarrow> Some (s \<lparr>mode := m \<rparr>)"
 |
   SetModeFail:      "mode s = User \<Longrightarrow> (SetMode m, s) \<Rightarrow> None"
-
-
 
 code_pred big_step .
 declare big_step.intros [intro]
@@ -242,7 +249,8 @@ lemma while_inv[vcg]:
 
 
 lemma  flush_sound[vcg]:
-  "\<Turnstile>\<lbrace>\<lambda>s. mode s = Kernel \<and> P (s \<lparr>incon_set := flush_effect f (incon_set s) \<rparr>)\<rbrace>  Flush f \<lbrace>P\<rbrace>"
+  "\<Turnstile>\<lbrace>\<lambda>s. mode s = Kernel \<and> P (s \<lparr>incon_set := flush_effect f (incon_set s), 
+                              ptable_snapshot := flush_effect_snp f (ptable_snapshot s) \<rparr>)\<rbrace>  Flush f \<lbrace>P\<rbrace>"
   apply (clarsimp simp:  hoare_valid_def)
   by auto
 
@@ -254,9 +262,15 @@ lemma updateTTBR0_sound[vcg]:
   by auto
 
 lemma updateASID_sound[vcg]:
-  "\<Turnstile>\<lbrace>\<lambda>s. mode s = Kernel \<and> P (s \<lparr>asid := a \<rparr> )\<rbrace>  UpdateASID a \<lbrace>P\<rbrace>"
+  "\<Turnstile>\<lbrace>\<lambda>s.  \<exists>snp_cur il iset' m_to_h' m_to_h h_to_h. mode s = Kernel \<and> snp_cur  = snapshot_update_current' (ptable_snapshot s) (({asid s} \<times> UNIV) \<inter> incon_set s) (heap s) (root s) (asid s) \<and> 
+                              il       = incon_load snp_cur a (heap s) (root s) \<and>
+                              iset'    = ({a} \<times> UNIV) \<inter> (incon_set s) \<and>
+                              m_to_h   = miss_to_hit  snp_cur a (heap s) (root s) \<and>
+                              h_to_h   = consistent_hit snp_cur a (heap s) (root s) \<and> 
+          P (s \<lparr>asid := a , incon_set := incon_set s \<union> il , ptable_snapshot := snapshot_update_new'  snp_cur (iset' \<union> il) m_to_h h_to_h (heap s) (root s) a \<rparr> )\<rbrace>  UpdateASID a \<lbrace>P\<rbrace>"
   apply (clarsimp simp: hoare_valid_def)
   by auto
+
 
 lemma set_mode_sound[vcg]:
   "\<Turnstile>\<lbrace>\<lambda>s. mode s = Kernel \<and> P (s \<lparr>mode := flg\<rparr>)\<rbrace>  SetMode flg \<lbrace>P\<rbrace>"

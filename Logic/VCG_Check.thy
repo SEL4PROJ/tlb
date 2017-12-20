@@ -29,6 +29,11 @@ lemma [simp]:
   by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
 
 
+lemma [simp]:
+  "aval e s = Some v \<Longrightarrow> aval e (s\<lparr>incon_set := {}, ptable_snapshot := \<lambda>a v. Miss\<rparr>) = Some v "
+  by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
+
+
 lemma flush_TLB_mem_write:
   "\<Turnstile> \<lbrace> \<lambda>s. aval lval s = Some vp \<and> aval rval s = Some v \<and> (asid s, Addr vp) \<in> incon_set s \<and>  mode s = Kernel \<and> 
       ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some pp \<rbrace>  Flush flushTLB ;; lval ::= rval \<lbrace>\<lambda>s. heap s pp = Some v \<rbrace>"
@@ -46,6 +51,11 @@ lemma [simp]:
  by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
 
 
+lemma [simp]:
+  "aval e s = Some v \<Longrightarrow>  aval e (s\<lparr>incon_set := {av \<in> incon_set s. fst av \<noteq> asid s} ,ptable_snapshot := (ptable_snapshot s)(asid s := \<lambda>v. Miss)\<rparr>) = Some v"
+ by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
+
+
  
 lemma flush_ASID_mem_write:
   "\<Turnstile> \<lbrace> \<lambda>s. aval lval s = Some vp \<and> aval rval s = Some v \<and> asid s = a \<and>  (a, Addr vp) \<in> incon_set s \<and> mode s = Kernel \<and> 
@@ -59,6 +69,12 @@ lemma [simp]:
 
 lemma  [simp]:
   "aval e sa = Some v \<Longrightarrow>  aval e (sa\<lparr>incon_set := {av \<in> incon_set sa. fst av \<noteq> asid s \<and> snd av \<noteq> vp}\<rparr>) = Some v"
+  by(induct e arbitrary: v sa; clarsimp split: option.splits)
+
+
+lemma  [simp]:
+  "aval e sa = Some v \<Longrightarrow>  aval e (sa\<lparr>incon_set := {av \<in> incon_set sa. fst av \<noteq> asid s \<and> snd av \<noteq> vp}, 
+         ptable_snapshot := (\<lambda>x y. if x = asid s \<and> y = vp then Miss else ptable_snapshot sa x y)\<rparr>) = Some v"
   by(induct e arbitrary: v sa; clarsimp split: option.splits)
 
 

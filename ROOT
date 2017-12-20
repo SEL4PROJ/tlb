@@ -37,7 +37,7 @@ session MMU_ARM = L3_LIB +
 session ARM_REF = MMU_ARM +
   theories
     "MMU_ARMv7_Refinement/MMU_ARMv7_Ref"
-    "MMU_ARMv7_Refinement_No_Fault/Update_TTBR0_Refine"
+    "MMU_ARMv7_Refinement_No_Fault/ARMv7_Update_ASID_Ref"
     "MMU_ARMv7A_Refinement/MMU_ARMv7A_Ref"
         
 
