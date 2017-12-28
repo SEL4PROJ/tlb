@@ -182,7 +182,7 @@ where
 definition 
   tlb_rel_abs' :: "tlb_entry set state_scheme \<Rightarrow> tlb_incon_set' state_scheme \<Rightarrow> bool"
 where                                                                
-  "tlb_rel_abs' s t \<equiv> state.truncate s = state.truncate t \<and>  asid_va_incon_tlb_mem s \<subseteq> incon_set (state.more t) \<and> 
+  "tlb_rel_abs' s t \<equiv> state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem s \<subseteq> incon_set (state.more t) \<and> 
                        saturated_no_flt s \<and> no_faults (state.more s) \<and> 
                          (\<forall>a v. a \<noteq> ASID s \<longrightarrow> snapshot_of_tlb (state.more s) a v \<le> tlb_snapshot (state.more t) a  v) \<and>
                           {(a,v). tlb_snapshot (state.more t) a  v = Incon }  \<subseteq>  incon_set (state.more t)" 
@@ -203,8 +203,6 @@ declare read_state_def [simp add]
 declare update_state_def [simp add]
 declare extend_state_def [simp add]
 declare trim_state_def [simp add]
-
-
 
 
 lemma consistent_not_Incon:
@@ -377,8 +375,8 @@ lemma sat_state_tlb':
 
 lemma tlb_rel'_absD:
   "tlb_rel_abs' s t \<Longrightarrow>
-     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and>  saturated_no_flt s \<and> no_faults (state.more s)
-         \<and> asid_va_incon_tlb_mem s  \<subseteq> incon_set (state.more t) \<and> exception t = exception s"
+     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and>  saturated_no_flt s \<and> no_faults (state.more s) \<and> 
+                asid_va_incon_tlb_mem s  \<subseteq> incon_set (state.more t) \<and> exception t = exception s"
    by (clarsimp simp: tlb_rel_abs'_def state.defs)
 
 

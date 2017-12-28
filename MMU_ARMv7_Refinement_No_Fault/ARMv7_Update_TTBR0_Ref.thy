@@ -76,7 +76,7 @@ end
 
 
 
-lemma update_asid_non_det_det_refine:
+lemma update_ttbr0_non_det_det_refine:
   "\<lbrakk> update_TTBR0 r (s::tlb_state) = ((), s') ;  update_TTBR0 r (t::tlb_det_state) = ((), t'); 
          tlb_rel (typ_tlb s) (typ_det_tlb t) \<rbrakk> \<Longrightarrow>  tlb_rel (typ_tlb s') (typ_det_tlb t') "
   apply (clarsimp simp: update_TTBR0_tlb_state_ext_def update_TTBR0_tlb_det_state_ext_def tlb_rel_def) 
@@ -84,7 +84,7 @@ lemma update_asid_non_det_det_refine:
    apply (cases s, cases t , clarsimp simp: state.defs tlb_rel_def) 
   by blast
 
-lemma  update_asid_det_sat_no_flt_refine:
+lemma  update_ttbr0_det_sat_no_flt_refine:
   "\<lbrakk> update_TTBR0 r (s::tlb_det_state) = ((), s') ;  update_TTBR0 r (t::tlb_sat_no_flt_state) = ((), t'); 
          tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t) \<rbrakk> \<Longrightarrow> 
                   tlb_rel_sat_no_flt (typ_det_tlb s') (typ_sat_no_flt_tlb t')"
@@ -172,7 +172,7 @@ lemma lookup_miss_snapshot:
   
 
 
-lemma update_asid_sat_no_flt_abs_refine':
+lemma update_ttbr0_sat_no_flt_abs_refine':
   "\<lbrakk> update_TTBR0 r (s::tlb_sat_no_flt_state) = ((), s') ;  update_TTBR0 r (t::tlb_incon_state') = ((), t'); 
              tlb_rel_abs' (typ_sat_no_flt_tlb s) (typ_incon' t) \<rbrakk> \<Longrightarrow> 
                      tlb_rel_abs' (typ_sat_no_flt_tlb s') (typ_incon' t')"

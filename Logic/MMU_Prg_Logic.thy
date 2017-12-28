@@ -393,11 +393,11 @@ fun
 where
   "flush_effect flushTLB iset  = {}"
 |
-  "flush_effect (flushASID a) iset = {av\<in>iset. fst av \<noteq> a}"
+  "flush_effect (flushASID a) iset = iset - {a} \<times> UNIV"
 |
-  "flush_effect (flushvarange vset) iset = {av\<in>iset. snd av \<notin> vset}"
+  "flush_effect (flushvarange vset) iset = iset - UNIV \<times> vset"
 |
-  "flush_effect (flushASIDvarange a vset) iset = {av\<in>iset. fst av \<noteq> a \<and> snd av \<notin>  vset}"
+  "flush_effect (flushASIDvarange a vset) iset = iset - {a} \<times> vset"
 
 
 
@@ -586,11 +586,10 @@ fun
 where
   "flush_effect_snp flushTLB  snp = (\<lambda>a v. Miss)"
 |
-  "flush_effect_snp (flushASID a) snp = snp (a := (\<lambda>a v. Miss) a)"
+  "flush_effect_snp (flushASID a) snp = snp(a := \<lambda>v. Miss)"
 |
-  "flush_effect_snp (flushvarange vset) snp = (\<lambda>x y. if (x,y) \<in> \<Union> ((\<lambda>v. UNIV \<times> {v}) ` vset) then Miss else snp x y)"
+  "flush_effect_snp (flushvarange vset) snp = (\<lambda>x y. if (x,y) \<in> UNIV \<times> vset then Miss else snp x y)"
 |
-  "flush_effect_snp (flushASIDvarange a vset) snp = (\<lambda>x y. if (x,y) \<in> (\<lambda>v. (a, v)) ` vset then Miss else snp x y)"
-
+  "flush_effect_snp (flushASIDvarange a vset) snp = (\<lambda>x y. if (x, y) \<in> {a} \<times> vset then Miss else snp x y)"
 
 end
