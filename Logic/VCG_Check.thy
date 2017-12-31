@@ -24,6 +24,7 @@ lemma [simp]:
 
 
 
+
 lemma [simp]:
   "aval e s = Some v \<Longrightarrow> aval e (s\<lparr>incon_set := {}\<rparr>) = Some v "
   by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
