@@ -59,6 +59,12 @@ lemma kernel_safe_incon_upd[simp]:
   "kernel_safe (incon_set_update f s) = kernel_safe s"
   by (simp add: kernel_safe_def vas_of_current_state_mapped_to_global_mappings_of_all_processes_def)
 
+
+lemma kernel_safe_ptable_snapshot_upd[simp]:
+  "kernel_safe (ptable_snapshot_update f s) = kernel_safe s"
+  by (simp add: kernel_safe_def vas_of_current_state_mapped_to_global_mappings_of_all_processes_def)
+
+
 lemma flush_one_asid:
   "\<Turnstile> \<lbrace>\<lambda>s. asids_consistent {a} s \<and> mode s = Kernel\<rbrace>
        Flush (flushASID a)
@@ -68,14 +74,14 @@ lemma flush_one_asid:
    apply fastforce
    done
 
+
 lemma flush_one_asid_rest:
   "\<Turnstile> \<lbrace>\<lambda>s. mmu_layout s \<and> mode s = Kernel \<and> safe_set (kernel_safe s) s\<rbrace>
        Flush (flushASID a)
    \<lbrace>\<lambda>s. mmu_layout s \<and> mode s = Kernel \<and> safe_set (kernel_safe s) s\<rbrace>"
-   apply vcgm
-   apply (simp add: mmu_layout_def)
-   apply (simp add: safe_set_def safe_memory_def con_set_def ptrace_set_def)
-  sorry
+  apply vcgm
+  by (simp add: mmu_layout_def safe_set_def safe_memory_def con_set_def ptrace_set_def)
+
 
 
 
