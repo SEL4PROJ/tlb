@@ -1,79 +1,9 @@
 theory  ARMv7_Update_TTBR0_Ref
 
 imports 
-  ARMv7_Mem_Write_Read_Ref
+  TLB_Op_Instants
 
 begin               
-
-
-class update_TTBR0 =
-  fixes update_TTBR0 :: "paddr \<Rightarrow> 'a state_scheme \<Rightarrow>  unit \<times> 'a state_scheme" 
-
-
-instantiation tlb_state_ext :: (type) update_TTBR0   
-begin
-  definition   
-  "(update_TTBR0 r :: ('a tlb_state_scheme \<Rightarrow> _))  = 
-do {
-    update_state (\<lambda>s. s\<lparr> tlb_set := tlb_set s - tlb_evict (typ_tlb s) \<rparr>);
-    update_state (\<lambda>s. s\<lparr> TTBR0 := r \<rparr>)
-  } "
-
-thm update_TTBR0_tlb_state_ext_def
-(* print_context *)                      
-  instance ..
-end
-
-
-instantiation tlb_det_state_ext :: (type) update_TTBR0  
-begin
-  definition   
-  "(update_TTBR0 r :: ('a tlb_det_state_scheme \<Rightarrow> _))  = update_state (\<lambda>s. s\<lparr> TTBR0 := r \<rparr>) "
-
-thm update_TTBR0_tlb_det_state_ext_def
-(* print_context *)                      
-  instance ..
-end
-
-
-instantiation tlb_sat_no_flt_state_ext :: (type) update_TTBR0   
-begin
-  definition   
-  "(update_TTBR0 r :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
-      update_state (\<lambda>s. s\<lparr> TTBR0 := r \<rparr>);
-      mem   <- read_state MEM;
-      asid <- read_state ASID;
-      let all_non_fault_entries = {e\<in>pt_walk asid mem r ` UNIV. \<not>is_fault e};
-      tlb0   <- read_state tlb_sat_no_flt_set;
-      let tlb = tlb0 \<union> all_non_fault_entries; 
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := tlb \<rparr>)} "
-
-thm update_TTBR0_tlb_sat_no_flt_state_ext_def
-(* print_context *)                      
-  instance ..
-end
-
-
-
-instantiation tlb_incon_state'_ext :: (type) update_TTBR0   
-begin
-  definition   
-  "(update_TTBR0 r :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      ttbr0   <- read_state TTBR0;
-      update_state (\<lambda>s. s\<lparr> TTBR0 := r \<rparr>);
-      iset   <- read_state tlb_incon_set';
-      asid   <- read_state ASID;
-      mem    <- read_state MEM;
-       let ptable_asid_va = ptable_comp asid mem mem ttbr0 r; 
-       let incon_set_n = incon_set iset \<union> ptable_asid_va;
-       let iset = iset \<lparr>incon_set := incon_set_n \<rparr>;
-      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset \<rparr>)
-} "
-thm update_TTBR0_tlb_incon_state'_ext_def
-print_context                     
-  instance ..
-end
-
 
 
 lemma update_ttbr0_non_det_det_refine:

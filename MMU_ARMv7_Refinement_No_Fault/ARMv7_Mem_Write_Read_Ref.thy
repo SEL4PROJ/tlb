@@ -1696,7 +1696,7 @@ lemma  entry_set_rewrite :
 lemma  lookup_not_hit_false:
   "\<lbrakk>lookup (t1 \<union> t2) a va = Hit x; lookup t1 a va \<noteq> Hit x; lookup t2 a va \<noteq> Hit x\<rbrakk> \<Longrightarrow> False"
   apply (clarsimp simp: lookup_def entry_set_def split: if_split_asm)
-          apply safe by force+
+          apply safe by blast+
 
 
 

@@ -8,52 +8,8 @@ begin
 
 (* flushing complete TLB *)
 
-class Flush_TLB =
-  fixes Flush_TLB :: "'a state_scheme \<Rightarrow>  unit \<times> 'a state_scheme" 
 
 
-instantiation tlb_state_ext :: (type) Flush_TLB   
-begin
-  definition   
-  "(Flush_TLB :: ('a tlb_state_scheme \<Rightarrow> _))  = update_state (\<lambda>s. s\<lparr> tlb_set := {} \<rparr>)"
-  instance ..
-end
-
-
-instantiation tlb_det_state_ext :: (type) Flush_TLB  
-begin
-  definition   
-  "(Flush_TLB  :: ('a tlb_det_state_scheme \<Rightarrow> _))  = update_state (\<lambda>s. s\<lparr> tlb_det_set := {} \<rparr>)"
- print_context                    
-  instance ..
-end
-
-
-instantiation tlb_sat_no_flt_state_ext :: (type) Flush_TLB  
-begin
-  definition   
-  "(Flush_TLB :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
-       update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := {} \<rparr>);
-      mem   <- read_state MEM;
-      ttbr0 <- read_state TTBR0;
-      asid <- read_state ASID;
-      let all_non_fault_entries = {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := all_non_fault_entries \<rparr>)} "
-  instance ..
-end
-
-
-
-instantiation tlb_incon_state'_ext :: (type) Flush_TLB   
-begin
-  definition   
-  "(Flush_TLB  :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      iset   <- read_state tlb_incon_set';
-      let iset = iset \<lparr>incon_set := {} , tlb_snapshot := \<lambda> a v . Miss \<rparr>;
-      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset \<rparr>)
-} "                
-  instance ..
-end
 
 lemma flush_tlb_non_det_det_refine:
   "\<lbrakk> Flush_TLB (s::tlb_state) = ((), s') ;   Flush_TLB (t::tlb_det_state) = ((), t'); 
@@ -98,60 +54,6 @@ lemma flush_tlb_sat_no_flt_abs_refine':
 
 
 
-
-class Flush_ASID =
-  fixes Flush_ASID :: "asid \<Rightarrow> 'a state_scheme \<Rightarrow>  unit \<times> 'a state_scheme" 
-
-
-instantiation tlb_state_ext :: (type) Flush_ASID   
-begin
-  definition   
-  "(Flush_ASID a :: ('a tlb_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_set;
-      update_state (\<lambda>s. s\<lparr> tlb_set := tlb - {e\<in>tlb. asid_entry e = a} - tlb_evict (typ_tlb s) \<rparr>)}"
-  instance ..
-end
-
-
-instantiation tlb_det_state_ext :: (type) Flush_ASID  
-begin
-  definition   
-  "(Flush_ASID a :: ('a tlb_det_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_det_set;
-      update_state (\<lambda>s. s\<lparr> tlb_det_set := tlb - {e\<in>tlb. asid_entry e = a} \<rparr>)}"
- print_context                    
-  instance ..
-end
-
-
-instantiation tlb_sat_no_flt_state_ext :: (type) Flush_ASID  
-begin
-  definition   
-  "(Flush_ASID a :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_sat_no_flt_set;
-      mem   <- read_state MEM;
-      ttbr0 <- read_state TTBR0;
-      asid <- read_state ASID;
-      let all_non_fault_entries = {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := (tlb - {e\<in>tlb. asid_entry e = a}) \<union> 
-                                                       all_non_fault_entries \<rparr>)} "
-  instance ..
-end
-
-
-
-instantiation tlb_incon_state'_ext :: (type) Flush_ASID   
-begin
-  definition   
-  "(Flush_ASID  a :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      iset   <- read_state tlb_incon_set';
-      let iset = iset \<lparr>incon_set := incon_set(iset) - {a} \<times> UNIV, 
-                       tlb_snapshot := (tlb_snapshot iset)(a := \<lambda>v. Miss) \<rparr>;
-      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset\<rparr>)
-} "
-                  
-  instance ..
-end
 
 lemma flush_asid_non_det_det_refine:
   "\<lbrakk> Flush_ASID a (s::tlb_state) = ((), s') ; Flush_ASID a (t::tlb_det_state) = ((), t'); 
@@ -340,59 +242,6 @@ lemma flush_asid_sat_no_flt_abs_refine':
 
 
 
-
-class Flush_varange =
-  fixes Flush_varange :: "vaddr set \<Rightarrow> 'a state_scheme \<Rightarrow>  unit \<times> 'a state_scheme" 
-
-
-instantiation tlb_state_ext :: (type) Flush_varange  
-begin
-  definition   
-  "(Flush_varange vset :: ('a tlb_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_set;
-      update_state (\<lambda>s. s\<lparr> tlb_set := tlb - \<Union>((\<lambda> v. {e\<in>tlb. addr_val v \<in> entry_range e}) ` vset) - 
-                                             tlb_evict (typ_tlb s) \<rparr>)}"
-  instance ..
-end
-
-
-instantiation tlb_det_state_ext :: (type) Flush_varange  
-begin
-  definition   
-  "(Flush_varange vset :: ('a tlb_det_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_det_set;
-      update_state (\<lambda>s. s\<lparr> tlb_det_set := tlb - \<Union>((\<lambda> v. {e\<in>tlb. addr_val v \<in> entry_range e}) ` vset)\<rparr>)}"
- print_context                    
-  instance ..
-end
-
-
-instantiation tlb_sat_no_flt_state_ext :: (type) Flush_varange 
-begin
-  definition   
-  "(Flush_varange vset :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_sat_no_flt_set;
-      mem   <- read_state MEM;
-      ttbr0 <- read_state TTBR0;
-      asid <- read_state ASID;
-      let all_non_fault_entries = {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := 
-              (tlb - (\<Union>v\<in>vset. {e \<in> tlb. addr_val v \<in> entry_range e})) \<union> all_non_fault_entries \<rparr>)} "
-  instance ..
-end
-
-instantiation tlb_incon_state'_ext :: (type) Flush_varange  
-begin
-  definition   
-  "(Flush_varange  vset :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      iset   <- read_state tlb_incon_set';
-      let iset = iset \<lparr>incon_set := incon_set(iset) - UNIV \<times> vset , 
-                 tlb_snapshot := \<lambda>x y. if (x, y) \<in> UNIV \<times> vset then Miss else tlb_snapshot iset x y \<rparr>;
-      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset\<rparr>)
-} "
-                  
-  instance ..
-end
 
 lemma flush_varange_non_det_det_refine:
   "\<lbrakk> Flush_varange vset (s::tlb_state) = ((), s') ; Flush_varange vset (t::tlb_det_state) = ((), t'); 
@@ -611,61 +460,7 @@ lemma flush_varange_sat_no_flt_abs_refine':
 
 
 
-class Flush_ASIDvarange =
-  fixes Flush_ASIDvarange :: "asid \<Rightarrow> vaddr set \<Rightarrow> 'a state_scheme \<Rightarrow>  unit \<times> 'a state_scheme" 
 
-
-instantiation tlb_state_ext :: (type) Flush_ASIDvarange  
-begin
-  definition   
-  "(Flush_ASIDvarange a vset :: ('a tlb_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_set;
-      update_state (\<lambda>s. s\<lparr> tlb_set := tlb -
-                   (\<Union>v\<in> vset. {e \<in> tlb. (a, addr_val v) \<in> entry_range_asid_tags e}) - 
-                                             tlb_evict (typ_tlb s) \<rparr>)}"
-instance ..
-end
-
-
-instantiation tlb_det_state_ext :: (type) Flush_ASIDvarange  
-begin
-  definition   
-  "(Flush_ASIDvarange a vset :: ('a tlb_det_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_det_set;
-      update_state (\<lambda>s. s\<lparr> tlb_det_set := tlb - 
-          (\<Union>v\<in>vset. {e \<in> tlb. (a, addr_val v) \<in> entry_range_asid_tags e})\<rparr>)}"                  
-  instance ..
-end
-
-
-instantiation tlb_sat_no_flt_state_ext :: (type) Flush_ASIDvarange 
-begin
-  definition   
-  "(Flush_ASIDvarange a vset :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_sat_no_flt_set;
-      mem   <- read_state MEM;
-      ttbr0 <- read_state TTBR0;
-      asid <- read_state ASID;
-      let all_non_fault_entries = {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := 
-              (tlb - (\<Union>v\<in>vset. {e \<in> tlb. (a, addr_val v) \<in> entry_range_asid_tags e}))
-                                  \<union> all_non_fault_entries \<rparr>)} "
-  instance ..
-end
-
-
-
-instantiation tlb_incon_state'_ext :: (type) Flush_ASIDvarange  
-begin
-  definition   
-  "(Flush_ASIDvarange  a vset :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      iset   <- read_state tlb_incon_set';
-      let iset = iset \<lparr>incon_set := incon_set(iset) - {a} \<times> vset, 
-                 tlb_snapshot := \<lambda>x y. if (x, y) \<in> {a} \<times> vset then Miss else tlb_snapshot iset x y \<rparr>;
-      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset\<rparr>) } "
-                  
-  instance ..
-end
 
 lemma flush_ASIDvarange_non_det_det_refine:
   "\<lbrakk> Flush_ASIDvarange a vset (s::tlb_state) = ((), s') ; Flush_ASIDvarange a vset (t::tlb_det_state) = ((), t'); 

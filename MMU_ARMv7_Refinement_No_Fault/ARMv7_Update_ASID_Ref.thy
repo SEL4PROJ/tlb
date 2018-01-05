@@ -7,158 +7,20 @@ begin
 
 
 
-class update_asid =
-  fixes update_asid :: "asid \<Rightarrow> 'a state_scheme \<Rightarrow>  unit \<times> 'a state_scheme" 
 
-
-instantiation tlb_state_ext :: (type) update_asid   
-begin
-  definition   
-  "(update_asid a :: ('a tlb_state_scheme \<Rightarrow> _))  = update_state (\<lambda>s. s\<lparr> ASID := a \<rparr>) "
-
-thm update_asid_tlb_state_ext_def
-(* print_context *)                      
-  instance ..
-end
-
-
-instantiation tlb_det_state_ext :: (type) update_asid   
-begin
-  definition   
-  "(update_asid a :: ('a tlb_det_state_scheme \<Rightarrow> _))  = update_state (\<lambda>s. s\<lparr> ASID := a \<rparr>) "
-
-thm update_asid_tlb_det_state_ext_def
-(* print_context *)                      
-  instance ..
-end
-
-
-
-
-
-instantiation tlb_sat_no_flt_state_ext :: (type) update_asid   
-begin
-  definition   
-  "(update_asid a :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
-      update_state (\<lambda>s. s\<lparr> ASID := a \<rparr>);
-      mem   <- read_state MEM;
-      ttbr0 <- read_state TTBR0;
-      let all_non_fault_entries = {e\<in>pt_walk a mem ttbr0 ` UNIV. \<not>is_fault e};
-      tlb0   <- read_state tlb_sat_no_flt_set;
-      let tlb = tlb0 \<union> all_non_fault_entries; 
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := tlb \<rparr>)} "
-
-thm update_asid_tlb_sat_no_flt_state_ext_def
-(* print_context *)                      
-  instance ..
-end
-
-
-definition 
-  incon_load :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> (asid \<times> vaddr) set"
-  where
-  "incon_load snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
-                            {v. \<exists>x. snp a v = Hit x \<and> x \<noteq> pt_walk a m rt v}"
-
-definition 
-  miss_to_hit :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> (asid \<times> vaddr) set"
- where
-  "miss_to_hit snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
-                              {v. snp a v = Miss \<and>  \<not>is_fault (pt_walk a m rt v)}"
-
-definition 
-  consistent_hit :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> (asid \<times> vaddr) set"
- where
-  "consistent_hit snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
-                                 {v. snp a v = Hit (pt_walk a m rt v)}"
-
-
-
-definition 
-  snapshot_update_new :: "(asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> 
-                          heap \<Rightarrow> ttbr0 \<Rightarrow>  (asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
-where
-  "snapshot_update_new iset m_to_h h_to_h hp ttbr0 \<equiv> (\<lambda>x y. if (x,y) \<in>  iset then Incon 
-                                                     else if (x,y) \<in> m_to_h then Hit (pt_walk x hp ttbr0 y) 
-                                                     else if (x,y) \<in> h_to_h then Hit (pt_walk x hp ttbr0 y) 
-                                                     else Miss)"
-
-definition 
-  snapshot_update_new' :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)  \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> 
-                          heap \<Rightarrow> ttbr0 \<Rightarrow> asid \<Rightarrow> (asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
-where
-  "snapshot_update_new' snp iset m_to_h h_to_h hp ttbr0 a \<equiv> 
-                     snp (a := snapshot_update_new iset m_to_h h_to_h hp ttbr0 a)"
-
-(*
-definition 
-  snapshot_update :: "(asid \<times> vaddr) set \<Rightarrow> (asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
-where
-  "snapshot_update iset  \<equiv> (\<lambda>x y. if (x,y) \<in>  iset then Incon   else Miss)"
-*)
-
-definition 
-  snapshot_update_current :: "(asid \<times> vaddr) set \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow>(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
-where
-  "snapshot_update_current iset mem ttbr0  \<equiv> (\<lambda>x y. if (x,y) \<in>  iset then Incon else 
-                            if (\<not>is_fault (pt_walk x mem ttbr0 y)) then  Hit (pt_walk x mem ttbr0 y) else Miss)"
-
-
-
-definition 
-  snapshot_update_current' :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> 
-                      heap \<Rightarrow> ttbr0 \<Rightarrow> asid \<Rightarrow> (asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
-where
-  "snapshot_update_current' snp iset mem ttbr0 a \<equiv> snp (a := snapshot_update_current iset mem ttbr0 a)"
-
-
-instantiation tlb_incon_state'_ext :: (type) update_asid   
-begin
-  definition   
-  "(update_asid a :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      mem   <- read_state MEM;
-      ttbr0 <- read_state TTBR0;
-      asid  <- read_state ASID;
-      tlb_incon_set   <- read_state tlb_incon_set';
-      let iset = incon_set tlb_incon_set;  
-      let snapshot = tlb_snapshot tlb_incon_set;
-      let iset_current = ({asid} \<times> UNIV) \<inter> iset; 
-      let snapshot_current = snapshot_update_current' snapshot iset_current mem ttbr0 asid;
-      let tlb_incon_set = tlb_incon_set \<lparr>tlb_snapshot := snapshot_current \<rparr>;
-      update_state (\<lambda>s. s\<lparr>tlb_incon_set' := tlb_incon_set \<rparr>);
-
-      (* new ASID *)
-      update_state (\<lambda>s. s\<lparr> ASID := a \<rparr>);
-      
-     let iset_snp = incon_load snapshot_current a mem ttbr0; 
-     let iset_new = ({a} \<times> UNIV) \<inter> iset; 
-     let iset_new_snp = iset_new \<union> iset_snp;
-     let m_to_h = miss_to_hit  snapshot_current a mem ttbr0;
-     let h_to_h = consistent_hit snapshot_current a mem ttbr0;
-     let snapshot' = snapshot_update_new' snapshot_current iset_new_snp m_to_h h_to_h mem ttbr0 a;
-     let tlb_incon_set = tlb_incon_set\<lparr> incon_set:= iset \<union> iset_snp , tlb_snapshot := snapshot'  \<rparr>;
-     update_state (\<lambda>s. s\<lparr> tlb_incon_set' := tlb_incon_set \<rparr>)
-} "
-thm update_asid_tlb_incon_state'_ext_def
-print_context                     
-  instance ..
-end
-
-
-
-
-lemma update_asid_non_det_det_refine:
-  "\<lbrakk> update_asid a (s::tlb_state) = ((), s') ;  update_asid a (t::tlb_det_state) = ((), t'); 
+lemma update_ASID_non_det_det_refine:
+  "\<lbrakk> update_ASID a (s::tlb_state) = ((), s') ;  update_ASID a (t::tlb_det_state) = ((), t'); 
          tlb_rel (typ_tlb s) (typ_det_tlb t) \<rbrakk> \<Longrightarrow>  tlb_rel (typ_tlb s') (typ_det_tlb t') "
-  apply (clarsimp simp: update_asid_tlb_state_ext_def update_asid_tlb_det_state_ext_def tlb_rel_def) 
-  by (cases s, cases t , clarsimp simp: state.defs)
+  apply (clarsimp simp: update_ASID_tlb_state_ext_def update_ASID_tlb_det_state_ext_def tlb_rel_def) 
+  apply (rule conjI)
+   apply (cases s, cases t , clarsimp simp: state.defs tlb_rel_def) 
+  by blast
 
-
-lemma  update_asid_det_sat_no_flt_refine:
-  "\<lbrakk> update_asid a (s::tlb_det_state) = ((), s') ;  update_asid a (t::tlb_sat_no_flt_state) = ((), t'); 
+lemma  update_ASID_det_sat_no_flt_refine:
+  "\<lbrakk> update_ASID a (s::tlb_det_state) = ((), s') ;  update_ASID a (t::tlb_sat_no_flt_state) = ((), t'); 
          tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t) \<rbrakk> \<Longrightarrow> 
                   tlb_rel_sat_no_flt (typ_det_tlb s') (typ_sat_no_flt_tlb t')"
-  apply (clarsimp simp: update_asid_tlb_det_state_ext_def update_asid_tlb_sat_no_flt_state_ext_def)
+  apply (clarsimp simp: update_ASID_tlb_det_state_ext_def update_ASID_tlb_sat_no_flt_state_ext_def)
   apply (clarsimp simp: tlb_rel_sat_no_flt_def saturated_no_flt_def no_faults_def)
   apply (cases s, cases t , clarsimp simp: state.defs , force)
 done
@@ -284,11 +146,11 @@ lemma not_fault_range_not_miss:
 
 
 
-lemma update_asid_sat_no_flt_abs_refine':
-  "\<lbrakk> update_asid a (s::tlb_sat_no_flt_state) = ((), s') ;  update_asid a (t::tlb_incon_state') = ((), t'); 
+lemma update_ASID_sat_no_flt_abs_refine':
+  "\<lbrakk> update_ASID a (s::tlb_sat_no_flt_state) = ((), s') ;  update_ASID a (t::tlb_incon_state') = ((), t'); 
         tlb_rel_abs' (typ_sat_no_flt_tlb s) (typ_incon' t) \<rbrakk> \<Longrightarrow> 
                        tlb_rel_abs' (typ_sat_no_flt_tlb s') (typ_incon' t')"
-  apply (clarsimp simp: update_asid_tlb_sat_no_flt_state_ext_def update_asid_tlb_incon_state'_ext_def Let_def)
+  apply (clarsimp simp: update_ASID_tlb_sat_no_flt_state_ext_def update_ASID_tlb_incon_state'_ext_def Let_def)
   apply (frule tlb_rel'_absD)
   apply (case_tac "a = ASID s")
     (* when we update to the same ASID *)
