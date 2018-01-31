@@ -142,6 +142,80 @@ inductive_cases
  
 
 
+(* first do it without the root_map *)
+
+
+definition "snp_incon_subset s \<equiv>  {(a,v). ptable_snapshot s a v = Incon }  \<subseteq>  incon_set s"
+(*
+
+lemma [simp]:
+  "\<lbrakk>(x1 ::= x2, s) \<Rightarrow> Some s' ; snp_incon_subset s\<rbrakk> \<Longrightarrow> snp_incon_subset s'"
+  apply (clarsimp simp: snp_incon_subset_def)
+  by force
+
+lemma [simp] :
+  "\<lbrakk>(Flush x, s) \<Rightarrow> Some s'; snp_incon_subset s\<rbrakk> \<Longrightarrow> snp_incon_subset s'"
+  apply (erule FlushE ; simp)
+  apply (induct x arbitrary: s s' ; clarsimp simp: snp_incon_subset_def split: if_split_asm)
+  by force+
+
+lemma [simp]:
+  "\<lbrakk>(UpdateTTBR0 x, s) \<Rightarrow> Some s'; snp_incon_subset s\<rbrakk> \<Longrightarrow> snp_incon_subset s'"
+  apply (clarsimp simp: snp_incon_subset_def)
+  by force
+
+lemma [simp]:
+  "\<lbrakk>(SetMode x, s) \<Rightarrow> Some s'; snp_incon_subset s\<rbrakk> \<Longrightarrow> snp_incon_subset s'"
+  apply (clarsimp simp: snp_incon_subset_def)
+  by force
+
+lemma  [simp]:
+  "\<lbrakk>(UpdateASID x, s) \<Rightarrow> Some s'; snp_incon_subset s\<rbrakk> \<Longrightarrow> snp_incon_subset s'"
+  apply (erule UpdateAE ; simp)
+  apply (clarsimp simp: snp_incon_subset_def incon_load_def snapshot_update_current'_def
+         snapshot_update_current_def snapshot_update_new'_def snapshot_update_new_def split: if_split_asm)
+  by force+
+ 
+*)
+
+theorem
+  shows "(c,s) \<Rightarrow> s' \<Longrightarrow> snp_incon_subset s \<Longrightarrow> s' = Some s'' \<Longrightarrow> snp_incon_subset s''"
+proof (induct arbitrary: s'' rule: big_step_induct)
+next
+  case (Assign lval s1 vp rval v pp)
+  thus ?case by (force simp: snp_incon_subset_def)
+next
+  case SetMode
+  thus ?case by (force simp: snp_incon_subset_def)
+next
+  case UpdateTTBR0
+  thus ?case by (force simp: snp_incon_subset_def)
+next 
+  case UpdateASID
+  thus ?case by (force simp: snp_incon_subset_def incon_load_def snapshot_update_current'_def
+                             snapshot_update_current_def snapshot_update_new'_def snapshot_update_new_def split: if_split_asm)
+next 
+  case (Flush s f)
+  thus ?case by (induct f; clarsimp simp: snp_incon_subset_def split: if_split_asm ; force)
+qed auto
+
+
+
+
+(* snap_incon_subset rlues  *)
+
+(* an option, generic form of snap_incon_subset, f will be root_map later *)
+
+(*
+definition "gen_f f S s \<equiv> (ran (f s) - S)"
+
+definition "snp_incon_subset' f S s \<equiv> 
+               {(a,v). a\<in> gen_f f S s \<and> ptable_snapshot s a v = Incon }  \<subseteq>  incon_set s"
+
+
+*)
+
+
 definition
   hoare_valid :: "(p_state \<Rightarrow> bool) \<Rightarrow> com \<Rightarrow> (p_state \<Rightarrow> bool) \<Rightarrow> bool" ("\<Turnstile> \<lbrace>(1_)\<rbrace>/ (_)/ \<lbrace>(1_)\<rbrace>" 50) where
   "\<Turnstile> \<lbrace>P\<rbrace> c \<lbrace>Q\<rbrace> \<equiv> \<forall>s s'. (c,s) \<Rightarrow> s' \<and> P s \<longrightarrow> (\<exists>r. s' = Some r \<and> Q r)"
