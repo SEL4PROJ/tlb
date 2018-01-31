@@ -178,7 +178,7 @@ lemma  [simp]:
  
 *)
 
-theorem
+theorem snap_incon_subset_commnad_exec:
   shows "(c,s) \<Rightarrow> s' \<Longrightarrow> snp_incon_subset s \<Longrightarrow> s' = Some s'' \<Longrightarrow> snp_incon_subset s''"
 proof (induct arbitrary: s'' rule: big_step_induct)
 next
@@ -219,7 +219,6 @@ definition "snp_incon_subset' f S s \<equiv>
 definition
   hoare_valid :: "(p_state \<Rightarrow> bool) \<Rightarrow> com \<Rightarrow> (p_state \<Rightarrow> bool) \<Rightarrow> bool" ("\<Turnstile> \<lbrace>(1_)\<rbrace>/ (_)/ \<lbrace>(1_)\<rbrace>" 50) where
   "\<Turnstile> \<lbrace>P\<rbrace> c \<lbrace>Q\<rbrace> \<equiv> \<forall>s s'. (c,s) \<Rightarrow> s' \<and> P s \<longrightarrow> (\<exists>r. s' = Some r \<and> Q r)"
-
 
 
 (* not in the vcg *)
@@ -352,6 +351,12 @@ lemma set_mode_sound[vcg]:
   by auto
 
 
-
+lemma snap_incon_subset_hoare_rule:
+ " \<Turnstile> \<lbrace>P\<rbrace> c \<lbrace>Q\<rbrace> \<Longrightarrow> \<Turnstile> \<lbrace>\<lambda>s. snp_incon_subset s \<and> P s\<rbrace> c \<lbrace>\<lambda>s. snp_incon_subset s \<and> Q s\<rbrace>"
+  apply (clarsimp simp: hoare_valid_def)
+  apply (erule_tac x = s in allE)
+  apply (erule_tac x = s' in allE)
+  by (clarsimp simp: snap_incon_subset_commnad_exec)
+   
 
 end
