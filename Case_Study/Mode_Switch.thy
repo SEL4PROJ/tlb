@@ -248,7 +248,7 @@ lemma not_range_asid_con_simp' [simp]:
 lemma new_context_switch:
   "\<Turnstile> \<lbrace> \<lambda>s. mmu_layout s \<and> asids_consistent {} s (* all assigned asids are consistent *) \<and> mode s = Kernel \<and> snp_incon_constraint {} s \<and>  
            snap_miss_or_consistent_hit (ptable_snapshot s) a (heap s) (Addr r)  (*new asid and the root are consistent or miss in the ptable snapshot *)\<and> 
-            0 \<notin> ran (root_map s)  (* reserved asid is not assigned *)\<and> root_map s (Addr r) = Some a \<and> Addr r \<in> root_log s\<rbrace>
+            0 \<notin> ran (root_map s)  (* reserved asid is not assigned *)\<and> root_map s (Addr r) = Some a \<and> Addr r \<in> set (root_log s)\<rbrace>
             UpdateASID 0 ;; UpdateTTBR0 (Const r) ;; UpdateASID a ;; SetMode User
       \<lbrace>\<lambda>s. mmu_layout s \<and> \<I>\<C> s = {} \<and> mode s = User \<and> asids_consistent {} s \<rbrace>"
   apply vcgm
