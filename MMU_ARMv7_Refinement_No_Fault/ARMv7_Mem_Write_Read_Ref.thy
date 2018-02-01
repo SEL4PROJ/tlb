@@ -2179,19 +2179,32 @@ lemma write_refinement_incon_incon_only2:
   apply (rule conjI)
    apply clarsimp
    apply (subgoal_tac "ASID bb = ASID b" , simp)
-  using write'mem1_eq_ASID_TTBR0 apply blast
-  apply (subgoal_tac "ASID bb = ASID b" , simp)
+    apply (drule_tac x = a in spec)
+    apply (drule_tac x = a in spec)
+    apply clarsimp
+    apply (drule_tac x = v in spec)
+    apply (drule_tac x = v in spec)
+    apply rule  apply simp  
+    apply (erule disjE)
+     apply simp
+    apply (subgoal_tac "(a, v) \<notin> ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)", simp)
+    apply (clarsimp simp: ptable_comp_def)
+   apply (simp add: write'mem1_eq_ASID_TTBR0)
+  apply (rule conjI)
+   apply (subgoal_tac "ASID bb = ASID b" , simp)
+   apply (simp add: write'mem1_eq_ASID_TTBR0)
 
+  apply (subgoal_tac "ASID bb = ASID b" , simp)
    apply (subgoal_tac 
       "{v. (ASID b, v) \<in> incon_set (tlb_incon_set' b) }
            \<subseteq> incon_set2 (tlb_incon_set'2 ba)")
     apply (subgoal_tac "{v.  (ASID b, v) \<in> ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)}
            \<subseteq> snd ` ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)")
-     apply blast
+     apply force
     prefer 2
     apply clarsimp
    apply (clarsimp simp: to_do)
-  using write'mem1_eq_ASID_TTBR0 apply blast
+  apply (simp add: write'mem1_eq_ASID_TTBR0)
   done
 
 

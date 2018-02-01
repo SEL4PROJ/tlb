@@ -332,13 +332,30 @@ lemma update_ttbr0_sat_no_flt_abs_refine'2:
    apply (clarsimp simp: typ_incon'2_def typ_incon'_def state.defs) 
   apply (rule conjI)
    apply (clarsimp simp: typ_sat_no_flt_tlb_def "state.defs")
+  apply (rule conjI)
+   apply clarsimp
+
+
+
+
+   apply (drule_tac x = a in spec)
+    apply (drule_tac x = a in spec)
+    apply clarsimp
+    apply (drule_tac x = v in spec)
+    apply (drule_tac x = v in spec)
+    apply rule  apply simp  
+    apply (erule disjE)
+     apply simp
+    apply (subgoal_tac "(a, v) \<notin> ptable_comp (ASID t) (MEM t) (MEM t) (TTBR0 t) r", simp)
+    apply (clarsimp simp: ptable_comp_def)
  apply (subgoal_tac  "{v. (ASID s, v) \<in> incon_set (tlb_incon_set' s) } \<subseteq> incon_set2 (tlb_incon_set'2 t)")
    apply (subgoal_tac "{v. (ASID s, v) \<in> ptable_comp (ASID s) (MEM s) (MEM s) (TTBR0 s) r} \<subseteq> 
            snd ` ptable_comp (ASID t) (MEM t) (MEM t) (TTBR0 t) r")
-     apply blast
+    apply blast
     prefer 2
     apply clarsimp
    by (clarsimp simp: to_do')
+ 
  
 
 end

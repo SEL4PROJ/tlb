@@ -343,4 +343,60 @@ lemma update_ASID_sat_no_flt_abs_refine':
   by force
 
 
+
+
+lemma update_ASID_sat_no_flt_abs_refine'2:
+  "\<lbrakk> update_ASID a (s::tlb_incon_state') = ((), s') ;  update_ASID a (t::tlb_incon_state'2) = ((), t'); 
+        tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                       tlb_rel_abs'2 (typ_incon' s') (typ_incon'2 t')"
+  apply (clarsimp simp: update_ASID_tlb_incon_state'2_ext_def update_ASID_tlb_incon_state'_ext_def Let_def)
+  apply (frule tlb_rel'_absD2)
+  apply (case_tac "a = ASID s")
+    (* when we update to the same ASID *)
+   apply clarsimp
+   apply (clarsimp simp: tlb_rel_abs'2_def)
+   apply (rule conjI)
+    apply (clarsimp simp: state.defs)
+   apply (rule conjI)
+    prefer 2
+    apply (rule conjI)
+     apply (clarsimp)
+     apply (clarsimp simp: snapshot_update_current'_def snapshot_update_current_def snapshot_update_current'2_def snapshot_update_current2_def 
+      incon_load_incon_def incon_load2_def)
+    apply (clarsimp simp: snapshot_update_current'_def snapshot_update_current_def snapshot_update_current'2_def snapshot_update_current2_def 
+      incon_load_incon_def incon_load2_def incon_load_def)
+    apply force
+   apply (clarsimp simp: snapshot_update_current'_def snapshot_update_current_def snapshot_update_current'2_def snapshot_update_current2_def 
+      incon_load_incon_def incon_load2_def incon_load_def split: if_split_asm)
+  apply (clarsimp simp: tlb_rel_abs'2_def)
+  apply (rule conjI)
+   apply (clarsimp simp: state.defs)
+  apply (rule conjI)
+   apply (clarsimp simp: snapshot_update_current'_def snapshot_update_current_def snapshot_update_current'2_def snapshot_update_current2_def 
+      incon_load_incon_def incon_load2_def incon_load_def split: if_split_asm)
+   apply force
+  apply (rule conjI)
+   apply (clarsimp simp: snapshot_update_current'_def snapshot_update_current_def snapshot_update_current'2_def snapshot_update_current2_def 
+      incon_load_incon_def incon_load2_def)
+   apply force
+  apply (clarsimp simp: snapshot_update_current'_def snapshot_update_current_def snapshot_update_current'2_def snapshot_update_current2_def 
+      incon_load_incon_def incon_load2_def incon_load_def)
+  apply (erule disjE)
+   apply (drule_tac x = a in spec , simp)
+   apply (drule_tac x = x in spec, simp)
+   apply (drule_tac x = a in spec , simp)
+   apply (drule_tac x = x in spec, simp)
+  apply clarsimp
+  apply (drule_tac x = a in spec , simp)
+  apply (drule_tac x = v in spec, simp)
+  apply (drule_tac x = a in spec , simp)
+  apply (drule_tac x = v in spec, simp)
+  apply (case_tac "tlb_snapshot2 (tlb_incon_set'2 t) a v")
+    apply (clarsimp simp: less_eq_lookup_type)
+   apply clarsimp
+  apply (clarsimp simp: less_eq_lookup_type)
+  done
+
+  
+
 end

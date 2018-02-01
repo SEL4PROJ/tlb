@@ -220,11 +220,22 @@ where
 
 definition 
   tlb_rel_abs'2 :: "tlb_incon_set' state_scheme \<Rightarrow> tlb_incon_set'2 state_scheme \<Rightarrow> bool"
+where  
+"tlb_rel_abs'2 s t \<equiv> state.truncate s = state.truncate t \<and> 
+                   (\<forall>a v. a \<noteq> ASID s \<longrightarrow> ((tlb_snapshot (state.more s) a  v = Incon) = ((a,v) \<in> incon_set (state.more s)))) \<and> 
+                   (\<forall>a v. a \<noteq> ASID s \<longrightarrow> tlb_snapshot (state.more s) a  v \<le> tlb_snapshot2 (state.more t) a  v) \<and> 
+                   {v. (ASID s,v) \<in> incon_set (state.more s)}  \<subseteq>  incon_set2 (state.more t)" 
+
+
+(*
+definition 
+  tlb_rel_abs'2 :: "tlb_incon_set' state_scheme \<Rightarrow> tlb_incon_set'2 state_scheme \<Rightarrow> bool"
 where                                                                
   "tlb_rel_abs'2 s t \<equiv> state.truncate s = state.truncate t \<and> 
+                       {(a,v). tlb_snapshot (state.more s) a  v = Incon }  \<subseteq>  incon_set (state.more s) \<and> 
                        (\<forall>a v. a \<noteq> ASID s \<longrightarrow> tlb_snapshot (state.more s) a  v \<le> tlb_snapshot2 (state.more t) a  v) \<and> 
                         {v. (ASID s,v) \<in> incon_set (state.more s)}  \<subseteq>  incon_set2 (state.more t)" 
-
+*)
 consts tlb_evict :: "tlb_entry set state_scheme \<Rightarrow> tlb_entry set"
 
 
@@ -410,11 +421,20 @@ lemma tlb_rel'_absD:
                 asid_va_incon_tlb_mem s  \<subseteq> incon_set (state.more t) \<and> exception t = exception s"
   by (clarsimp simp: tlb_rel_abs'_def state.defs)
 
+
 lemma tlb_rel'_absD2:
   "tlb_rel_abs'2 s t \<Longrightarrow>
-     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and> 
+     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s  \<and> exception t = exception s"
+  apply (clarsimp simp: tlb_rel_abs'2_def)
+  by (clarsimp simp:  state.defs)
+
+
+(*lemma tlb_rel'_absD2:
+  "tlb_rel_abs'2 s t \<Longrightarrow>
+     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and> {(a,v). tlb_snapshot (state.more s) a  v = Incon }  \<subseteq>  incon_set (state.more s) \<and>
                  {v. (ASID s,v) \<in> incon_set (state.more s)}  \<subseteq>  incon_set2 (state.more t) \<and> exception t = exception s"
   apply (clarsimp simp: tlb_rel_abs'2_def)
   by (clarsimp simp:  state.defs)
+*)
 
 end
