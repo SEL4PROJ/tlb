@@ -2279,7 +2279,8 @@ lemma  mem_read1_consistent_tlb_rel:
         apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
        apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
       apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-     apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
+     subgoal
+     by (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
     apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
    apply (clarsimp simp: tlb_rel_sat_no_flt_def state.defs)
   apply (drule mem1_read_exception)
@@ -2332,12 +2333,13 @@ lemma  mem_read1_consistent_tlb_rel_abs:
     apply (thin_tac " tlb_rel_abs' (typ_sat_no_flt_tlb s) (typ_incon' t)")
     apply (clarsimp simp: mem_read1_def)
     apply (clarsimp split: if_split_asm)
-        apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
        apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
       apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
      apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-    apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
-   apply (clarsimp simp: tlb_rel_abs'_def state.defs)
+    subgoal
+    by (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
+   apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
+  apply (clarsimp simp: tlb_rel_abs'_def state.defs)
   done
 
 
