@@ -349,36 +349,56 @@ definition
 } "
 
 
-(*
+
  definition   
-  "(Flush_TLB  :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      iset   <- read_state tlb_incon_set';
-      let iset = iset \<lparr>incon_set := {} , tlb_snapshot := \<lambda> a v . Miss \<rparr>;
-      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset \<rparr>)
-} "   
+  "(Flush_TLB  :: ('a tlb_incon_state'2_scheme \<Rightarrow> _))  = do {
+      iset   <- read_state tlb_incon_set'2;
+      let iset = iset \<lparr>incon_set2 := {} , tlb_snapshot2 := \<lambda> a v . Miss \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set'2 := iset \<rparr>)
+} " 
+
 
   definition   
-  "(Flush_ASID  a :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      iset   <- read_state tlb_incon_set';
-      let iset = iset \<lparr>incon_set := incon_set(iset) - {a} \<times> UNIV, 
-                       tlb_snapshot := (tlb_snapshot iset)(a := \<lambda>v. Miss) \<rparr>;
-      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset\<rparr>)
+  "(Flush_ASID  a :: ('a tlb_incon_state'2_scheme \<Rightarrow> _))  = do {
+      iset   <- read_state tlb_incon_set'2;
+      asid   <- read_state ASID;
+      if a = asid then 
+      do { 
+      let iset = iset \<lparr>incon_set2 := {} \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set'2 := iset\<rparr>)
+           }
+      else 
+      do { 
+      let iset = iset \<lparr> tlb_snapshot2 := (tlb_snapshot2 iset)(a := \<lambda>v. Miss) \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set'2 := iset\<rparr>)
+      }
 } "
+
+
     
 definition   
-  "(Flush_varange  vset :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      iset   <- read_state tlb_incon_set';
-      let iset = iset \<lparr>incon_set := incon_set(iset) - UNIV \<times> vset , 
-                 tlb_snapshot := \<lambda>x y. if (x, y) \<in> UNIV \<times> vset then Miss else tlb_snapshot iset x y \<rparr>;
-      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset\<rparr>)
+  "(Flush_varange  vset :: ('a tlb_incon_state'2_scheme \<Rightarrow> _))  = do {
+      iset   <- read_state tlb_incon_set'2;
+      let iset = iset \<lparr>incon_set2 := incon_set2(iset) - vset , 
+                 tlb_snapshot2 := \<lambda>x y. if (x, y) \<in> UNIV \<times> vset then Miss else tlb_snapshot2 iset x y \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set'2 := iset\<rparr>)
 } "
 
 definition   
-  "(Flush_ASIDvarange  a vset :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
-      iset   <- read_state tlb_incon_set';
-      let iset = iset \<lparr>incon_set := incon_set(iset) - {a} \<times> vset, 
-                 tlb_snapshot := \<lambda>x y. if (x, y) \<in> {a} \<times> vset then Miss else tlb_snapshot iset x y \<rparr>;
-      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset\<rparr>) } " *)
+  "(Flush_ASIDvarange  a vset :: ('a tlb_incon_state'2_scheme \<Rightarrow> _))  = do {
+      iset   <- read_state tlb_incon_set'2;
+      asid  <- read_state ASID;
+      if a = asid then 
+      do { 
+       let iset = iset \<lparr>incon_set2 := incon_set2(iset) - vset \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set'2 := iset\<rparr>) 
+           }
+      else 
+      do { 
+       let iset = iset \<lparr>tlb_snapshot2 := \<lambda>x y. if (x, y) \<in> {a} \<times> vset then Miss else tlb_snapshot2 iset x y \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set'2 := iset\<rparr>) 
+      }
+} " 
   instance ..
 end
 
