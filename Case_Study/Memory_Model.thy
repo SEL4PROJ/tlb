@@ -124,7 +124,7 @@ definition
   "root_log_area = set root_log_fp"
 
 definition
-  "kernel_data s \<equiv> [\<Union>(ptable_footprint s ` set (root_log s)), root_log_area, root_map_area]"
+  "kernel_data s \<equiv> map (ptable_footprint s) (root_log s) @ [root_log_area, root_map_area]"
 
 abbreviation
   "kernel_data_area s \<equiv> \<Union> set (kernel_data s)"
@@ -147,13 +147,24 @@ definition
 where
   "mmu_layout s \<equiv>  
   kernel_data_area s \<subseteq> kernel_phy_mem \<and>
-  non_overlapping_tables s \<and> non_overlapping (kernel_data s) \<and>
+  non_overlapping (kernel_data s) \<and>
   root s \<in> set (root_log s) \<and>
   root_map s (root s) = Some (asid s) \<and>
   global_mappings_of_all_processes s \<and> 
   user_mappings s \<and>
   partial_inj (root_map s)"
 
+lemma non_overlapping_append[simp]:
+  "non_overlapping (xs @ ys) = (non_overlapping xs \<and> non_overlapping ys \<and> \<Union>set xs \<inter> \<Union>set ys = {})"
+  by (induct xs) auto
+
+lemma non_overlapping_map:
+  "\<lbrakk> non_overlapping (map f xs); x \<in> set xs; y \<in> set xs; x \<noteq> y\<rbrakk> \<Longrightarrow> f x \<inter> f y = {}"
+  by (induct xs) auto
+
+lemma non_overlapping_tables_from_kernel_data:
+  "non_overlapping (kernel_data s) \<Longrightarrow> non_overlapping_tables s"
+  by (clarsimp simp: non_overlapping_tables_def kernel_data_def non_overlapping_map)
 
 (*  kernel_safe_region preservation *)
 definition
@@ -228,19 +239,15 @@ lemma kernel_mapping_upd:
    apply (clarsimp simp: ptable_footprint_def)
    apply (clarsimp simp:global_mappings_def)
    apply (rule conjI)
-    apply (rotate_tac) apply (rotate_tac)
-    apply (drule_tac x = rt in bspec)
-     apply clarsimp
-    apply (drule_tac x = va in spec)
-    apply clarsimp
+    apply (drule (1) bspec)+
+    apply (drule_tac x = "va" in spec)
+    apply clarsimp   
     apply (rule_tac x = pa in exI)
     apply (rule_tac x = perms in exI)
     apply (frule ptable_trace_get_pde')
      apply force
     apply clarsimp
-   apply (rotate_tac) apply (rotate_tac)
-   apply (drule_tac x = rt in bspec)
-    apply clarsimp
+    apply (drule (1) bspec)+
    apply (drule_tac x = va in spec)
    apply clarsimp
    apply (subgoal_tac "p \<notin> ptable_trace' (heap s) rt (Addr va)")
@@ -250,9 +257,7 @@ lemma kernel_mapping_upd:
   apply (clarsimp simp: ptable_footprint_def)
   apply (clarsimp simp:global_mappings_def)
   apply (rule conjI)
-   apply (rotate_tac) apply (rotate_tac)
-   apply (drule_tac x = rt in bspec)
-    apply clarsimp
+   apply (drule (1) bspec)+
    apply (drule_tac x = va in spec)
    apply clarsimp
    apply (rule_tac x = pa in exI)
@@ -261,9 +266,7 @@ lemma kernel_mapping_upd:
    apply (rule ptable_trace_get_pde)
     apply force
    apply clarsimp
-  apply (rotate_tac) apply (rotate_tac)
-  apply (drule_tac x = rt in bspec)
-   apply clarsimp
+  apply (drule (1) bspec)+
   apply (drule_tac x = va in spec)
   apply clarsimp
   apply (subgoal_tac "p \<notin> ptable_trace' (heap s) rt (Addr va)")
@@ -276,13 +279,11 @@ lemma kernel_mapping_upd:
 lemma mmu_layout_upd:
   "\<lbrakk> mmu_layout s; p \<notin> kernel_phy_mem \<rbrakk> \<Longrightarrow> mmu_layout (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>)"
   apply (clarsimp simp: mmu_layout_def)
+  apply (frule non_overlapping_tables_from_kernel_data)
   apply (subgoal_tac "p \<notin> kernel_data_area s")
    prefer 2
    apply blast
   apply (simp add: kernel_data_upd kernel_mapping_upd)
-  apply (rule conjI)
-   apply (clarsimp simp: non_overlapping_tables_def)
-   apply (simp add: kernel_data_def ptable_footprint_upd)
   apply (clarsimp simp: user_mappings_def)
   apply (subst (asm) pt_table_lift_trace_upd)
    apply (simp add: kernel_data_def ptable_footprint_def)

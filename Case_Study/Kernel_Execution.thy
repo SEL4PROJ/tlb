@@ -49,13 +49,11 @@ lemma mmu_layout_ptable_comp':
 lemma mmu_layout_upd':
   "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s \<rbrakk> \<Longrightarrow> mmu_layout (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>)"
   apply (clarsimp simp: mmu_layout_def)
+  apply (frule non_overlapping_tables_from_kernel_data)
   apply (subgoal_tac "p \<notin> kernel_data_area s")
    prefer 2
    apply blast
   apply (simp add: kernel_data_upd kernel_mapping_upd)
-  apply (rule conjI)
-   apply (clarsimp simp: non_overlapping_tables_def)
-   apply (simp add: kernel_data_def ptable_footprint_upd)
   apply (clarsimp simp: user_mappings_def)
   apply (subst (asm) pt_table_lift_trace_upd)
    apply (simp add: kernel_data_def ptable_footprint_def)
