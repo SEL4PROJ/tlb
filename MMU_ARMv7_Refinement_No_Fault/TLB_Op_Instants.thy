@@ -226,9 +226,9 @@ begin
        let iset = iset \<lparr>incon_set := incon_set_n \<rparr>;
       update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset \<rparr>)
 } "
-thm update_TTBR0_tlb_incon_state'_ext_def
 
- definition   
+
+definition
   "(update_ASID a :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
@@ -245,12 +245,7 @@ thm update_TTBR0_tlb_incon_state'_ext_def
       update_state (\<lambda>s. s\<lparr> ASID := a \<rparr>);
       
      let iset_snp = incon_load snapshot_current a mem ttbr0; 
-     let iset_new = ({a} \<times> UNIV) \<inter> iset; 
-     let iset_new_snp = iset_new \<union> iset_snp;
-     let m_to_h = miss_to_hit  snapshot_current a mem ttbr0;
-     let h_to_h = consistent_hit snapshot_current a mem ttbr0;
-     let snapshot' = snapshot_update_new' snapshot_current iset_new_snp m_to_h h_to_h mem ttbr0 a;
-     let tlb_incon_set = tlb_incon_set\<lparr> incon_set:= iset \<union> iset_snp , tlb_snapshot := snapshot'  \<rparr>;
+     let tlb_incon_set = tlb_incon_set\<lparr> incon_set:= iset \<union> iset_snp  \<rparr>;
      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := tlb_incon_set \<rparr>)
 } "
 

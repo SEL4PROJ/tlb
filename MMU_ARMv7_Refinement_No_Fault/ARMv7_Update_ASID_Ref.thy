@@ -171,9 +171,8 @@ lemma update_ASID_sat_no_flt_abs_refine':
                         snapshot_update_new'_def  snapshot_update_new_def)
    apply (clarsimp simp: snapshot_of_tlb_def snapshot_update_current'_def snapshot_update_current_def
                         snapshot_update_new'_def  snapshot_update_new_def incon_load_def)
-   apply force
-
-
+   apply (simp split: if_split_asm)
+   apply force  
 
 (* when we update to the new ASID *)
   apply (clarsimp simp: tlb_rel_abs'_def)
@@ -260,7 +259,7 @@ lemma update_ASID_sat_no_flt_abs_refine':
    apply (clarsimp simp: saturated_no_flt_def)
   apply (rule conjI)
    apply (clarsimp simp: no_faults_def)
-
+(*
   apply (thin_tac " t' = t\<lparr>ASID := a, tlb_incon_set' := tlb_incon_set' t
                          \<lparr>incon_set := incon_set (tlb_incon_set' t) \<union> incon_load (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s),
                             tlb_snapshot :=
@@ -268,7 +267,7 @@ lemma update_ASID_sat_no_flt_abs_refine':
                                ({a} \<times> UNIV \<inter> incon_set (tlb_incon_set' t) \<union> incon_load (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s))
                                (miss_to_hit (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s))
                                (consistent_hit (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s)) (MEM s) (TTBR0 s) a\<rparr>\<rparr>")
-
+*)
 (* relationship between snapshot_of_tlb and tlb_snapshot *)
 
   apply (rule conjI)
@@ -334,16 +333,7 @@ lemma update_ASID_sat_no_flt_abs_refine':
     apply blast
    apply (erule disjE)
     apply clarsimp
-:  
-  "{v. (ASID b, v) \<in>   ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)}
-           \<subseteq> snd ` ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)"
-  apply (clarsimp simp: subset_image_iff)
-  apply (rule_tac x = "ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)" in exI)
-  apply (rule conjI)
-   apply simp
-  apply (clarsimp simp: ptable_comp_def)
-  apply (clarsimp simp: snd_eq_Range)
-  by auto   apply clarsimp
+   apply clarsimp
    apply (clarsimp simp:  asid_va_incon_tlb_mem_def asid_va_hit_incon_def)
    apply (case_tac "x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) v")
     apply blast
