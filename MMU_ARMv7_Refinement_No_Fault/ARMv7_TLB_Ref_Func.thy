@@ -28,6 +28,15 @@ record tlb_incon_state' = state +
            tlb_incon_set' :: tlb_incon_set'
 
 
+record tlb_incon_set'2 =
+  incon_set2   :: "vaddr set"
+  tlb_snapshot2 :: "asid \<Rightarrow> vaddr \<Rightarrow> lookup_type"
+
+
+record tlb_incon_state'2 = state + 
+           tlb_incon_set'2 :: tlb_incon_set'2
+
+
 
 definition 
   typ_tlb :: "'a tlb_state_scheme \<Rightarrow> tlb_entry set state_scheme"
@@ -55,6 +64,12 @@ where
   "typ_incon' s =  state.extend (state.truncate s) (tlb_incon_set' s)"
 
 
+definition 
+  typ_incon'2 :: "'a tlb_incon_state'2_scheme \<Rightarrow> tlb_incon_set'2 state_scheme"
+where
+  "typ_incon'2 s =  state.extend (state.truncate s) (tlb_incon_set'2 s)"
+
+
 lemma tlb_more [simp]:
   "state.more (typ_tlb s) = tlb_set s"
   by (clarsimp simp: typ_tlb_def state.defs)
@@ -73,6 +88,11 @@ lemma tlb_incon_more' [simp]:
   "state.more (typ_incon' s) = tlb_incon_set' s"
   by (clarsimp simp: typ_incon'_def state.defs)
 
+lemma tlb_incon_more'2 [simp]:
+  "state.more (typ_incon'2 s) = tlb_incon_set'2 s"
+  by (clarsimp simp: typ_incon'2_def state.defs)
+
+
 lemma tlb_truncate [simp]:
   "state.truncate (typ_tlb s') = state.truncate s'"
   by (clarsimp simp: typ_tlb_def state.defs)
@@ -88,6 +108,11 @@ lemma tlb_sat_no_flt_truncate [simp]:
 lemma tlb_incon_truncate' [simp]:
   "state.truncate (typ_incon' s') = state.truncate s'"
   by (clarsimp simp: typ_incon'_def state.defs)
+
+
+lemma tlb_incon_truncate'2 [simp]:
+  "state.truncate (typ_incon'2 s') = state.truncate s'"
+  by (clarsimp simp: typ_incon'2_def state.defs)
 
 
 lemma typ_prim_parameter [simp]:
@@ -112,6 +137,11 @@ lemma typ_incon_prim_parameter' [simp]:
   "ASID (typ_incon' s) = ASID s \<and> TTBR0 (typ_incon' s) =  TTBR0 s \<and> MEM (typ_incon' s) = MEM s \<and>
       exception (typ_incon' s) = exception s"
   by (clarsimp simp: typ_incon'_def state.defs)
+
+lemma typ_incon_prim_parameter'2 [simp]:
+  "ASID (typ_incon'2 s) = ASID s \<and> TTBR0 (typ_incon'2 s) =  TTBR0 s \<and> MEM (typ_incon'2 s) = MEM s \<and>
+      exception (typ_incon'2 s) = exception s"
+  by (clarsimp simp: typ_incon'2_def state.defs)
 
 
 definition
@@ -188,11 +218,12 @@ where
                           {(a,v). tlb_snapshot (state.more t) a  v = Incon }  \<subseteq>  incon_set (state.more t)" 
 
 
-(* have proved the update ASID with the equality version of last conj, but for write we need the subset relation *)
-
-(* should we add a condition that all of the elements in the incon set has incon in the saturated tlb, not the 
-  hit or a miss? or its not necessary, why it is not necessary? *)
-
+definition 
+  tlb_rel_abs'2 :: "tlb_incon_set' state_scheme \<Rightarrow> tlb_incon_set'2 state_scheme \<Rightarrow> bool"
+where                                                                
+  "tlb_rel_abs'2 s t \<equiv> state.truncate s = state.truncate t \<and> 
+                       (\<forall>a v. a \<noteq> ASID s \<longrightarrow> tlb_snapshot (state.more s) a  v \<le> tlb_snapshot2 (state.more t) a  v) \<and> 
+                        {v. (ASID s,v) \<in> incon_set (state.more s)}  \<subseteq>  incon_set2 (state.more t)" 
 
 consts tlb_evict :: "tlb_entry set state_scheme \<Rightarrow> tlb_entry set"
 
@@ -377,7 +408,13 @@ lemma tlb_rel'_absD:
   "tlb_rel_abs' s t \<Longrightarrow>
      ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and>  saturated_no_flt s \<and> no_faults (state.more s) \<and> 
                 asid_va_incon_tlb_mem s  \<subseteq> incon_set (state.more t) \<and> exception t = exception s"
-   by (clarsimp simp: tlb_rel_abs'_def state.defs)
+  by (clarsimp simp: tlb_rel_abs'_def state.defs)
 
+lemma tlb_rel'_absD2:
+  "tlb_rel_abs'2 s t \<Longrightarrow>
+     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and> 
+                 {v. (ASID s,v) \<in> incon_set (state.more s)}  \<subseteq>  incon_set2 (state.more t) \<and> exception t = exception s"
+  apply (clarsimp simp: tlb_rel_abs'2_def)
+  by (clarsimp simp:  state.defs)
 
 end

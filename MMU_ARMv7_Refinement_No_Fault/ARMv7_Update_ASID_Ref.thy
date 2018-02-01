@@ -334,7 +334,16 @@ lemma update_ASID_sat_no_flt_abs_refine':
     apply blast
    apply (erule disjE)
     apply clarsimp
-   apply clarsimp
+:  
+  "{v. (ASID b, v) \<in>   ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)}
+           \<subseteq> snd ` ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)"
+  apply (clarsimp simp: subset_image_iff)
+  apply (rule_tac x = "ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)" in exI)
+  apply (rule conjI)
+   apply simp
+  apply (clarsimp simp: ptable_comp_def)
+  apply (clarsimp simp: snd_eq_Range)
+  by auto   apply clarsimp
    apply (clarsimp simp:  asid_va_incon_tlb_mem_def asid_va_hit_incon_def)
    apply (case_tac "x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) v")
     apply blast
