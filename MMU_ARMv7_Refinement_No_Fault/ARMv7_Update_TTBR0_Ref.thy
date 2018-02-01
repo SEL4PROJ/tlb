@@ -309,4 +309,36 @@ lemma update_ttbr0_sat_no_flt_abs_refine':
 
 
 
+lemma  to_do':
+  "{v. (ASID s, v) \<in> ptable_comp (ASID s) (MEM s) (MEM s) (TTBR0 s) r} \<subseteq> 
+       snd ` ptable_comp (ASID s) (MEM s) (MEM s) (TTBR0 s) r"
+  apply (clarsimp simp: subset_image_iff)
+  apply (rule_tac x = "ptable_comp (ASID s) (MEM s) (MEM s) (TTBR0 s) r" in exI)
+  apply (rule conjI)
+   apply simp
+  apply (clarsimp simp: ptable_comp_def)
+  apply (clarsimp simp: snd_eq_Range)
+  by auto
+   
+
+
+lemma update_ttbr0_sat_no_flt_abs_refine'2:
+  "\<lbrakk> update_TTBR0 r (s::tlb_incon_state') = ((), s') ;  update_TTBR0 r (t::tlb_incon_state'2) = ((), t'); 
+             tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                     tlb_rel_abs'2 (typ_incon' s') (typ_incon'2 t')"
+  apply (clarsimp simp: update_TTBR0_tlb_incon_state'2_ext_def update_TTBR0_tlb_incon_state'_ext_def tlb_rel_abs'2_def)
+  apply (subgoal_tac "ASID s = ASID t \<and> TTBR0 s = TTBR0 t \<and> MEM s = MEM t")
+   prefer 2
+   apply (clarsimp simp: typ_incon'2_def typ_incon'_def state.defs) 
+  apply (rule conjI)
+   apply (clarsimp simp: typ_sat_no_flt_tlb_def "state.defs")
+ apply (subgoal_tac  "{v. (ASID s, v) \<in> incon_set (tlb_incon_set' s) } \<subseteq> incon_set2 (tlb_incon_set'2 t)")
+   apply (subgoal_tac "{v. (ASID s, v) \<in> ptable_comp (ASID s) (MEM s) (MEM s) (TTBR0 s) r} \<subseteq> 
+           snd ` ptable_comp (ASID t) (MEM t) (MEM t) (TTBR0 t) r")
+     apply blast
+    prefer 2
+    apply clarsimp
+   by (clarsimp simp: to_do')
+ 
+
 end

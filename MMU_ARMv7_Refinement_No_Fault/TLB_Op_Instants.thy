@@ -283,4 +283,78 @@ end
 
 
 
+
+
+
+instantiation tlb_incon_state'2_ext :: (type) reg_tlb_op   
+begin
+  definition   
+  "(update_TTBR0 r :: ('a tlb_incon_state'2_scheme \<Rightarrow> _))  = do {
+      ttbr0   <- read_state TTBR0;
+      update_state (\<lambda>s. s\<lparr> TTBR0 := r \<rparr>);
+      iset   <- read_state tlb_incon_set'2;
+      asid   <- read_state ASID;
+      mem    <- read_state MEM;
+       let ptable_asid_va = ptable_comp asid mem mem ttbr0 r; 
+       let incon_set_n = incon_set2 iset \<union> snd ` ptable_asid_va;
+       let iset = iset \<lparr>incon_set2 := incon_set_n \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set'2 := iset \<rparr>)
+} "
+
+(*
+definition
+  "(update_ASID a :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
+      mem   <- read_state MEM;
+      ttbr0 <- read_state TTBR0;
+      asid  <- read_state ASID;
+      tlb_incon_set   <- read_state tlb_incon_set';
+      let iset = incon_set tlb_incon_set;  
+      let snapshot = tlb_snapshot tlb_incon_set;
+      let iset_current = ({asid} \<times> UNIV) \<inter> iset; 
+      let snapshot_current = snapshot_update_current' snapshot iset_current mem ttbr0 asid;
+      let tlb_incon_set = tlb_incon_set \<lparr>tlb_snapshot := snapshot_current \<rparr>;
+      update_state (\<lambda>s. s\<lparr>tlb_incon_set' := tlb_incon_set \<rparr>);
+
+      (* new ASID *)
+      update_state (\<lambda>s. s\<lparr> ASID := a \<rparr>);
+      
+     let iset_snp = incon_load snapshot_current a mem ttbr0; 
+     let tlb_incon_set = tlb_incon_set\<lparr> incon_set:= iset \<union> iset_snp  \<rparr>;
+     update_state (\<lambda>s. s\<lparr> tlb_incon_set' := tlb_incon_set \<rparr>)
+} "
+
+ definition   
+  "(Flush_TLB  :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
+      iset   <- read_state tlb_incon_set';
+      let iset = iset \<lparr>incon_set := {} , tlb_snapshot := \<lambda> a v . Miss \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset \<rparr>)
+} "   
+
+  definition   
+  "(Flush_ASID  a :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
+      iset   <- read_state tlb_incon_set';
+      let iset = iset \<lparr>incon_set := incon_set(iset) - {a} \<times> UNIV, 
+                       tlb_snapshot := (tlb_snapshot iset)(a := \<lambda>v. Miss) \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset\<rparr>)
+} "
+    
+definition   
+  "(Flush_varange  vset :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
+      iset   <- read_state tlb_incon_set';
+      let iset = iset \<lparr>incon_set := incon_set(iset) - UNIV \<times> vset , 
+                 tlb_snapshot := \<lambda>x y. if (x, y) \<in> UNIV \<times> vset then Miss else tlb_snapshot iset x y \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset\<rparr>)
+} "
+
+definition   
+  "(Flush_ASIDvarange  a vset :: ('a tlb_incon_state'_scheme \<Rightarrow> _))  = do {
+      iset   <- read_state tlb_incon_set';
+      let iset = iset \<lparr>incon_set := incon_set(iset) - {a} \<times> vset, 
+                 tlb_snapshot := \<lambda>x y. if (x, y) \<in> {a} \<times> vset then Miss else tlb_snapshot iset x y \<rparr>;
+      update_state (\<lambda>s. s\<lparr> tlb_incon_set' := iset\<rparr>) } " *)
+  instance ..
+end
+
+
+
 end
