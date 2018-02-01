@@ -2236,7 +2236,8 @@ lemma  mem_read1_consistent_tlb_rel_non_det:
         apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
        apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
       apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-     apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
+     subgoal
+     by (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
     apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
    apply (clarsimp simp: tlb_rel_sat_no_flt_def state.defs)
   apply (drule mem1_read_exception)
@@ -2366,23 +2367,21 @@ lemma  mem_read1_consistent_tlb_rel_abs2:
    apply (rule conjI)
     apply (cases s', cases t')
     apply clarsimp
-    apply (subgoal_tac "ASID t = ASID t' \<and> incon_set2 (tlb_incon_set'2 t) = incon_set2 (tlb_incon_set'2 t')")
+   apply (subgoal_tac "ASID t = ASID t' \<and> incon_set2 (tlb_incon_set'2 t) = incon_set2 (tlb_incon_set'2 t')")
     apply clarsimp
    apply (cases t, cases t')
    apply clarsimp
-   apply (subgoal_tac "MEM s = MEM t \<and> exception s = exception t")
-    apply (clarsimp simp: mem_read1_def)
-    apply (clarsimp split: if_split_asm)
-        apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
+  apply (subgoal_tac "MEM s = MEM t \<and> exception s = exception t")
+   apply (clarsimp simp: mem_read1_def)
+   apply (clarsimp split: if_split_asm)
        apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
       apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
      apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-    apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
-   apply (clarsimp simp: tlb_rel_abs'2_def state.defs)
+    subgoal   
+    by (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
+   apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
+  apply (clarsimp simp: tlb_rel_abs'2_def state.defs)
   done
-
-
-
 
 
 end
