@@ -452,6 +452,19 @@ where
          (\<lambda>x. (a, x)) ` {va. (\<exists>e1 e2. pt_walk a hp1 rt1 va = e1 \<and> pt_walk a hp2 rt2 va = e2  \<and> \<not>is_fault e1 \<and> \<not>is_fault e2 \<and> e1 \<noteq> e2 )  \<or>
                 (\<exists>e1 e2. pt_walk a hp1 rt1 va = e1 \<and> pt_walk a hp2 rt2 va = e2  \<and> \<not>is_fault e1 \<and> is_fault e2 )}"
 
+definition
+  tlb_comp :: "(vaddr \<Rightarrow> lookup_type) \<Rightarrow> (vaddr \<Rightarrow> lookup_type) \<Rightarrow> vaddr set"
+where
+  "tlb_comp w1 w2 \<equiv> {va. (\<exists>e1 e2. w1 va = Hit e1 \<and> w2 va = Hit e2 \<and> e1 \<noteq> e2) \<or> (w1 va \<noteq> Miss \<and> w2 va = Miss) \<or> w1 va = Incon}"
+
+definition
+  lift_pt :: "(vaddr \<Rightarrow> tlb_entry) \<Rightarrow> vaddr \<Rightarrow> lookup_type"
+where
+  "lift_pt walk \<equiv> \<lambda>va. if is_fault (walk va) then Miss else Hit (walk va)"
+
+lemma ptable_comp_tlb_comp:
+  "ptable_comp a hp1 hp2 rt1 rt2 = {a} \<times> tlb_comp (lift_pt (pt_walk a hp1 rt1)) (lift_pt (pt_walk a hp2 rt2))"
+  by (auto simp: ptable_comp_def tlb_comp_def lift_pt_def)
 
 
 lemma ptable_trace_pde_comp:

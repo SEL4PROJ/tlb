@@ -107,12 +107,9 @@ where
                             incon_set := incon_set s \<union>  ptable_comp (asid s)  (heap s) (heap s) (root s) (Addr rt) \<rparr>)"
 |
   UpdateASID:      " \<lbrakk>snp_cur  = snapshot_update_current' (ptable_snapshot s) (({asid s} \<times> UNIV) \<inter> incon_set s) (heap s) (root s) (asid s) ; 
-                              il       = incon_load snp_cur a (heap s) (root s) ; 
-                              iset'    = ({a} \<times> UNIV) \<inter> (incon_set s); 
-                              m_to_h   = miss_to_hit  snp_cur a (heap s) (root s) ;
-                              h_to_h   = consistent_hit snp_cur a (heap s) (root s);  
-                         mode s = Kernel\<rbrakk> \<Longrightarrow> 
-                                 (UpdateASID a , s) \<Rightarrow>  Some (s \<lparr>asid := a , incon_set := incon_set s \<union> il , ptable_snapshot := snapshot_update_new'  snp_cur (iset' \<union> il) m_to_h h_to_h (heap s) (root s) a \<rparr>)"
+                      il       = incon_load snp_cur a (heap s) (root s) ; 
+                      mode s = Kernel\<rbrakk> \<Longrightarrow> 
+                    (UpdateASID a , s) \<Rightarrow>  Some (s \<lparr>asid := a , incon_set := incon_set s \<union> il , ptable_snapshot := snp_cur \<rparr>)"
    (* 'let' gives this error:
       "Conclusion of introduction rule must be an inductive predicate" *)
 |
@@ -335,15 +332,12 @@ lemma updateTTBR0_sound[vcg]:
   by auto
 
 lemma updateASID_sound[vcg]:
-  "\<Turnstile>\<lbrace>\<lambda>s.  \<exists>snp_cur il iset' m_to_h' m_to_h h_to_h. mode s = Kernel \<and> snp_cur  = snapshot_update_current' (ptable_snapshot s) (({asid s} \<times> UNIV) \<inter> incon_set s) (heap s) (root s) (asid s) \<and> 
-                              il       = incon_load snp_cur a (heap s) (root s) \<and>
-                              iset'    = ({a} \<times> UNIV) \<inter> (incon_set s) \<and>
-                              m_to_h   = miss_to_hit  snp_cur a (heap s) (root s) \<and>
-                              h_to_h   = consistent_hit snp_cur a (heap s) (root s) \<and> 
-          P (s \<lparr>asid := a , incon_set := incon_set s \<union> il , ptable_snapshot := snapshot_update_new'  snp_cur (iset' \<union> il) m_to_h h_to_h (heap s) (root s) a \<rparr> )\<rbrace>  UpdateASID a \<lbrace>P\<rbrace>"
+  "\<Turnstile>\<lbrace>\<lambda>s.  \<exists>snp_cur il. mode s = Kernel \<and> 
+             snp_cur  = snapshot_update_current' (ptable_snapshot s) (({asid s} \<times> UNIV) \<inter> incon_set s) (heap s) (root s) (asid s) \<and> 
+             il       = incon_load snp_cur a (heap s) (root s) \<and>
+          P (s \<lparr>asid := a , incon_set := incon_set s \<union> il , ptable_snapshot := snp_cur \<rparr> )\<rbrace>  UpdateASID a \<lbrace>P\<rbrace>"
   apply (clarsimp simp: hoare_valid_def)
   by auto
-
 
 lemma set_mode_sound[vcg]:
   "\<Turnstile>\<lbrace>\<lambda>s. mode s = Kernel \<and> P (s \<lparr>mode := flg\<rparr>)\<rbrace>  SetMode flg \<lbrace>P\<rbrace>"
@@ -357,6 +351,41 @@ lemma snap_incon_subset_hoare_rule:
   apply (erule_tac x = s in allE)
   apply (erule_tac x = s' in allE)
   by (clarsimp simp: snap_incon_subset_commnad_exec)
-   
+
+definition
+  restrict :: "vaddr set \<Rightarrow> (vaddr \<Rightarrow> lookup_type) \<Rightarrow> (vaddr \<Rightarrow> lookup_type)"
+where
+  "restrict V walk \<equiv> \<lambda>va. if va \<in> V then Incon else walk va" 
+
+definition
+  "snap_pt s = restrict {va. (asid s, va) \<in> incon_set s} (lift_pt (pt_walk (asid s) (heap s) (root s)))"
+
+definition
+  "new_snp s = (ptable_snapshot s) (asid s := snap_pt s)"
+
+lemma snap_pt:
+  "snapshot_update_current ({asid s} \<times> UNIV \<inter> incon_set s) (heap s) (root s) (asid s) = snap_pt s"
+  by (rule ext) (simp add: snapshot_update_current_def snap_pt_def restrict_def lift_pt_def)
+
+lemma snapshot_update_current'_new_snp:
+  "snapshot_update_current' (ptable_snapshot s) ({asid s} \<times> UNIV \<inter> incon_set s) (heap s) (root s) (asid s)
+  = new_snp s"
+  by (clarsimp simp: snapshot_update_current'_def new_snp_def snap_pt)
+
+definition
+  "snp_comp a snp walk = {a} \<times> {va. \<exists>e. snp a va = Hit e \<and> e \<noteq> walk va}"
+
+lemma Pair_times:
+  "Pair a ` V = {a} \<times> V"
+  by auto
+
+lemma updateASID_sound':
+  "\<Turnstile>\<lbrace>\<lambda>s. mode s = Kernel \<and>
+         P (s \<lparr>asid := a, 
+               incon_set := incon_set s \<union> snp_comp a (new_snp s) (pt_walk a (heap s) (root s)), 
+               ptable_snapshot := new_snp s \<rparr> )\<rbrace>  UpdateASID a \<lbrace>P\<rbrace>"
+  apply (rule weak_pre, rule updateASID_sound)
+  apply (clarsimp simp: snapshot_update_current'_new_snp incon_load_def snp_comp_def Pair_times)
+  done
 
 end
