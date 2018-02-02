@@ -47,7 +47,7 @@ interpretation ptable_footprint: heap_only ptable_footprint
 
 lemma root_log_heap_eq:
   "heap s = heap s' \<Longrightarrow> root_log s = root_log s'"
-  by (simp add: root_log_def)
+  by (simp add: root_log_def root_map_def map_of_set_def root_set_def)
 
 interpretation rt_log: heap_only root_log
   by unfold_locales (rule root_log_heap_eq)
@@ -59,14 +59,15 @@ lemma root_map_heap_eq:
 interpretation rt_map: heap_only root_map
   by unfold_locales (rule root_map_heap_eq)
 
-lemma kernel_data_heap_eq:
+lemma kernel_date_area_heap_eq:
   assumes "heap s = heap s'"
-  shows "kernel_data s = kernel_data s'"
+  shows "kernel_data_area s = kernel_data_area s'"
   using assms
-  by (simp add: kernel_data_def ptable_footprint_heap_eq[OF assms] root_log_def)
+  by (simp add: kernel_data_area_def ptable_footprint_heap_eq[OF assms] root_log_def
+    root_map_def map_of_set_def root_set_def)
 
-interpretation kernel_data: heap_only kernel_data
-  by unfold_locales (rule kernel_data_heap_eq)
+interpretation kernel_date_area: heap_only kernel_data_area
+  by unfold_locales (rule kernel_date_area_heap_eq)
                                    
 lemma non_overlapping_tables_heap_eq:
   assumes "heap s = heap s'"
@@ -101,14 +102,14 @@ lemma ptable_comp_asid:
 
 
 lemma asids_consistentD:
-  "\<lbrakk> asids_consistent {} s; root_map s (Addr r) = Some a ; Addr r \<in> set (root_log s) ; a \<noteq> asid s \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> asids_consistent {} s; root_map s (Addr r) = Some a ; Addr r \<in> root_log s ; a \<noteq> asid s \<rbrakk> \<Longrightarrow>
               (ptable_snapshot s) a v \<noteq> Incon \<and> ((ptable_snapshot s) a v = Miss \<or> 
                                  (ptable_snapshot s) a v = Hit (pt_walk a (heap s) (Addr r) v) )"
   by (clarsimp simp: asids_consistent_def ran_def) 
   
 
 (*
-lemma kernel_data_asid_consistent_eq:
+lemma kernel_date_area_asid_consistent_eq:
   assumes "heap s = heap s'"
   shows "asids_consistent {} s = asids_consistent {} s'"
   using assms
@@ -116,7 +117,7 @@ lemma kernel_data_asid_consistent_eq:
 
 
 interpretation asids_consistent: heap_only "asids_consistent {}"
-  by unfold_locales (rule kernel_data_heap_eq)
+  by unfold_locales (rule kernel_date_area_heap_eq)
 *)
 
 lemma pde_comp_def_x:
@@ -377,7 +378,7 @@ lemma asid_rewrite2:
 
 lemma new_context_switch:
   "\<Turnstile> \<lbrace> \<lambda>s. mmu_layout s \<and> asids_consistent {} s \<and> mode s = Kernel \<and>  \<I>\<C> s = {} \<and>
-            0 \<notin> ran (root_map s)  \<and> root_map s (Addr r) = Some a \<and> Addr r \<in> set (root_log s)\<rbrace>
+            0 \<notin> ran (root_map s)  \<and> root_map s (Addr r) = Some a \<and> Addr r \<in> root_log s\<rbrace>
             UpdateASID 0 ;; UpdateTTBR0 (Const r) ;; UpdateASID a ;; SetMode User
       \<lbrace>\<lambda>s. mmu_layout s \<and> \<I>\<C> s = {} \<and> mode s = User \<and> asids_consistent {} s \<rbrace>"
   apply vcgm

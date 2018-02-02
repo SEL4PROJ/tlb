@@ -26,11 +26,11 @@ lemma kerenl_region_offset':
 
 
 lemma mmu_layout_pt_walk':
-  "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s; rt \<in> set (root_log s) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s; rt \<in> root_log s \<rbrakk> \<Longrightarrow>
   pt_walk a (heap s(p \<mapsto> v)) rt = pt_walk a (heap s) rt"
   apply (rule ext)
   apply (subst pt_walk_pt_trace_upd')
-   apply (clarsimp simp: mmu_layout_def kernel_data_def ptable_footprint_def)
+   apply (clarsimp simp: mmu_layout_def kernel_data_area_def ptable_footprint_def)
   by fastforce 
 
 
@@ -39,7 +39,7 @@ lemma mmu_layout_ptable_comp':
   "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s \<rbrakk> \<Longrightarrow> 
         ptable_comp (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s) = {}"
   apply (simp add: ptable_comp_def)
-  apply (subgoal_tac "root s \<in> set (root_log s)")
+  apply (subgoal_tac "root s \<in> root_log s")
    apply (simp add: mmu_layout_pt_walk')
   by (simp add: mmu_layout_def)
 
@@ -49,14 +49,13 @@ lemma mmu_layout_ptable_comp':
 lemma mmu_layout_upd':
   "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s \<rbrakk> \<Longrightarrow> mmu_layout (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>)"
   apply (clarsimp simp: mmu_layout_def)
-  apply (frule non_overlapping_tables_from_kernel_data)
   apply (subgoal_tac "p \<notin> kernel_data_area s")
    prefer 2
    apply blast
   apply (simp add: kernel_data_upd kernel_mapping_upd)
   apply (clarsimp simp: user_mappings_def)
   apply (subst (asm) pt_table_lift_trace_upd)
-   apply (simp add: kernel_data_def ptable_footprint_def)
+   apply (simp add: kernel_data_area_def ptable_footprint_def)
   apply simp
   done
 
@@ -202,6 +201,7 @@ lemma kernel_exec2:
   apply (drule_tac x = r in spec)
   apply (drule_tac x = a in spec)
   apply clarsimp
+  apply (subgoal_tac "r \<in> root_log s")
   apply (drule_tac x = va in spec)
   apply (erule conjE)
   apply (erule disjE, simp)
@@ -210,8 +210,8 @@ lemma kernel_exec2:
    prefer 2
    apply (frule_tac p = "Addr (vp - global_offset)" and rt = "r" and a = a  and  v = v in mmu_layout_pt_walk' ;
       simp add: mmu_layout_def)
-  by force
-
+   apply force
+  by (clarsimp simp: root_log_def)
 
 end
 
