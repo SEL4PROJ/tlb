@@ -292,16 +292,4 @@ lemma mmu_layout_upd:
 
 
 
-
-(* to sort here *)
-
-
-lemma pde_comp_asid_incon:
-  "{av. (av \<in> incon_set s \<or> av \<in> ptable_comp (asid s) (heap s) (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) 
-      (root s)) \<and> fst av \<noteq> asid s} =
-   {av. av \<in> incon_set s  \<and> fst av \<noteq> asid s}"
-  apply (clarsimp simp: ptable_comp_def)
-  apply force
-done
-
 end

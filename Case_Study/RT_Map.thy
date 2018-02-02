@@ -102,9 +102,10 @@ lemma part_inj_root_map_different_asids:
   by force
 
 
-
 (* assigned ASIDs *)
 
+
+(*
 definition "assigned_asid_va_map rt_map   \<equiv> \<Union>((\<lambda>x. {x} \<times> UNIV) ` ran rt_map)"
 
 definition "assigned_asids_consistent rt_map iset  \<equiv> assigned_asid_va_map rt_map \<inter> iset = {}"
@@ -121,4 +122,5 @@ lemma asids_consitent_eq:
   by (auto simp: asids_consistent_def assigned_asids_consistent'_def assigned_asids_consistent_def
                  assigned_asid_va_map_def)
 
+*)
 end

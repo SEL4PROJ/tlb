@@ -19,6 +19,7 @@ where
   "root_log s  =  map (Addr o the o heap s) root_log_fp"
 
 
+
 lemma [simp]:
   "root_log s = root_log (s \<lparr>incon_set := is\<rparr>)"
   by (clarsimp simp: root_log_def)
@@ -48,6 +49,13 @@ where
                      \<forall>x y. x\<in> set (root_log s) \<and> y \<in> set (root_log s) \<and>
                               x\<noteq>y \<longrightarrow> \<Union>(ptable_trace' (heap s) x ` UNIV) \<inter> \<Union>(ptable_trace' (heap s) y ` UNIV) = {}"
 
+
+
+definition
+  "asids_consistent S s \<equiv>  
+           (\<forall> r a. root_map s r = Some a  \<and> r \<in> set (root_log s) \<longrightarrow> a \<notin> S \<union> {asid s}  \<longrightarrow> 
+                  (\<forall>v. (ptable_snapshot s) a v \<noteq> Incon \<and> ((ptable_snapshot s) a v = Miss \<or> 
+                                 (ptable_snapshot s) a v = Hit (pt_walk a (heap s) r v) )))"
 
 
 

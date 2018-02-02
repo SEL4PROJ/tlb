@@ -30,8 +30,8 @@ where
 
 lemma cons_set_preserved:
   "\<lbrakk> \<forall>va\<in>SM. \<exists>p.  ptable_lift_m (heap s) (root s) (mode s) va = Some p \<and> p \<notin> ptrace_set SM s;
-          \<forall>va\<in>SM. (asid s, va) \<notin> incon_set s; p \<notin> ptrace_set SM s; va \<in> SM\<rbrakk>  \<Longrightarrow> 
-              (asid s, va) \<notin> ptable_comp (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s)"
+          \<forall>va\<in>SM. va \<notin> incon_set s; p \<notin> ptrace_set SM s; va \<in> SM\<rbrakk>  \<Longrightarrow> 
+              va \<notin> ptable_comp (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s)"
   apply (case_tac "mode s")
    apply (drule_tac x = va in bspec ; clarsimp)
    apply (drule_tac x = va in bspec , simp)

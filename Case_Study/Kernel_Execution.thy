@@ -167,8 +167,6 @@ lemma kernel_exec2:
      apply (subgoal_tac  "ptrace_set (kernel_safe s) (s\<lparr> heap := heap s(Addr (vp - global_offset) \<mapsto> v)\<rparr>) =
       ptrace_set (kernel_safe s) s")
       apply (clarsimp simp: )
-     prefer 4
-     apply (clarsimp simp: asids_consistent_def)
     prefer 3
     apply (frule_tac vp = vp in global_high_ptable' , clarsimp , clarsimp)
     apply (clarsimp simp: kernel_safe_def
@@ -198,8 +196,21 @@ lemma kernel_exec2:
    apply clarsimp
   apply (rule pt_trace_upd)
   apply clarsimp
-done
 
+
+  apply (clarsimp simp: asids_consistent_def)
+  apply (drule_tac x = r in spec)
+  apply (drule_tac x = a in spec)
+  apply clarsimp
+  apply (drule_tac x = va in spec)
+  apply (erule conjE)
+  apply (erule disjE, simp)
+  apply (subgoal_tac "pt_walk a (heap s(Addr (vp - global_offset) \<mapsto> v)) r va = 
+                                     pt_walk a (heap s) r va")
+   prefer 2
+   apply (frule_tac p = "Addr (vp - global_offset)" and rt = "r" and a = a  and  v = v in mmu_layout_pt_walk' ;
+      simp add: mmu_layout_def)
+  by force
 
 
 end

@@ -12,7 +12,8 @@ type_synonym val         = "32 word"
 type_synonym asid        = "8 word"
 type_synonym word_t      = "32 word"
 type_synonym heap        = "paddr \<rightharpoonup> word_t"
-type_synonym incon_set   = "(asid \<times> vaddr) set"
+type_synonym incon_set   = "vaddr set"
+(* type_synonym incon_set   = "(asid \<times> vaddr) set" *)
 
 
 datatype mode_t = Kernel | User
@@ -338,9 +339,9 @@ where
 
 
 definition
-  mem_read_hp' :: "asid \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> mode_t \<Rightarrow> vaddr \<rightharpoonup> val"
+  mem_read_hp' :: "vaddr set \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> mode_t \<Rightarrow> vaddr \<rightharpoonup> val"
 where
-  "mem_read_hp' a iset hp rt m vp \<equiv>  if (a , vp) \<notin> iset then
+  "mem_read_hp'  iset hp rt m vp \<equiv>  if vp \<notin> iset then
         (ptable_lift_m hp rt m \<rhd>o load_value_word_hp hp) vp else None"
 
 
@@ -389,15 +390,15 @@ datatype flush_type = flushTLB
 
 
 fun
-  flush_effect ::"flush_type \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set"
+  flush_effect ::"flush_type \<Rightarrow> vaddr set \<Rightarrow> asid \<Rightarrow> vaddr set"
 where
-  "flush_effect flushTLB iset  = {}"
+  "flush_effect flushTLB iset  a' = {}"
 |
-  "flush_effect (flushASID a) iset = iset - {a} \<times> UNIV"
+  "flush_effect (flushASID a)  iset a' = (if a = a' then {} else iset)"
 |
-  "flush_effect (flushvarange vset) iset = iset - UNIV \<times> vset"
+  "flush_effect (flushvarange vset)  iset a' = iset - vset"
 |
-  "flush_effect (flushASIDvarange a vset) iset = iset - {a} \<times> vset"
+  "flush_effect (flushASIDvarange a vset)  iset a' =  (if a =a' then iset - vset else iset)"
 
 
 
@@ -446,10 +447,10 @@ definition
 
 
 definition
-  ptable_comp :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> paddr \<Rightarrow> (asid \<times> vaddr) set"
+  ptable_comp :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> paddr \<Rightarrow> vaddr set"
 where
   "ptable_comp a hp1 hp2 rt1 rt2 \<equiv>
-         (\<lambda>x. (a, x)) ` {va. (\<exists>e1 e2. pt_walk a hp1 rt1 va = e1 \<and> pt_walk a hp2 rt2 va = e2  \<and> \<not>is_fault e1 \<and> \<not>is_fault e2 \<and> e1 \<noteq> e2 )  \<or>
+                {va. (\<exists>e1 e2. pt_walk a hp1 rt1 va = e1 \<and> pt_walk a hp2 rt2 va = e2  \<and> \<not>is_fault e1 \<and> \<not>is_fault e2 \<and> e1 \<noteq> e2 )  \<or>
                 (\<exists>e1 e2. pt_walk a hp1 rt1 va = e1 \<and> pt_walk a hp2 rt2 va = e2  \<and> \<not>is_fault e1 \<and> is_fault e2 )}"
 
 definition
@@ -463,7 +464,7 @@ where
   "lift_pt walk \<equiv> \<lambda>va. if is_fault (walk va) then Miss else Hit (walk va)"
 
 lemma ptable_comp_tlb_comp:
-  "ptable_comp a hp1 hp2 rt1 rt2 = {a} \<times> tlb_comp (lift_pt (pt_walk a hp1 rt1)) (lift_pt (pt_walk a hp2 rt2))"
+  "ptable_comp a hp1 hp2 rt1 rt2 =  tlb_comp (lift_pt (pt_walk a hp1 rt1)) (lift_pt (pt_walk a hp2 rt2))"
   by (auto simp: ptable_comp_def tlb_comp_def lift_pt_def)
 
 
@@ -486,7 +487,7 @@ lemma pde_comp_empty:
 
 lemma plift_equal_not_in_pde_comp [simp]:
   "\<lbrakk> pt_walk a h1 r va =  e ; pt_walk a h2 r va = e \<rbrakk> \<Longrightarrow>
-            (a, va) \<notin> ptable_comp a h1 h2 r r"
+            va \<notin> ptable_comp a h1 h2 r r"
   by (clarsimp simp: ptable_comp_def)
 
 
@@ -533,6 +534,36 @@ lemma pt_walk_pt_trace_upd':
 
 (* snapshot functions *)
 
+
+
+definition 
+  snapshot_update_current2 :: "vaddr set \<Rightarrow> heap \<Rightarrow> paddr  \<Rightarrow> (asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
+where
+  "snapshot_update_current2 iset mem ttbr0  \<equiv> (\<lambda>a v. if v \<in>  iset then Incon else 
+                            if (\<not>is_fault (pt_walk a mem ttbr0 v)) then  Hit (pt_walk a mem ttbr0 v) else Miss)"
+
+
+definition 
+  snapshot_update_current'2 :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> vaddr set \<Rightarrow> 
+                                 heap \<Rightarrow> paddr \<Rightarrow> asid \<Rightarrow> (asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
+where
+  "snapshot_update_current'2 snp iset mem ttbr0 a \<equiv> snp (a := snapshot_update_current2 iset mem ttbr0 a)"
+
+
+
+definition 
+  incon_load2 :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> vaddr set"
+  where
+  "incon_load2 snp a m rt \<equiv>  {v. \<exists>x. snp a v = Hit x \<and> x \<noteq> pt_walk a m rt v}"
+
+
+definition 
+  incon_load_incon:: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap  \<Rightarrow> vaddr set"
+  where
+  "incon_load_incon snp a m  \<equiv>  {v. snp a v = Incon}"
+
+
+(*
 definition 
   incon_load :: "ptable_snapshot \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> incon_set"
   where
@@ -591,18 +622,19 @@ definition
 where
   "snapshot_update_new' snp iset m_to_h h_to_h hp ttbr0 a \<equiv> 
                                snp (a := snapshot_update_new iset m_to_h h_to_h hp ttbr0 a)"
+*)
 
-
+ 
 
 fun
-  flush_effect_snp :: "flush_type \<Rightarrow> ptable_snapshot \<Rightarrow> ptable_snapshot"
+  flush_effect_snp :: "flush_type  \<Rightarrow> ptable_snapshot \<Rightarrow> asid \<Rightarrow>  ptable_snapshot"
 where
-  "flush_effect_snp flushTLB  snp = (\<lambda>a v. Miss)"
+  "flush_effect_snp flushTLB   snp a' = (\<lambda>a v. Miss)"
+|   
+  "flush_effect_snp (flushASID a)  snp a'= (if a = a' then snp else snp(a := \<lambda>v. Miss))"
 |
-  "flush_effect_snp (flushASID a) snp = snp(a := \<lambda>v. Miss)"
-|
-  "flush_effect_snp (flushvarange vset) snp = (\<lambda>x y. if (x,y) \<in> UNIV \<times> vset then Miss else snp x y)"
-|
-  "flush_effect_snp (flushASIDvarange a vset) snp = (\<lambda>x y. if (x, y) \<in> {a} \<times> vset then Miss else snp x y)"
+  "flush_effect_snp (flushvarange vset)  snp a' = (\<lambda>x y. if (x,y) \<in> UNIV \<times> vset then Miss else snp x y)"
+|   
+  "flush_effect_snp (flushASIDvarange a vset)  snp  a'= (if a = a' then snp else (\<lambda>x y. if (x, y) \<in> {a} \<times> vset then Miss else snp x y))"
 
 end
