@@ -356,15 +356,14 @@ where
 
 
 definition
-  "physical_address iset hp rt m a va \<equiv>
-    (\<lambda>a va. ((a , va) \<notin> (iset ::(asid \<times> vaddr) set)) \<then> pagetable_lookup hp rt m va) a va"
+  "physical_address iset hp rt m va \<equiv> (va \<notin> iset) \<then> pagetable_lookup hp rt m va"
 
 
 definition
-  mem_read_hp'' :: "(asid \<times> vaddr) set \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> mode_t \<Rightarrow> asid \<Rightarrow>  vaddr \<rightharpoonup> val"
+  mem_read_hp'' :: "vaddr set \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> mode_t \<Rightarrow> vaddr \<rightharpoonup> val"
 where
-  "mem_read_hp''  iset hp rt m a va \<equiv>
-    (physical_address iset hp rt m a  \<rhd>o load_value_word_hp hp) va"
+  "mem_read_hp'' iset hp rt m va \<equiv>
+    (physical_address iset hp rt m \<rhd>o load_value_word_hp hp) va"
 
 definition
   "fun_update' f g v  \<equiv>
@@ -374,10 +373,10 @@ definition
 
 
 definition
-  mem_write :: "(asid \<times> vaddr) set \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> mode_t \<Rightarrow> asid \<Rightarrow> vaddr \<Rightarrow> val \<rightharpoonup> heap"
+  mem_write :: "vaddr set \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> mode_t \<Rightarrow> vaddr \<Rightarrow> val \<rightharpoonup> heap"
 where
-  "mem_write iset hp rt m a va v \<equiv>
-    fun_update' (physical_address iset hp rt m a va) hp v "
+  "mem_write iset hp rt m va v \<equiv>
+    fun_update' (physical_address iset hp rt m va) hp v "
 
 
 (*Flush Operations for incon_set  *)
@@ -454,19 +453,9 @@ where
                 (\<exists>e1 e2. pt_walk a hp1 rt1 va = e1 \<and> pt_walk a hp2 rt2 va = e2  \<and> \<not>is_fault e1 \<and> is_fault e2 )}"
 
 definition
-  tlb_comp :: "(vaddr \<Rightarrow> lookup_type) \<Rightarrow> (vaddr \<Rightarrow> lookup_type) \<Rightarrow> vaddr set"
-where
-  "tlb_comp w1 w2 \<equiv> {va. (\<exists>e1 e2. w1 va = Hit e1 \<and> w2 va = Hit e2 \<and> e1 \<noteq> e2) \<or> (w1 va \<noteq> Miss \<and> w2 va = Miss) \<or> w1 va = Incon}"
-
-definition
   lift_pt :: "(vaddr \<Rightarrow> tlb_entry) \<Rightarrow> vaddr \<Rightarrow> lookup_type"
 where
   "lift_pt walk \<equiv> \<lambda>va. if is_fault (walk va) then Miss else Hit (walk va)"
-
-lemma ptable_comp_tlb_comp:
-  "ptable_comp a hp1 hp2 rt1 rt2 =  tlb_comp (lift_pt (pt_walk a hp1 rt1)) (lift_pt (pt_walk a hp2 rt2))"
-  by (auto simp: ptable_comp_def tlb_comp_def lift_pt_def)
-
 
 lemma ptable_trace_pde_comp:
   "\<forall>x. p \<notin> ptable_trace' h r x \<Longrightarrow> ptable_comp a  h (h(p \<mapsto> v)) r  r= {}"
