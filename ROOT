@@ -58,4 +58,7 @@ session LOGIC =  PTABLE +
 
 session CASE_STUDY =  LOGIC +
    theories
+   "Case_Study/User_Execution"
+(*	 
    "Case_Study/Page_Table_Ops"
+*)
