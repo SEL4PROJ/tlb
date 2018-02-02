@@ -13,4 +13,4 @@ cache:
     - $HOME/.isabelle
 
 script:
-  travis_wait 30 Isabelle2017/bin/isabelle build -v -D .
+  travis_wait 120 Isabelle2017/bin/isabelle build -v -D .
