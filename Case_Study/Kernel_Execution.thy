@@ -15,23 +15,15 @@ lemma [simp]:
   by (clarsimp simp: con_set_def)
 
 
+lemma root_map_rootsD:
+  "root_map s r = Some a \<Longrightarrow> r \<in> roots s"
+  by (simp add: roots_def')
 
 lemma kerenl_region_offset':
   " mmu_layout s \<and> mode s = Kernel   \<Longrightarrow>
         \<forall>va\<in>kernel_safe s.  ptable_lift' (heap s) (root s) va = 
       Some (Addr (addr_val va) r- global_offset)"
-  by (clarsimp simp: mmu_layout_def)
-
-
-
-
-lemma mmu_layout_pt_walk':
-  "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s; rt \<in> root_log s \<rbrakk> \<Longrightarrow>
-  pt_walk a (heap s(p \<mapsto> v)) rt = pt_walk a (heap s) rt"
-  apply (rule ext)
-  apply (subst pt_walk_pt_trace_upd')
-   apply (clarsimp simp: mmu_layout_def kernel_data_area_def ptable_footprint_def)
-  by fastforce 
+  by (clarsimp simp: mmu_layout_def dest!: root_map_rootsD)
 
 
 
@@ -39,25 +31,9 @@ lemma mmu_layout_ptable_comp':
   "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s \<rbrakk> \<Longrightarrow> 
         ptable_comp (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s) = {}"
   apply (simp add: ptable_comp_def)
-  apply (subgoal_tac "root s \<in> root_log s")
+  apply (subgoal_tac "root s \<in> roots s")
    apply (simp add: mmu_layout_pt_walk')
-  by (simp add: mmu_layout_def)
-
-
-
-
-lemma mmu_layout_upd':
-  "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s \<rbrakk> \<Longrightarrow> mmu_layout (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>)"
-  apply (clarsimp simp: mmu_layout_def)
-  apply (subgoal_tac "p \<notin> kernel_data_area s")
-   prefer 2
-   apply blast
-  apply (simp add: kernel_data_upd kernel_mapping_upd)
-  apply (clarsimp simp: user_mappings_def)
-  apply (subst (asm) pt_table_lift_trace_upd)
-   apply (simp add: kernel_data_area_def ptable_footprint_def)
-  apply simp
-  done
+  by (clarsimp simp: mmu_layout_def rootsI)
 
 
 lemma global_mappings_decode_mmu:
@@ -65,7 +41,7 @@ lemma global_mappings_decode_mmu:
          \<exists>p perm. decode_pde (the ((heap s) 
           (root s r+ (vaddr_pd_index (addr_val va) << 2)))) =  SectionPDE p perm"
   apply (clarsimp simp: kernel_safe_def vas_mapped_by_global_mappings_def
-  global_mappings_of_all_processes_def global_mappings_def  mmu_layout_def )
+  global_mappings_of_all_processes_def global_mappings_def  mmu_layout_def dest!: root_map_rootsD)
   apply (drule_tac x = "root s" in bspec)
    apply clarsimp
   apply (drule_tac x = "x" in spec)
@@ -79,7 +55,7 @@ lemma global_high_ptable:
   apply (frule_tac va = "Addr vp" in global_mappings_decode_mmu ; clarsimp )
   apply (clarsimp simp: ptable_trace'_def Let_def)
   apply (clarsimp simp: mmu_layout_def kernel_safe_def vas_mapped_by_global_mappings_def
-  vas_of_current_state_mapped_to_global_mappings_of_all_processes_def)
+  vas_of_current_state_mapped_to_global_mappings_of_all_processes_def dest!: root_map_rootsD)
   apply (subgoal_tac "xa = root s r+ (vaddr_pd_index vp << 2)")
    apply (rule_tac x = "root s" in bexI)
     apply (clarsimp simp: pd_idx_offset_def)
@@ -124,8 +100,8 @@ lemma  kernel_safe_region_ptable_trace'' [simp]:
   apply (clarsimp simp:  mmu_layout_def ptable_trace'_def kernel_safe_def Let_def
       vas_mapped_by_global_mappings_def 
         vas_of_current_state_mapped_to_global_mappings_of_all_processes_def 
-        pd_idx_offset_def)   
-done
+        pd_idx_offset_def dest!: root_map_rootsD)
+  done
 
 
 
@@ -172,7 +148,7 @@ lemma kernel_exec2:
     vas_of_current_state_mapped_to_global_mappings_of_all_processes_def)
     apply (rule_tac x = "root s" in bexI)
      apply force
-    apply (clarsimp simp: mmu_layout_def)
+    apply (clarsimp simp: mmu_layout_def dest!: root_map_rootsD)
    prefer 2
    apply (rule pt_table_lift_trace_upd')
    apply clarsimp
@@ -201,19 +177,15 @@ lemma kernel_exec2:
   apply (drule_tac x = r in spec)
   apply (drule_tac x = a in spec)
   apply clarsimp
-  apply (subgoal_tac "r \<in> root_log s")
   apply (drule_tac x = va in spec)
-  apply (erule conjE)
   apply (erule disjE, simp)
   apply (subgoal_tac "pt_walk a (heap s(Addr (vp - global_offset) \<mapsto> v)) r va = 
                                      pt_walk a (heap s) r va")
    prefer 2
    apply (frule_tac p = "Addr (vp - global_offset)" and rt = "r" and a = a  and  v = v in mmu_layout_pt_walk' ;
       simp add: mmu_layout_def)
-   apply force
+   apply (force dest!: root_map_rootsD)
   by (clarsimp simp: root_log_def)
 
 end
-
-
 

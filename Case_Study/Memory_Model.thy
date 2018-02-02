@@ -1,16 +1,12 @@
 theory Memory_Model
-                  
 imports RT_Log
-        
-
 begin               
 
-
-consts kernel_window_lower_bound   :: "32 word"
-consts  kernel_window_upper_bound  :: "32 word"
-consts global_offset               :: "32 word"
-consts ker_phy_lower_bound         :: "paddr"
-consts ker_phy_upper_bound         :: "paddr"
+consts kernel_window_lower_bound :: "32 word"
+consts kernel_window_upper_bound :: "32 word"
+consts global_offset             :: "32 word"
+consts ker_phy_lower_bound       :: "paddr"
+consts ker_phy_upper_bound       :: "paddr"
 
 
 definition
@@ -62,7 +58,7 @@ where
 definition
   global_mappings_of_all_processes :: "p_state  \<Rightarrow> bool"
 where
-  "global_mappings_of_all_processes s  \<equiv> \<forall>rt\<in> root_log s. global_mappings (heap s) rt"
+  "global_mappings_of_all_processes s  \<equiv> \<forall>rt\<in>roots s. global_mappings (heap s) rt"
 
 
 
@@ -71,7 +67,7 @@ definition
 where
   "vas_of_current_state_mapped_to_global_mappings_of_all_processes s = 
          {va\<in>vas_mapped_by_global_mappings (root s). 
-    ptable_trace' (heap s) (root s)va \<subseteq> \<Union>(high_ptable ` root_log s)}"
+    ptable_trace' (heap s) (root s) va \<subseteq> \<Union>(high_ptable ` roots s)}"
 
 
 definition                   
@@ -82,21 +78,20 @@ where
 
 
 lemma global_mappings_ptable_lift' [simp]:
-  "\<exists>rt. root s = rt \<and> mode s = Kernel \<and>  rt \<in> root_log s \<and>   global_mappings_of_all_processes s  \<Longrightarrow>
+  "\<exists>rt. root s = rt \<and> mode s = Kernel \<and>  rt \<in> roots s \<and>   global_mappings_of_all_processes s  \<Longrightarrow>
         \<forall>va\<in>kernel_safe s.  ptable_lift' (heap s) (root s) va = Some (Addr (addr_val va) r- global_offset)"
   by (clarsimp simp:  global_mappings_of_all_processes_def kernel_safe_def vas_mapped_by_global_mappings_def global_mappings_def
     vas_of_current_state_mapped_to_global_mappings_of_all_processes_def ) 
 
 lemma global_mappings_ptable_lift_m:
-  "\<lbrakk>\<exists>rt. root s = rt \<and> rt  \<in> root_log s;
+  "\<lbrakk>\<exists>rt. root s = rt \<and> rt  \<in> roots s;
                         global_mappings_of_all_processes s;  va \<in> kernel_safe s\<rbrakk> \<Longrightarrow>
       ptable_lift_m (heap s) (root s) Kernel va = Some (Addr (addr_val va) r- global_offset) "
   by (clarsimp simp:  global_mappings_of_all_processes_def kernel_safe_def vas_mapped_by_global_mappings_def global_mappings_def)
 
 
 lemma global_mappings_ptable_decode_heap_pde:
-  "\<lbrakk>root s \<in> root_log s;
-                        global_mappings_of_all_processes s ; va \<in> kernel_safe s\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>root s \<in> roots s; global_mappings_of_all_processes s ; va \<in> kernel_safe s\<rbrakk> \<Longrightarrow> 
          \<exists>p perm. decode_heap_pde' (heap s) (root s r+ (vaddr_pd_index (addr_val va) << 2)) =  Some (SectionPDE p perm)"
   apply (clarsimp simp: kernel_safe_def vas_mapped_by_global_mappings_def global_mappings_of_all_processes_def pd_idx_offset_def get_pde'_def global_mappings_def)
   apply force
@@ -116,7 +111,7 @@ abbreviation
 
 lemma non_overlapping_tables_def:
   "non_overlapping_tables s \<equiv> 
-  \<forall>rt rt'. rt \<in> root_log s \<and> rt' \<in> root_log s \<and> rt \<noteq> rt' \<longrightarrow>
+  \<forall>rt rt'. rt \<in> roots s \<and> rt' \<in> roots s \<and> rt \<noteq> rt' \<longrightarrow>
       ptable_footprint s rt \<inter> ptable_footprint s rt' = {}"
   by (auto simp: non_overlapping_defined_page_tables_def ptable_footprint_def)
 
@@ -124,23 +119,22 @@ lemma non_overlapping_tables_def:
 definition
   "root_log_area = set root_log_fp"
 *)
-definition
-  "kernel_data_area s \<equiv> \<Union>((ptable_footprint s) `root_log s) \<union>  root_map_area "
-
-(*
-abbreviation
-  "kernel_data_area s \<equiv> \<Union> set (kernel_data s)"
-*)
 
 definition
-  "user_mappings s \<equiv> \<forall>rt \<in> root_log s. \<forall>va pa. ptable_lift_m (heap s) rt User va = Some pa \<longrightarrow> pa \<notin> kernel_phy_mem"
+  "kernel_data s \<equiv> map (ptable_footprint s) (root_log s) @ [root_map_area]"
+
+definition
+  "kernel_data_area s \<equiv> \<Union>set (kernel_data s)"
+
+definition
+  "user_mappings s \<equiv> \<forall>rt \<in> roots s. \<forall>va pa. ptable_lift_m (heap s) rt User va = Some pa \<longrightarrow> pa \<notin> kernel_phy_mem"
 
 fun non_overlapping where
   "non_overlapping [] = True" |
   "non_overlapping (x#xs) = ((x \<inter> \<Union>set xs = {}) \<and> non_overlapping xs)"
 
 definition 
- "page_tables s  \<equiv> non_overlapping [kernel_data_area s] \<and> user_mappings s \<and> kernel_data_area s \<subseteq> kernel_phy_mem"
+ "page_tables s  \<equiv> non_overlapping (kernel_data s) \<and> user_mappings s \<and> kernel_data_area s \<subseteq> kernel_phy_mem"
 
 
 (* MMU *)
@@ -150,8 +144,7 @@ definition
 where
   "mmu_layout s \<equiv>  
   kernel_data_area s \<subseteq> kernel_phy_mem \<and>
-  non_overlapping [kernel_data_area s] \<and>
-  root s \<in> root_log s \<and>
+  non_overlapping (kernel_data s) \<and>
   root_map s (root s) = Some (asid s) \<and>
   global_mappings_of_all_processes s \<and> 
   user_mappings s \<and>
@@ -164,44 +157,38 @@ lemma non_overlapping_append[simp]:
 lemma non_overlapping_map:
   "\<lbrakk> non_overlapping (map f xs); x \<in> set xs; y \<in> set xs; x \<noteq> y\<rbrakk> \<Longrightarrow> f x \<inter> f y = {}"
   by (induct xs) auto
-(*
-lemma non_overlapping_tables_from_kernel_data:
-  "non_overlapping [kernel_data_area s] \<Longrightarrow> non_overlapping_tables s"
-  apply (induct rule: non_overlapping.induct)
-   apply simp
-  prefer 2
-   apply (clarsimp simp: non_overlapping_tables_def kernel_data_area_def non_overlapping_map )
-   (* need simp lemmas *)
- *) 
-
 
 (*  kernel_safe_region preservation *)
 definition
   "k_phy_ad vp = Addr vp r- global_offset"
 
-lemma kernel_safe_region'_upd:
-  "Addr vp \<in> kernel_safe s \<Longrightarrow> 
-  kernel_safe (s \<lparr>p_state.heap := heap s (k_phy_ad vp \<mapsto> v)\<rparr>) = kernel_safe s"  
-  oops (* something like this one would be nice to have and show in the paper, but not strictly necessary *)
 
-
-
-lemma mmu_layout_pt_walk:
-  "\<lbrakk> mmu_layout s; p \<notin> kernel_phy_mem; rt \<in> root_log s \<rbrakk> \<Longrightarrow>
+lemma mmu_layout_pt_walk':
+  "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s; rt \<in> roots s \<rbrakk> \<Longrightarrow>
   pt_walk a (heap s(p \<mapsto> v)) rt = pt_walk a (heap s) rt"
   apply (rule ext)
   apply (subst pt_walk_pt_trace_upd')
-   apply (clarsimp simp: mmu_layout_def kernel_data_area_def ptable_footprint_def)
-   apply fastforce
+   apply (clarsimp simp: mmu_layout_def kernel_data_def kernel_data_area_def ptable_footprint_def roots_def)
   apply simp
   done
+
+lemma mmu_layout_pt_walk:
+  "\<lbrakk> mmu_layout s; p \<notin> kernel_phy_mem; rt \<in> roots s \<rbrakk> \<Longrightarrow>
+  pt_walk a (heap s(p \<mapsto> v)) rt = pt_walk a (heap s) rt"
+  apply (rule mmu_layout_pt_walk'; assumption?)
+  apply (auto simp: mmu_layout_def)
+  done
+
+lemma rootsI:
+  "root_map s r \<noteq> None \<Longrightarrow> r \<in> roots s"
+  by (simp add: roots_def')
 
 lemma mmu_layout_ptable_comp:
   "\<lbrakk> mmu_layout s; p \<notin> kernel_phy_mem \<rbrakk> \<Longrightarrow> ptable_comp (asid s) (heap s) (heap s(p \<mapsto> v)) (root s) (root s) = {}"
   apply (simp add: ptable_comp_def)
-  apply (subgoal_tac "root s \<in> root_log s")
+  apply (subgoal_tac "root s \<in> roots s")
    apply (simp add: mmu_layout_pt_walk)
-  apply (simp add: mmu_layout_def)
+  apply (clarsimp simp: mmu_layout_def intro!: rootsI)
   done
 
 lemma ptable_footprint_upd:
@@ -209,47 +196,52 @@ lemma ptable_footprint_upd:
    ptable_footprint (s\<lparr>p_state.heap := p_state.heap s(p \<mapsto> v)\<rparr>) rt = ptable_footprint s rt"
   by (simp add: ptable_footprint_def pt_trace_upd)
 
-lemma ptable_footprint_upd_roots[simp]:
-  "p \<notin> kernel_data_area s \<Longrightarrow> 
-   ptable_footprint (s\<lparr>p_state.heap := p_state.heap s(p \<mapsto> v)\<rparr>) ` (root_log s) = ptable_footprint s ` (root_log s)"
-  by (rule set_eqI) (clarsimp simp: kernel_data_area_def image_iff ptable_footprint_upd)
-
-
-lemma root_log_upd[simp]:
-  "p \<notin> kernel_data_area s \<Longrightarrow> root_log (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = root_log s"
-  apply (clarsimp simp: kernel_data_area_def root_log_def)
-  (* using root_set_not_elem by auto  *)
-  sorry
- 
+lemma root_set_upd[simp]:
+  "p \<notin> kernel_data_area s \<Longrightarrow> root_set (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = root_set s"  
+  by (clarsimp simp: kernel_data_area_def kernel_data_def root_set_not_elem[symmetric])
 
 lemma root_set_upd'[simp]:
   "p \<notin> root_map_area \<Longrightarrow> root_set (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = root_set s"
   using root_set_not_elem by auto
 
-lemma root_set_upd[simp]:
-  "p \<notin> kernel_data_area s \<Longrightarrow> root_set (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = root_set s"  
-  by (clarsimp simp: kernel_data_area_def)
-
 lemma root_map_upd[simp]:
   "p \<notin> kernel_data_area s \<Longrightarrow> root_map (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = root_map s"
   by (clarsimp simp: kernel_data_area_def root_map_def)
-
 
 lemma root_map_upd'[simp]:
   "p \<notin> root_map_area \<Longrightarrow> root_map (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = root_map s"
   by (clarsimp simp: kernel_data_area_def root_map_def)
 
+lemma roots_upd[simp]:
+  "p \<notin> kernel_data_area s \<Longrightarrow> roots (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = roots s"
+  by (clarsimp simp: kernel_data_area_def roots_def')
+
+lemma roots_upd'[simp]:
+  "p \<notin> root_map_area \<Longrightarrow> roots (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = roots s"
+  by (clarsimp simp: kernel_data_area_def roots_def')
+
+lemma ptable_footprint_upd_roots[simp]:
+  "p \<notin> kernel_data_area s \<Longrightarrow> 
+   ptable_footprint (s\<lparr>p_state.heap := p_state.heap s(p \<mapsto> v)\<rparr>) ` (roots s) = ptable_footprint s ` (roots s)"
+  by (rule set_eqI) (clarsimp simp: kernel_data_def kernel_data_area_def image_iff ptable_footprint_upd roots_def)
+
+lemma root_log_upd[simp]:
+  "p \<notin> kernel_data_area s \<Longrightarrow> root_log (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = root_log s"
+  by (clarsimp simp: kernel_data_area_def root_log_def)
+ 
 lemma kernel_data_upd:
+  "p \<notin> kernel_data_area s \<Longrightarrow> kernel_data (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = kernel_data s"
+  by (clarsimp simp: kernel_data_def kernel_data_area_def ptable_footprint_upd) 
+
+lemma kernel_data_area_upd:
   "p \<notin> kernel_data_area s \<Longrightarrow> kernel_data_area (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) = kernel_data_area s"
-  apply (clarsimp simp: kernel_data_area_def ptable_footprint_upd root_log_def
-   root_map_def map_of_set_def root_set_def) 
-  sorry
+  by (clarsimp simp: kernel_data_area_def kernel_data_upd) 
 
 lemma kernel_mapping_upd:
   "p \<notin> kernel_data_area s \<Longrightarrow> 
   global_mappings_of_all_processes (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>) =
       global_mappings_of_all_processes s"
-  apply (clarsimp simp: kernel_data_area_def global_mappings_of_all_processes_def)
+  apply (clarsimp simp: kernel_data_area_def kernel_data_def global_mappings_of_all_processes_def roots_def)
   apply safe
    apply (clarsimp simp: ptable_footprint_def)
    apply (clarsimp simp:global_mappings_def)
@@ -290,20 +282,23 @@ lemma kernel_mapping_upd:
   by clarsimp
 
 
-
-lemma mmu_layout_upd:
-  "\<lbrakk> mmu_layout s; p \<notin> kernel_phy_mem \<rbrakk> \<Longrightarrow> mmu_layout (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>)"
+lemma mmu_layout_upd':
+  "\<lbrakk> mmu_layout s; p \<notin> kernel_data_area s \<rbrakk> \<Longrightarrow> mmu_layout (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>)"
   apply (clarsimp simp: mmu_layout_def)
   apply (subgoal_tac "p \<notin> kernel_data_area s")
    prefer 2
    apply blast
-  apply (simp add: kernel_data_upd kernel_mapping_upd)
-  apply (clarsimp simp: user_mappings_def)
+  apply (simp add: kernel_data_upd kernel_data_area_upd kernel_mapping_upd)
+  apply (clarsimp simp: user_mappings_def) 
   apply (subst (asm) pt_table_lift_trace_upd)
-   apply (simp add: kernel_data_area_def ptable_footprint_def)
+   apply (simp add: kernel_data_def kernel_data_area_def ptable_footprint_def roots_def)
   apply simp
   done
 
-
+lemma mmu_layout_upd:
+  "\<lbrakk> mmu_layout s; p \<notin> kernel_phy_mem \<rbrakk> \<Longrightarrow> mmu_layout (s\<lparr>p_state.heap := heap s(p \<mapsto> v)\<rparr>)"
+  apply (rule mmu_layout_upd', assumption)
+  apply (auto simp: mmu_layout_def)
+  done
 
 end

@@ -63,7 +63,7 @@ lemma kernel_date_area_heap_eq:
   assumes "heap s = heap s'"
   shows "kernel_data_area s = kernel_data_area s'"
   using assms
-  by (simp add: kernel_data_area_def ptable_footprint_heap_eq[OF assms] root_log_def
+  by (simp add: kernel_data_area_def kernel_data_def ptable_footprint_heap_eq[OF assms] root_log_def
     root_map_def map_of_set_def root_set_def)
 
 interpretation kernel_date_area: heap_only kernel_data_area
@@ -72,7 +72,7 @@ interpretation kernel_date_area: heap_only kernel_data_area
 lemma non_overlapping_tables_heap_eq:
   assumes "heap s = heap s'"
   shows "non_overlapping_tables s = non_overlapping_tables s'"
-  by (simp add: non_overlapping_tables_def root_log_heap_eq[OF assms] ptable_footprint_heap_eq[OF assms])
+  by (simp add: non_overlapping_tables_def root_log_heap_eq[OF assms] ptable_footprint_heap_eq[OF assms] roots_def)
 
 interpretation overl: heap_only non_overlapping_tables
   by unfold_locales (rule non_overlapping_tables_heap_eq)
@@ -80,7 +80,7 @@ interpretation overl: heap_only non_overlapping_tables
 lemma user_mappings_heap_eq:
   assumes "heap s = heap s'"
   shows "user_mappings s = user_mappings s'"
-  using assms by (simp add: user_mappings_def root_log_heap_eq[OF assms])
+  using assms by (simp add: user_mappings_def root_log_heap_eq[OF assms] roots_def)
 
 interpretation user_mappings: heap_only user_mappings
   by unfold_locales (rule user_mappings_heap_eq)
@@ -88,7 +88,7 @@ interpretation user_mappings: heap_only user_mappings
 lemma kernel_mappings_heap_eq:
   assumes "heap s = heap s'"
   shows "global_mappings_of_all_processes s = global_mappings_of_all_processes s'"
-  using assms by (simp add: global_mappings_of_all_processes_def root_log_heap_eq[OF assms])
+  using assms by (simp add: global_mappings_of_all_processes_def root_log_heap_eq[OF assms] roots_def)
 
 interpretation kernel_mappings: heap_only global_mappings_of_all_processes
   by unfold_locales (rule kernel_mappings_heap_eq)
@@ -102,10 +102,11 @@ lemma ptable_comp_asid:
 
 
 lemma asids_consistentD:
-  "\<lbrakk> asids_consistent {} s; root_map s (Addr r) = Some a ; Addr r \<in> root_log s ; a \<noteq> asid s \<rbrakk> \<Longrightarrow>
-              (ptable_snapshot s) a v \<noteq> Incon \<and> ((ptable_snapshot s) a v = Miss \<or> 
-                                 (ptable_snapshot s) a v = Hit (pt_walk a (heap s) (Addr r) v) )"
-  by (clarsimp simp: asids_consistent_def ran_def) 
+  "\<lbrakk> asids_consistent {} s; root_map s (Addr r) = Some a; a \<noteq> asid s \<rbrakk> \<Longrightarrow>
+     ptable_snapshot s a v \<noteq> Incon \<and> ((ptable_snapshot s) a v = Miss \<or> 
+                          (ptable_snapshot s) a v = Hit (pt_walk a (heap s) (Addr r) v) )"
+  apply (clarsimp simp: asids_consistent_def)
+  by (metis lookup_type.distinct(1) lookup_type.distinct(5))
   
 
 (*
@@ -311,22 +312,7 @@ lemma asid_rewrite:
                      is'
                       (heap s) (Addr r) 0,
                    mode := User\<rparr>)"
-  apply (clarsimp simp: asids_consistent_def)
-  apply (rule conjI)
-   apply (clarsimp simp: snapshot_update_current'2_def snapshot_update_current2_def)
-   apply (rule conjI)
-    apply (clarsimp simp: ran_def)
-   apply (clarsimp simp: ran_def)
-
-  apply (subgoal_tac "aa \<noteq> 0")
-   apply (subgoal_tac "snapshot_update_current'2 pt is' (heap s) (Addr r) 0 aa v =
-                         pt aa v  ")
-    apply (simp only:)
-    apply (drule_tac x = ra in spec)
-    apply (drule_tac x = aa in spec)
-    apply clarsimp
-    apply (clarsimp simp: snapshot_update_current'2_def snapshot_update_current2_def)
-  by  (clarsimp simp: ran_def)
+  by (clarsimp simp: asids_consistent_def snapshot_update_current'2_def snapshot_update_current2_def ran_def)
 
 lemma asid_rewrite2:
   "\<lbrakk>asids_consistent {} 
@@ -341,44 +327,20 @@ lemma asid_rewrite2:
                      is'
                       (heap s) (root s) 0,
                    mode := User\<rparr>)"
+  by (clarsimp simp: asids_consistent_def snapshot_update_current'2_def snapshot_update_current2_def ran_def)
+
+lemma asids_consistent_def2:
+  "asids_consistent S s = 
+  (\<forall>r a. root_map s r = Some a \<longrightarrow> a \<notin> S \<union> {asid s} \<longrightarrow> 
+  (\<forall>v. ptable_snapshot s a v \<noteq> Incon \<and> (ptable_snapshot s a v = Miss \<or> ptable_snapshot s a v = Hit (pt_walk a (heap s) r v))))"
   apply (clarsimp simp: asids_consistent_def)
-  apply (rule conjI)
-   apply (clarsimp simp: snapshot_update_current'2_def snapshot_update_current2_def)
-   apply (rule conjI ; clarsimp simp: ran_def)
+  by (metis lookup_type.distinct(1) lookup_type.distinct(5))
 
-
-
-  apply clarsimp
-  apply (clarsimp simp: snapshot_update_current'2_def snapshot_update_current2_def)
-  apply (rule conjI)
-   apply (clarsimp simp: ran_def)
-   apply (rule conjI)
-    apply (clarsimp simp: ran_def)
-   apply (clarsimp simp: ran_def)
-   apply (drule_tac x = r in spec)
-   apply (drule_tac x = a in spec)
-   apply clarsimp
-   apply (drule_tac x = v in spec, simp)
-  apply clarsimp
-  apply (rule conjI)
-   apply clarsimp
-   apply (rule conjI)
-    apply (clarsimp simp: ran_def)
-   apply clarsimp
-   apply (drule_tac x = r in spec)
-   apply (drule_tac x = a in spec)
-   apply clarsimp
-   apply (drule_tac x = v in spec, simp)
-  apply clarsimp
-  apply (drule_tac x = r in spec)
-  apply (drule_tac x = a in spec)
-  apply clarsimp
-  by (drule_tac x = v in spec, simp)
-
+find_theorems non_overlapping
 
 lemma new_context_switch:
   "\<Turnstile> \<lbrace> \<lambda>s. mmu_layout s \<and> asids_consistent {} s \<and> mode s = Kernel \<and>  \<I>\<C> s = {} \<and>
-            0 \<notin> ran (root_map s)  \<and> root_map s (Addr r) = Some a \<and> Addr r \<in> root_log s\<rbrace>
+            0 \<notin> ran (root_map s)  \<and> root_map s (Addr r) = Some a\<rbrace>
             UpdateASID 0 ;; UpdateTTBR0 (Const r) ;; UpdateASID a ;; SetMode User
       \<lbrace>\<lambda>s. mmu_layout s \<and> \<I>\<C> s = {} \<and> mode s = User \<and> asids_consistent {} s \<rbrace>"
   apply vcgm
@@ -386,15 +348,15 @@ lemma new_context_switch:
    prefer 2
    apply (clarsimp simp: ran_def)
   apply (rule conjI)
-   apply (clarsimp simp: mmu_layout_def)  
+   apply (clarsimp simp: mmu_layout_def kernel_data_def)
   apply (rule conjI)
    apply (clarsimp simp: \<I>\<C>_def)
    apply (rule conjI)
     apply (clarsimp simp: incon_load_incon_def snapshot_update_current'2_def snapshot_update_current2_def)
     apply (rule conjI)
      apply clarsimp
-     apply (clarsimp simp: asids_consistent_def)
-    apply (clarsimp simp: asids_consistent_def)
+     apply (clarsimp simp: asids_consistent_def2)
+    apply (clarsimp simp: asids_consistent_def2)
    apply (clarsimp simp: incon_load2_def snapshot_update_current'2_def snapshot_update_current2_def split: if_split_asm)
    apply (rule conjI)
     apply clarsimp
@@ -406,7 +368,7 @@ lemma new_context_switch:
      apply (clarsimp simp: ran_def partial_inj_def)
      apply force
     apply (clarsimp simp:)
-    apply (clarsimp simp: asids_consistent_def)
+    apply (clarsimp simp: asids_consistent_def2)
     apply (drule_tac x = "Addr r" in spec)
     apply (drule_tac x = a in spec)
     apply clarsimp
@@ -416,7 +378,7 @@ lemma new_context_switch:
      apply clarsimp
     apply clarsimp
    apply (clarsimp simp:) 
-   apply (clarsimp simp: asids_consistent_def)
+   apply (clarsimp simp: asids_consistent_def2)
    apply (drule_tac x = "Addr r" in spec)
    apply (drule_tac x = a in spec)
    apply clarsimp
@@ -433,11 +395,11 @@ lemma new_context_switch:
    apply clarsimp
    apply (subgoal_tac "incon_load_incon (ptable_snapshot s) a (heap s)  = {}")
     prefer 2
-    apply (clarsimp simp: incon_load_incon_def asids_consistent_def)
+    apply (clarsimp simp: incon_load_incon_def asids_consistent_def2)
    apply clarsimp
    apply (subgoal_tac "incon_load2 (ptable_snapshot s) a (heap s) (Addr r) = {}")
     prefer 2
-    apply (clarsimp simp: incon_load2_def asids_consistent_def)
+    apply (clarsimp simp: incon_load2_def asids_consistent_def2)
     apply (drule_tac x = "Addr r" in spec)
     apply (drule_tac x = a in spec , simp)
     apply (drule_tac x = x in spec)
@@ -448,7 +410,7 @@ lemma new_context_switch:
      apply clarsimp
     prefer 2
     apply simp
-   apply (clarsimp simp: asids_consistent_def)
+   apply (clarsimp simp: asids_consistent_def2)
    apply (rule conjI)
     apply (clarsimp simp: snapshot_update_current'2_def snapshot_update_current2_def)
     apply (rule conjI)
@@ -526,7 +488,7 @@ lemma new_context_switch:
     prefer 2
     apply simp
    prefer 2 apply simp
-  apply (clarsimp simp: asids_consistent_def)
+  apply (clarsimp simp: asids_consistent_def2)
   apply (rule conjI)
    apply (clarsimp simp: snapshot_update_current'2_def snapshot_update_current2_def)
   apply (case_tac "aa \<noteq> asid s")

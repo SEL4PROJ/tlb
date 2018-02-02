@@ -25,7 +25,7 @@ where
 lemma mmu_layout_no_phy:
   "\<lbrakk> mmu_layout s; mode s = User;  ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some p \<rbrakk> 
            \<Longrightarrow> p \<notin> kernel_phy_mem"
-  by (clarsimp simp: mmu_layout_def user_mappings_def)
+  by (clarsimp simp: mmu_layout_def user_mappings_def dest!: root_map_rootsD)
 
 
 
