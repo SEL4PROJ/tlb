@@ -47,27 +47,20 @@ lemma remap_section_current_asid:
    apply (clarsimp simp: mmu_layout_def)
   apply (clarsimp simp: k_phy_ad_def ptable_footprint_def)
   apply (subgoal_tac "non_overlapping_tables s")
-   apply (clarsimp simp: non_overlapping_tables_def)
-   apply (drule_tac x = r in spec, drule_tac x = "root s" in spec)
-   apply (subgoal_tac "r \<in> roots s \<and> root s \<in> roots s")
-    apply (clarsimp simp: ptable_footprint_def) apply blast
-   apply rule
-    prefer 2
-    apply (clarsimp simp: roots_def mmu_layout_def root_log_def)
-    apply (rule_tac x = "addr_val (root s)" in image_eqI, simp, force)
-   apply (clarsimp simp: roots_def mmu_layout_def root_log_def)
-   apply (rule_tac x = "addr_val r" in image_eqI, simp, force)
-  sorry
- 
-
-lemma
-  "mmu_layout s \<Longrightarrow> non_overlapping_tables s"
-  apply (clarsimp simp: mmu_layout_def kernel_data_def)
+   prefer 2
+   apply (clarsimp simp: mmu_layout_def non_overlapping_tables_from_kernel_data )
   apply (clarsimp simp: non_overlapping_tables_def)
-  apply (clarsimp simp: roots_def)
-  apply (clarsimp simp: ptable_footprint_def root_log_def)
-
-  sorry
+  apply (drule_tac x = r in spec, drule_tac x = "root s" in spec)
+  apply (subgoal_tac "r \<in> roots s \<and> root s \<in> roots s")
+   apply (clarsimp simp: ptable_footprint_def) apply blast
+  apply rule
+   prefer 2
+   apply (clarsimp simp: roots_def mmu_layout_def root_log_def)
+   apply (rule_tac x = "addr_val (root s)" in image_eqI, simp, force)
+  apply (clarsimp simp: roots_def mmu_layout_def root_log_def)
+  apply (rule_tac x = "addr_val r" in image_eqI, simp, force)
+  done
+ 
 
 
 

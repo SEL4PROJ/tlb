@@ -137,6 +137,20 @@ definition
  "page_tables s  \<equiv> non_overlapping (kernel_data s) \<and> user_mappings s \<and> kernel_data_area s \<subseteq> kernel_phy_mem"
 
 
+lemma non_overlapping_append[simp]:
+  "non_overlapping (xs @ ys) = (non_overlapping xs \<and> non_overlapping ys \<and> \<Union>set xs \<inter> \<Union>set ys = {})"
+  by (induct xs) auto
+
+lemma non_overlapping_map:
+  "\<lbrakk> non_overlapping (map f xs); x \<in> set xs; y \<in> set xs; x \<noteq> y\<rbrakk> \<Longrightarrow> f x \<inter> f y = {}"
+  by (induct xs) auto
+
+lemma non_overlapping_tables_from_kernel_data:
+  "non_overlapping (kernel_data s) \<Longrightarrow> non_overlapping_tables s"
+  by (clarsimp simp: non_overlapping_tables_def kernel_data_def non_overlapping_map roots_def)
+
+
+
 (* MMU *)
 
 definition
@@ -150,13 +164,6 @@ where
   user_mappings s \<and>
   partial_inj (root_map s)"
 
-lemma non_overlapping_append[simp]:
-  "non_overlapping (xs @ ys) = (non_overlapping xs \<and> non_overlapping ys \<and> \<Union>set xs \<inter> \<Union>set ys = {})"
-  by (induct xs) auto
-
-lemma non_overlapping_map:
-  "\<lbrakk> non_overlapping (map f xs); x \<in> set xs; y \<in> set xs; x \<noteq> y\<rbrakk> \<Longrightarrow> f x \<inter> f y = {}"
-  by (induct xs) auto
 
 (*  kernel_safe_region preservation *)
 definition
