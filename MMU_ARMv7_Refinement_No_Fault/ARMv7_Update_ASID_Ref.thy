@@ -259,17 +259,6 @@ lemma update_ASID_sat_no_flt_abs_refine':
    apply (clarsimp simp: saturated_no_flt_def)
   apply (rule conjI)
    apply (clarsimp simp: no_faults_def)
-(*
-  apply (thin_tac " t' = t\<lparr>ASID := a, tlb_incon_set' := tlb_incon_set' t
-                         \<lparr>incon_set := incon_set (tlb_incon_set' t) \<union> incon_load (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s),
-                            tlb_snapshot :=
-                              snapshot_update_new' (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s))
-                               ({a} \<times> UNIV \<inter> incon_set (tlb_incon_set' t) \<union> incon_load (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s))
-                               (miss_to_hit (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s))
-                               (consistent_hit (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s)) (MEM s) (TTBR0 s) a\<rparr>\<rparr>")
-*)
-(* relationship between snapshot_of_tlb and tlb_snapshot *)
-
   apply (rule conjI)
    apply (rule allI)
    apply (rule impI)
@@ -346,15 +335,15 @@ lemma update_ASID_sat_no_flt_abs_refine':
 
 
 lemma update_ASID_sat_no_flt_abs_refine'2:
-  "\<lbrakk> update_ASID a (s::tlb_incon_state') = ((), s') ;  update_ASID a (t::tlb_incon_state'2) = ((), t'); 
-        tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
-                       tlb_rel_abs'2 (typ_incon' s') (typ_incon'2 t')"
-  apply (clarsimp simp: update_ASID_tlb_incon_state'2_ext_def update_ASID_tlb_incon_state'_ext_def Let_def)
-  apply (frule tlb_rel'_absD2)
+  "\<lbrakk> update_ASID a (s::tlb_incon_state') = ((), s') ;  update_ASID a (t::tlb_incon_state) = ((), t'); 
+        refine_rel (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                       refine_rel (typ_incon' s') (typ_incon'2 t')"
+  apply (clarsimp simp: update_ASID_tlb_incon_state_ext_def update_ASID_tlb_incon_state'_ext_def Let_def)
+  apply (frule refine_relD)
   apply (case_tac "a = ASID s")
     (* when we update to the same ASID *)
    apply clarsimp
-   apply (clarsimp simp: tlb_rel_abs'2_def)
+   apply (clarsimp simp: refine_rel_def)
    apply (rule conjI)
     apply (clarsimp simp: state.defs)
    apply (rule conjI)
@@ -368,7 +357,7 @@ lemma update_ASID_sat_no_flt_abs_refine'2:
     apply force
    apply (clarsimp simp: snapshot_update_current'_def snapshot_update_current_def snapshot_update_current'2_def snapshot_update_current2_def 
       incon_load_incon_def incon_load2_def incon_load_def split: if_split_asm)
-  apply (clarsimp simp: tlb_rel_abs'2_def)
+  apply (clarsimp simp: refine_rel_def)
   apply (rule conjI)
    apply (clarsimp simp: state.defs)
   apply (rule conjI)
@@ -391,7 +380,7 @@ lemma update_ASID_sat_no_flt_abs_refine'2:
   apply (drule_tac x = v in spec, simp)
   apply (drule_tac x = a in spec , simp)
   apply (drule_tac x = v in spec, simp)
-  apply (case_tac "tlb_snapshot2 (tlb_incon_set'2 t) a v")
+  apply (case_tac "snapshot (tlb_incon_set t) a v")
     apply (clarsimp simp: less_eq_lookup_type)
    apply clarsimp
   apply (clarsimp simp: less_eq_lookup_type)

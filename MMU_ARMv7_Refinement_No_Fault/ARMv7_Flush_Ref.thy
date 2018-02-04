@@ -56,11 +56,11 @@ lemma flush_tlb_sat_no_flt_abs_refine':
 
 
 lemma flush_tlb_abs_abs_refine':
-  "\<lbrakk>Flush_TLB (s::tlb_incon_state') = ((), s') ;  Flush_TLB (t::tlb_incon_state'2) = ((), t'); 
-             tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
-                     tlb_rel_abs'2 (typ_incon' s') (typ_incon'2 t')"
+  "\<lbrakk>Flush_TLB (s::tlb_incon_state') = ((), s') ;  Flush_TLB (t::tlb_incon_state) = ((), t'); 
+             refine_rel (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                     refine_rel (typ_incon' s') (typ_incon'2 t')"
   apply (clarsimp simp: Flush_TLB_tlb_incon_state'_ext_def
-                        Flush_TLB_tlb_incon_state'2_ext_def tlb_rel_abs'2_def)
+                        Flush_TLB_tlb_incon_state_ext_def refine_rel_def)
   by (cases s, cases t, clarsimp simp: state.defs)
  
 
@@ -254,9 +254,9 @@ lemma flush_asid_sat_no_flt_abs_refine':
 
 
 lemma flush_asid_abs_abs_refine':
-  "\<lbrakk>Flush_ASID a (s::tlb_incon_state') = ((), s') ;  Flush_ASID a (t::tlb_incon_state'2) = ((), t'); 
-             tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> tlb_rel_abs'2 (typ_incon' s') (typ_incon'2 t')"
-  apply (clarsimp simp: Flush_ASID_tlb_incon_state'2_ext_def Flush_ASID_tlb_incon_state'_ext_def tlb_rel_abs'2_def 
+  "\<lbrakk>Flush_ASID a (s::tlb_incon_state') = ((), s') ;  Flush_ASID a (t::tlb_incon_state) = ((), t'); 
+             refine_rel (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> refine_rel (typ_incon' s') (typ_incon'2 t')"
+  apply (clarsimp simp: Flush_ASID_tlb_incon_state_ext_def Flush_ASID_tlb_incon_state'_ext_def refine_rel_def 
       split: if_split_asm)
   by (cases s, cases t, clarsimp simp: state.defs)+
 
@@ -480,10 +480,10 @@ lemma flush_varange_sat_no_flt_abs_refine':
 
 
 lemma flush_varange_abs_abs_refine':
-  "\<lbrakk>Flush_varange vset (s::tlb_incon_state') = ((), s') ;  Flush_varange vset (t::tlb_incon_state'2) = ((), t'); 
-             tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> tlb_rel_abs'2 (typ_incon' s') (typ_incon'2 t')"
-  apply (clarsimp simp: Flush_varange_tlb_incon_state'2_ext_def 
-      Flush_varange_tlb_incon_state'_ext_def tlb_rel_abs'2_def split: if_split_asm)
+  "\<lbrakk>Flush_varange vset (s::tlb_incon_state') = ((), s') ;  Flush_varange vset (t::tlb_incon_state) = ((), t'); 
+             refine_rel (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> refine_rel (typ_incon' s') (typ_incon'2 t')"
+  apply (clarsimp simp: Flush_varange_tlb_incon_state_ext_def 
+      Flush_varange_tlb_incon_state'_ext_def refine_rel_def split: if_split_asm)
   apply (rule conjI)
    apply (cases s, cases t, clarsimp simp: state.defs)
   by force
@@ -766,10 +766,10 @@ lemma flush_ASIDvarange_sat_no_flt_abs_refine':
 
 
 lemma flush_ASIDvarange_abs_abs_refine':
-  "\<lbrakk>Flush_ASIDvarange a vset (s::tlb_incon_state') = ((), s') ; Flush_ASIDvarange a vset (t::tlb_incon_state'2) = ((), t'); 
-             tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> tlb_rel_abs'2 (typ_incon' s') (typ_incon'2 t')"
-  apply (clarsimp simp: Flush_ASIDvarange_tlb_incon_state'2_ext_def 
-      Flush_ASIDvarange_tlb_incon_state'_ext_def tlb_rel_abs'2_def split: if_split_asm)
+  "\<lbrakk>Flush_ASIDvarange a vset (s::tlb_incon_state') = ((), s') ; Flush_ASIDvarange a vset (t::tlb_incon_state) = ((), t'); 
+             refine_rel (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> refine_rel (typ_incon' s') (typ_incon'2 t')"
+  apply (clarsimp simp: Flush_ASIDvarange_tlb_incon_state_ext_def 
+      Flush_ASIDvarange_tlb_incon_state'_ext_def refine_rel_def split: if_split_asm)
    apply (rule conjI)
     apply (cases s, cases t, clarsimp simp: state.defs)
    prefer 2

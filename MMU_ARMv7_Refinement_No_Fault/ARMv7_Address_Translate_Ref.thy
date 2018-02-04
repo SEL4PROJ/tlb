@@ -112,16 +112,16 @@ end
 
 
 
-instantiation tlb_incon_state'2_ext :: (type) mmu    
+instantiation tlb_incon_state_ext :: (type) mmu    
 begin
 definition   
- "(mmu_translate v :: ('a tlb_incon_state'2_scheme \<Rightarrow> _))
+ "(mmu_translate v :: ('a tlb_incon_state_scheme \<Rightarrow> _))
   = do {
      mem   <- read_state MEM;
      asid  <- read_state ASID;
      ttbr0 <- read_state TTBR0;
-     tlb_incon_set <- read_state tlb_incon_set'2;
-     if  v \<in> incon_set2 tlb_incon_set
+     tlb_incon_set <- read_state tlb_incon_set;
+     if  v \<in> iset tlb_incon_set
        then raise'exception (IMPLEMENTATION_DEFINED ''set on fire'')
        else let entry = pt_walk asid mem ttbr0 v in 
              if is_fault entry
@@ -571,9 +571,9 @@ lemma mmu_translate_sat_no_flt_abs_refine:
 
 
 lemma tlb_rel_abs_consistent'2 [simp]:
-  "\<lbrakk>va \<notin> incon_set2 (tlb_incon_set'2 t) ;   tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk>  \<Longrightarrow> 
+  "\<lbrakk>va \<notin> iset (tlb_incon_set t) ;   refine_rel (typ_incon' s) (typ_incon'2 t) \<rbrakk>  \<Longrightarrow> 
            (ASID s, va) \<notin> incon_set (tlb_incon_set' s) " 
-  apply (clarsimp simp: tlb_rel_abs'2_def)
+  apply (clarsimp simp: refine_rel_def)
   apply (subgoal_tac "ASID s = ASID t" , simp)
    apply blast
   apply (cases s , cases t , clarsimp simp: state.defs)
@@ -582,32 +582,32 @@ lemma tlb_rel_abs_consistent'2 [simp]:
 
 lemma mmu_translate_sat_abs_refine_pa'2:
   "\<lbrakk> mmu_translate va s = (pa, s');  mmu_translate va t = (pa', t') ;
-           va \<notin> incon_set2 (tlb_incon_set'2 t) ; tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+           va \<notin> iset (tlb_incon_set t) ; refine_rel (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
                                           pa = pa'"
   apply (frule_tac s = s in tlb_rel_abs_consistent'2 , simp)
-  apply (frule tlb_rel'_absD2 , clarsimp)
-  apply (clarsimp simp: mmu_translate_tlb_incon_state'_ext_def  mmu_translate_tlb_incon_state'2_ext_def Let_def split_def)
+  apply (frule refine_relD , clarsimp)
+  apply (clarsimp simp: mmu_translate_tlb_incon_state'_ext_def  mmu_translate_tlb_incon_state_ext_def Let_def split_def)
   by (clarsimp simp: raise'exception_def split:if_split_asm)
   
 lemma mmu_translate_abs_rel'2:
-  "\<lbrakk>  mmu_translate va t = (pa', t')\<rbrakk>  \<Longrightarrow> (t'::'a tlb_incon_state'2_scheme) = t\<lparr>exception := exception t'\<rparr>"
-  by (clarsimp simp: mmu_translate_tlb_incon_state'2_ext_def Let_def raise'exception_def split: if_split_asm)
+  "\<lbrakk>  mmu_translate va t = (pa', t')\<rbrakk>  \<Longrightarrow> (t'::'a tlb_incon_state_scheme) = t\<lparr>exception := exception t'\<rparr>"
+  by (clarsimp simp: mmu_translate_tlb_incon_state_ext_def Let_def raise'exception_def split: if_split_asm)
 
 
 lemma mmu_translate_sat_abs_refine'2:
    "\<lbrakk> mmu_translate va s = (pa, s');  mmu_translate va t = (pa', t') ;
-           va \<notin> incon_set2 (tlb_incon_set'2 t) ; tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
-            tlb_rel_abs'2  (typ_incon' s') (typ_incon'2 t')"
+           va \<notin> iset (tlb_incon_set t) ; refine_rel (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+            refine_rel  (typ_incon' s') (typ_incon'2 t')"
   apply (frule_tac s = s in tlb_rel_abs_consistent'2 ; clarsimp )
-  apply (frule tlb_rel'_absD2 , clarsimp)
-  apply (clarsimp simp: tlb_rel_abs'2_def)
+  apply (frule refine_relD , clarsimp)
+  apply (clarsimp simp: refine_rel_def)
   apply (subgoal_tac "s' = s\<lparr>exception := exception s'\<rparr> \<and> t' = t\<lparr>exception := exception t'\<rparr>")
    apply (subgoal_tac "exception t' = exception s'")
     apply (cases t, cases t, cases s, cases s', clarsimp simp: state.defs saturated_no_flt_def)
    prefer 2
    apply (frule mmu_translate_abs_rel', clarsimp)
    apply (frule mmu_translate_abs_rel'2, clarsimp)
-  apply (clarsimp simp: mmu_translate_tlb_incon_state'_ext_def mmu_translate_tlb_incon_state'2_ext_def Let_def)
+  apply (clarsimp simp: mmu_translate_tlb_incon_state'_ext_def mmu_translate_tlb_incon_state_ext_def Let_def)
   apply (subgoal_tac "(ASID s, va) \<notin> incon_set (tlb_incon_set' s)")
    apply (clarsimp simp: Let_def raise'exception_def split: if_split_asm)
   by force
@@ -615,19 +615,19 @@ lemma mmu_translate_sat_abs_refine'2:
 
 lemma mmu_translate_sat_abs_refine_consistency2:
    "\<lbrakk> mmu_translate va s = (pa, s');  mmu_translate va t = (pa', t') ;
-           va \<notin> incon_set2 (tlb_incon_set'2 t) ; tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
-                                  va \<notin> incon_set2 (tlb_incon_set'2 t')"
-  apply (frule tlb_rel'_absD2 , clarsimp)
-  apply (clarsimp simp: mmu_translate_tlb_incon_state'_ext_def mmu_translate_tlb_incon_state'2_ext_def Let_def)
+           va \<notin> iset (tlb_incon_set t) ; refine_rel (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                                  va \<notin> iset (tlb_incon_set t')"
+  apply (frule refine_relD , clarsimp)
+  apply (clarsimp simp: mmu_translate_tlb_incon_state'_ext_def mmu_translate_tlb_incon_state_ext_def Let_def)
   apply (subgoal_tac "(ASID s, va) \<notin> incon_set (tlb_incon_set' s)")
    apply (clarsimp simp: Let_def raise'exception_def split: if_split_asm)
   by force
 
 lemma mmu_translate_sat_no_flt_abs_refine2:
   "\<lbrakk> mmu_translate va s = (pa, s');  mmu_translate va t = (pa', t') ;
-           va \<notin> incon_set2 (tlb_incon_set'2 t) ; tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
-                              pa = pa' \<and>  tlb_rel_abs'2  (typ_incon' s') (typ_incon'2 t')  \<and> 
-                              va \<notin> incon_set2 (tlb_incon_set'2 t')"
+           va \<notin> iset (tlb_incon_set t) ; refine_rel (typ_incon' s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                              pa = pa' \<and>  refine_rel  (typ_incon' s') (typ_incon'2 t')  \<and> 
+                              va \<notin> iset (tlb_incon_set t')"
   by (clarsimp simp: mmu_translate_sat_abs_refine_pa'2 mmu_translate_sat_abs_refine'2
       mmu_translate_sat_abs_refine_consistency2)
 

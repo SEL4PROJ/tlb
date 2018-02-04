@@ -122,6 +122,16 @@ where
 
 
 
+definition
+  ptable_comp' :: "asid \<Rightarrow> heap \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> paddr \<Rightarrow> vaddr set"
+where
+  "ptable_comp' a hp1 hp2 rt1 rt2 \<equiv>
+               {va. (\<exists>e1 e2. pt_walk a hp1 rt1 va = e1 \<and> pt_walk a hp2 rt2 va = e2  \<and> \<not>is_fault e1 \<and> \<not>is_fault e2 \<and> e1 \<noteq> e2 )  \<or>
+                   (\<exists>e1 e2. pt_walk a hp1 rt1 va = e1 \<and> pt_walk a hp2 rt2 va = e2  \<and> \<not>is_fault e1 \<and> is_fault e2 )}"
+
+
+
+
 instantiation tlb_incon_state'_ext :: (type) mem_op    
 begin
 
@@ -165,18 +175,18 @@ end
 
 
 
-instantiation tlb_incon_state'2_ext :: (type) mem_op    
+instantiation tlb_incon_state_ext :: (type) mem_op    
 begin
 
 definition   
-  "(mmu_read  :: (vaddr  \<Rightarrow>  'a tlb_incon_state'2_scheme \<Rightarrow> bool list \<times>  'a tlb_incon_state'2_scheme))
+  "(mmu_read  :: (vaddr  \<Rightarrow>  'a tlb_incon_state_scheme \<Rightarrow> bool list \<times>  'a tlb_incon_state_scheme))
    \<equiv>  \<lambda>va. do {
                      pa  \<leftarrow> mmu_translate va;
                      mem1 pa
   }"
 
 definition
- "(mmu_read_size  :: (vaddr \<times> nat \<Rightarrow>  'a tlb_incon_state'2_scheme \<Rightarrow> bool list \<times>  'a tlb_incon_state'2_scheme))
+ "(mmu_read_size  :: (vaddr \<times> nat \<Rightarrow>  'a tlb_incon_state_scheme \<Rightarrow> bool list \<times>  'a tlb_incon_state_scheme))
   \<equiv> \<lambda>(va,size). do {
                      pa  \<leftarrow> mmu_translate va;
                      mem_read1 (pa , size)
@@ -184,22 +194,22 @@ definition
 
 
 definition   
-  "(mmu_write_size  :: (bool list \<times> vaddr \<times> nat \<Rightarrow> 'a tlb_incon_state'2_scheme \<Rightarrow> unit \<times> 'a tlb_incon_state'2_scheme))
+  "(mmu_write_size  :: (bool list \<times> vaddr \<times> nat \<Rightarrow> 'a tlb_incon_state_scheme \<Rightarrow> unit \<times> 'a tlb_incon_state_scheme))
   \<equiv> \<lambda>(value, vaddr, size). do {
       ttbr0 <- read_state TTBR0;
       asid  <- read_state ASID;
       mem   <- read_state MEM; 
       paddr <- mmu_translate vaddr;
-      tlb_incon_set <- read_state tlb_incon_set'2; 
+      tlb_incon_set <- read_state tlb_incon_set; 
       exception <- read_state exception;
       if exception = NoException 
         then  do {
                    write'mem1 (value, paddr, size);
                    mem' <- read_state MEM;
-                   let ptable_asid_va = ptable_comp asid mem mem' ttbr0 ttbr0;
-                   let incon_set_n = incon_set2 tlb_incon_set \<union> snd ` ptable_asid_va;
-                   let tlb_incon_set = tlb_incon_set \<lparr>incon_set2 := incon_set_n \<rparr>;
-                   update_state (\<lambda>s. s\<lparr> tlb_incon_set'2 :=  tlb_incon_set \<rparr>)
+                   let ptable_asid_va = ptable_comp' asid mem mem' ttbr0 ttbr0;
+                   let incon_set_n = iset tlb_incon_set \<union>  ptable_asid_va;
+                   let tlb_incon_set = tlb_incon_set \<lparr>iset := incon_set_n \<rparr>;
+                   update_state (\<lambda>s. s\<lparr> tlb_incon_set :=  tlb_incon_set \<rparr>)
             }
         else return ()
    }"
@@ -2136,28 +2146,17 @@ lemma mmu_incon_eq_ASID_TTBR0_MEM:
   by (clarsimp simp:raise'exception_def Let_def split: if_split_asm)+
 
 
-lemma  to_do:
-  "{v. (ASID b, v) \<in> ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)}
-           \<subseteq> snd ` ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)"
-  apply (clarsimp simp: subset_image_iff)
-  apply (rule_tac x = "ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)" in exI)
-  apply (rule conjI)
-   apply simp
-  apply (clarsimp simp: ptable_comp_def)
-  apply (clarsimp simp: snd_eq_Range)
-  by auto
-  
 
 lemma write_refinement_incon_incon_only2:        
-  "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s');  va \<notin> incon_set2 (tlb_incon_set'2 t);
-          tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t) ;  mmu_write_size (val,va, sz) t = ((), t')  \<rbrakk> \<Longrightarrow> 
-                                 tlb_rel_abs'2 (typ_incon' s') (typ_incon'2 t')"  
+  "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s');  va \<notin> iset (tlb_incon_set t);
+          refine_rel (typ_incon' s) (typ_incon'2 t) ;  mmu_write_size (val,va, sz) t = ((), t')  \<rbrakk> \<Longrightarrow> 
+                                 refine_rel (typ_incon' s') (typ_incon'2 t')"  
   apply (frule_tac s = s in tlb_rel_abs_consistent'2 ; clarsimp )
-  apply (frule_tac tlb_rel'_absD2 , clarsimp)
-  apply (clarsimp simp: mmu_write_size_tlb_incon_state'2_ext_def  mmu_write_size_tlb_incon_state'_ext_def)
+  apply (frule_tac refine_relD , clarsimp)
+  apply (clarsimp simp: mmu_write_size_tlb_incon_state_ext_def  mmu_write_size_tlb_incon_state'_ext_def)
   apply (cases "mmu_translate va s" ,cases "mmu_translate va t" , clarsimp)
   apply (frule_tac t=t and pa'= aa and t' = ba in   mmu_translate_sat_no_flt_abs_refine2)  apply clarsimp+
-  apply (clarsimp simp: tlb_rel_abs'2_def)
+  apply (clarsimp simp: refine_rel_def)
   apply (subgoal_tac "exception b = exception ba")
    prefer 2 apply (case_tac b , case_tac ba , clarsimp simp: state.defs)
   apply (clarsimp split: if_split_asm)
@@ -2168,45 +2167,29 @@ lemma write_refinement_incon_incon_only2:
   apply (rule conjI , clarsimp simp: state.defs)
   apply (subgoal_tac "MEM bb = MEM bc  \<and> MEM s = MEM b" , simp)
    apply (subgoal_tac "ASID s = ASID b \<and> TTBR0 s = TTBR0 b" , simp)
-
     prefer 2
-  using mmu_incon_eq_ASID_TTBR0_MEM apply blast
+  using mmu_incon_eq_ASID_TTBR0_MEM apply fastforce
    prefer 2
    apply (rule conjI)
     apply (clarsimp simp: state.defs)
   using mmu_incon_eq_ASID_TTBR0_MEM
-   apply blast
+   apply fastforce
   apply (rule conjI)
    apply clarsimp
    apply (subgoal_tac "ASID bb = ASID b" , simp)
-    apply (drule_tac x = a in spec)
-    apply (drule_tac x = a in spec)
-    apply clarsimp
-    apply (drule_tac x = v in spec)
-    apply (drule_tac x = v in spec)
-    apply rule  apply simp  
-    apply (erule disjE)
-     apply simp
-    apply (subgoal_tac "(a, v) \<notin> ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)", simp)
+    apply (drule_tac x = a in spec)+
+    apply (clarsimp, (drule_tac x = v in spec)+, rule, simp ,erule disjE, simp)
     apply (clarsimp simp: ptable_comp_def)
    apply (simp add: write'mem1_eq_ASID_TTBR0)
   apply (rule conjI)
    apply (subgoal_tac "ASID bb = ASID b" , simp)
    apply (simp add: write'mem1_eq_ASID_TTBR0)
-
   apply (subgoal_tac "ASID bb = ASID b" , simp)
-   apply (subgoal_tac 
-      "{v. (ASID b, v) \<in> incon_set (tlb_incon_set' b) }
-           \<subseteq> incon_set2 (tlb_incon_set'2 ba)")
-    apply (subgoal_tac "{v.  (ASID b, v) \<in> ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)}
-           \<subseteq> snd ` ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)")
-     apply force
-    prefer 2
-    apply clarsimp
-   apply (clarsimp simp: to_do)
+   apply (clarsimp simp: ptable_comp'_def ptable_comp_def)
+   apply force
+  apply (clarsimp simp: ptable_comp'_def ptable_comp_def)
   apply (simp add: write'mem1_eq_ASID_TTBR0)
   done
-
 
 (* refinement for read theroems *)
 
@@ -2347,10 +2330,10 @@ lemma  mem_read1_consistent_tlb_rel_abs:
 
 lemma  mem_read1_consistent_tlb_rel_abs2:
   "\<lbrakk>mem_read1 (a, sz) s = (val, s'); mem_read1 (a, sz) t = (val, t'); 
-             va \<notin> incon_set2 (tlb_incon_set'2 t); tlb_rel_abs'2 (typ_incon' s) (typ_incon'2 t)\<rbrakk>
-              \<Longrightarrow>  va \<notin> incon_set2 (tlb_incon_set'2 t') \<and>  tlb_rel_abs'2 (typ_incon' s') (typ_incon'2 t')"
+             va \<notin> iset (tlb_incon_set t); refine_rel (typ_incon' s) (typ_incon'2 t)\<rbrakk>
+              \<Longrightarrow>  va \<notin> iset (tlb_incon_set t') \<and>  refine_rel (typ_incon' s') (typ_incon'2 t')"
   apply (rule conjI)
-   apply (subgoal_tac "ASID t = ASID t' \<and> incon_set2 (tlb_incon_set'2 t) = incon_set2 (tlb_incon_set'2 t')")
+   apply (subgoal_tac "ASID t = ASID t' \<and> iset (tlb_incon_set t) = iset (tlb_incon_set t')")
     apply clarsimp
    apply (drule mem1_read_exception)
    apply (drule mem1_read_exception)
@@ -2359,7 +2342,7 @@ lemma  mem_read1_consistent_tlb_rel_abs2:
   apply (subgoal_tac "exception s' =  exception t'")
    apply (drule mem1_read_exception)
    apply (drule mem1_read_exception)
-   apply (clarsimp simp: tlb_rel_abs'2_def)
+   apply (clarsimp simp: refine_rel_def)
    apply (rule conjI)
     apply (clarsimp simp: state.defs)
     apply (cases s', cases t')
@@ -2367,7 +2350,7 @@ lemma  mem_read1_consistent_tlb_rel_abs2:
    apply (rule conjI)
     apply (cases s', cases t')
     apply clarsimp
-   apply (subgoal_tac "ASID t = ASID t' \<and> incon_set2 (tlb_incon_set'2 t) = incon_set2 (tlb_incon_set'2 t')")
+   apply (subgoal_tac "ASID t = ASID t' \<and> iset (tlb_incon_set t) = iset (tlb_incon_set t')")
     apply clarsimp
    apply (cases t, cases t')
    apply clarsimp
@@ -2380,7 +2363,7 @@ lemma  mem_read1_consistent_tlb_rel_abs2:
     subgoal   
     by (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
    apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
-  apply (clarsimp simp: tlb_rel_abs'2_def state.defs)
+  apply (clarsimp simp: refine_rel_def state.defs)
   done
 
 

@@ -671,9 +671,6 @@ where
                   (ucast  (the (mem (pa + 3))) ::32 word)) "
 
 
-(* This definition currently yields page faults for Small Pages and Super Sections
-    N = 0, only TTBR0 is used for translation, translation table size is 16B *)
-(* update here for the number of bits instead if shifting *)
 
 definition
  pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
@@ -693,28 +690,6 @@ where
                  |  Some (SmallPagePTE p1 a) \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word)
                                             (Some  ((word_extract 31 12 (addr_val p1)):: 20 word)) 0)"
 
-thm pt_walk_def
-(*definition
-  pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
-where
-  "pt_walk asid heap ttbr0 v \<equiv>
-      case get_pde heap ttbr0 v
-       of None                 \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
-       | Some InvalidPDE       \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
-       | Some ReservedPDE      \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
-       | Some (SectionPDE p a) \<Rightarrow>
-          EntrySection asid (ucast (addr_val v >> 20) :: 12 word)
-                            (Some (ucast (addr_val p >> 20) :: 12 word))  0
-       | Some (PageTablePDE p) \<Rightarrow>
-               (case get_pte heap p v
-                 of None                     \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
-                 |  Some InvalidPTE          \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
-                 |  Some (SmallPagePTE p1 a) \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word)
-                                            (Some (ucast (addr_val p1 >> 12) :: 20 word)) 0)"
-*)
-
-(* nice definition but it looses information about the entrysmall none case
-    incomplete too (may be) *)
 definition
   pt_walk1 :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
 where
@@ -726,13 +701,6 @@ where
                                 else EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) (Some (ucast (addr_val p >> 12) :: 20 word)) 0"
 
 
-(*definition
-  pt_lookup :: "8 word \<Rightarrow> mem_type \<Rightarrow> ttbr0 \<Rightarrow> va \<Rightarrow> 32 word option"
-where
-  "pt_lookup asid mem ttbr0 v \<equiv>
-    let entry = pt_walk asid mem ttbr0 v
-      in if is_fault entry then None else Some (va_to_pa v entry)"
-*)
 
 
 
