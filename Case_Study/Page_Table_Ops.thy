@@ -23,7 +23,7 @@ lemma remap_section_current_asid:
    apply (clarsimp simp: asids_consistent_def safe_set_def con_set_def)
   apply (subgoal_tac " ptable_lift' (heap s) (root s) (Addr vp) = Some (Addr vp r-  global_offset)" , clarsimp)
    prefer 2
-   apply (clarsimp simp: kerenl_region_offset')
+   apply (clarsimp simp: kernel_region_offset')
   apply (subgoal_tac "Addr (vp - global_offset) \<notin> root_map_area")
    prefer 2
    apply (subgoal_tac "root s \<in> set (root_log s)")
@@ -61,8 +61,6 @@ lemma remap_section_current_asid:
   apply (rule_tac x = "addr_val r" in image_eqI, simp, force)
   done
  
-
-
 
 lemma kernel_safe_incon_upd[simp]:
   "kernel_safe (incon_set_update f s) = kernel_safe s"

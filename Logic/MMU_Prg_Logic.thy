@@ -552,67 +552,6 @@ definition
   "incon_load_incon snp a m  \<equiv>  {v. snp a v = Incon}"
 
 
-(*
-definition 
-  incon_load :: "ptable_snapshot \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> incon_set"
-  where
-  "incon_load snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
-                            {v. \<exists>x. snp a v = Hit x \<and> x \<noteq> pt_walk a m rt v}"
-
-
-definition 
-  snapshot_update_current :: "incon_set \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> ptable_snapshot"
-where
-  "snapshot_update_current iset mem ttbr0  \<equiv> (\<lambda>x y. if (x,y) \<in>  iset then Incon else 
-                                                if (\<not>is_fault (pt_walk x mem ttbr0 y)) then  Hit (pt_walk x mem ttbr0 y) else Miss)"
-
-
-definition 
-  snapshot_update_current' :: "ptable_snapshot \<Rightarrow> incon_set \<Rightarrow>  heap \<Rightarrow> paddr \<Rightarrow> asid \<Rightarrow> ptable_snapshot"
-where
-  "snapshot_update_current' snp iset mem ttbr0 a \<equiv> snp (a := snapshot_update_current iset mem ttbr0 a)"
-
-
-
-definition
-  incon_for_snapshot :: "incon_set \<Rightarrow> ptable_snapshot \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> incon_set"
-  where
-  "incon_for_snapshot iset snp a hp rt =  ({a} \<times> UNIV) \<inter> iset \<union>  incon_load snp a hp rt"
-
-
-
-
-definition 
-  miss_to_hit :: "ptable_snapshot \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> paddr \<Rightarrow> incon_set"
- where
-  "miss_to_hit snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
-                              {v. snp a v = Miss \<and>  \<not>is_fault (pt_walk a m rt v)}"
-
-definition 
-  consistent_hit :: "ptable_snapshot\<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> paddr  \<Rightarrow> incon_set"
- where
-  "consistent_hit snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
-                                 {v. snp a v = Hit (pt_walk a m rt v)}"
-
-
-
-definition 
-  snapshot_update_new :: "(asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> 
-                          heap \<Rightarrow> paddr \<Rightarrow>  ptable_snapshot"
-where
-  "snapshot_update_new iset m_to_h h_to_h hp ttbr0 \<equiv> (\<lambda>x y. if (x,y) \<in>  iset then Incon 
-                                                     else if (x,y) \<in> m_to_h then Hit (pt_walk x hp ttbr0 y) 
-                                                     else if (x,y) \<in> h_to_h then Hit (pt_walk x hp ttbr0 y) 
-                                                     else Miss)"
-
-definition 
-  snapshot_update_new' :: "ptable_snapshot \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> (asid \<times> vaddr) set \<Rightarrow> 
-                              heap \<Rightarrow> paddr \<Rightarrow> asid \<Rightarrow> ptable_snapshot"
-where
-  "snapshot_update_new' snp iset m_to_h h_to_h hp ttbr0 a \<equiv> 
-                               snp (a := snapshot_update_new iset m_to_h h_to_h hp ttbr0 a)"
-*)
-
  
 
 fun

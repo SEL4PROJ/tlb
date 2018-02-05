@@ -95,8 +95,6 @@ lemma hoare_post_conj:
   by blast
 
 
-
-(* this is the main theorem *)
 lemma weak_pre_write':
   "\<Turnstile> \<lbrace> \<lambda>s. safe_set SM s \<and> (\<exists>vp v. aval lval s = Some vp \<and> aval rval s = Some v \<and> Addr vp \<in> SM \<and> 
      Q (s \<lparr>heap := heap s (the ( ptable_lift_m (heap s) (root s) (mode s) (Addr vp)) \<mapsto> v),

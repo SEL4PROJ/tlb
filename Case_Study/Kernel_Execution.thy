@@ -19,7 +19,7 @@ lemma root_map_rootsD:
   "root_map s r = Some a \<Longrightarrow> r \<in> roots s"
   by (simp add: roots_def')
 
-lemma kerenl_region_offset':
+lemma kernel_region_offset':
   " mmu_layout s \<and> mode s = Kernel   \<Longrightarrow>
         \<forall>va\<in>kernel_safe s.  ptable_lift' (heap s) (root s) va = 
       Some (Addr (addr_val va) r- global_offset)"
@@ -105,7 +105,7 @@ lemma  kernel_safe_region_ptable_trace'' [simp]:
 
 
 
-lemma kernel_exec2:
+lemma kernel_safe_assignemnt:
   "\<Turnstile> \<lbrace>\<lambda>s. mmu_layout s \<and> mode s = Kernel \<and> safe_set (kernel_safe s) s \<and>
            asids_consistent {} s \<and>
            aval lval s = Some vp \<and> aval rval s = Some v \<and> 
@@ -118,65 +118,40 @@ lemma kernel_exec2:
    apply (clarsimp simp: asids_consistent_def safe_set_def con_set_def)
   apply (subgoal_tac " ptable_lift' (heap s) (root s) (Addr vp) = Some (Addr vp r-  global_offset)")
    prefer 2
-   apply (clarsimp simp: kerenl_region_offset')
-  apply clarsimp
-  apply (clarsimp simp: k_phy_ad_def)
-  apply (clarsimp simp: mmu_layout_ptable_comp')
-  apply (clarsimp simp: mmu_layout_upd')
+   apply (clarsimp simp: kernel_region_offset')
+  apply (clarsimp simp: k_phy_ad_def mmu_layout_ptable_comp' mmu_layout_upd')
   apply (rule conjI)
    apply (subgoal_tac  "kernel_safe (s\<lparr> heap := heap s(Addr (vp - global_offset) \<mapsto> v)\<rparr>) =
                         kernel_safe s")
-    apply clarsimp
-    apply (clarsimp simp: safe_set_def)
-    apply (rule conjI)
-     prefer 2
-     apply (clarsimp simp: con_set_def)
-    apply (clarsimp simp: safe_memory_def)
-    apply (drule_tac x = va in bspec) apply clarsimp
-    apply (clarsimp)
+    apply (clarsimp simp: safe_set_def safe_memory_def con_set_def)
+    apply (drule_tac x = va in bspec; clarsimp)
     apply (rule_tac x = "p" in exI)
-    apply (subgoal_tac "ptable_lift' (heap s) (root s) va = ptable_lift' (heap s(Addr (vp -
-     global_offset) \<mapsto> v)) (root s) va")
-     apply (rule conjI)
-      apply clarsimp
+    apply (subgoal_tac "ptable_lift' (heap s) (root s) va = 
+                      ptable_lift' (heap s(Addr (vp -  global_offset) \<mapsto> v)) (root s) va")
+     apply (rule conjI , clarsimp)
      apply (subgoal_tac  "ptrace_set (kernel_safe s) (s\<lparr> heap := heap s(Addr (vp - global_offset) \<mapsto> v)\<rparr>) =
-      ptrace_set (kernel_safe s) s")
-      apply (clarsimp simp: )
-    prefer 3
-    apply (frule_tac vp = vp in global_high_ptable' , clarsimp , clarsimp)
-    apply (clarsimp simp: kernel_safe_def
-    vas_of_current_state_mapped_to_global_mappings_of_all_processes_def)
-    apply (rule_tac x = "root s" in bexI)
-     apply force
-    apply (clarsimp simp: mmu_layout_def dest!: root_map_rootsD)
-   prefer 2
-   apply (rule pt_table_lift_trace_upd')
-   apply clarsimp
-  apply (clarsimp simp: ptrace_set_def)
-  apply safe
-   apply (rule_tac a = xa in UN_I , clarsimp)
-   prefer 2
-   apply (rule_tac a = xa in UN_I  , clarsimp)
+                           ptrace_set (kernel_safe s) s", clarsimp)
+     prefer 3
+     apply (frule_tac vp = vp in global_high_ptable' , clarsimp , clarsimp)
+     apply (clarsimp simp: kernel_safe_def  vas_of_current_state_mapped_to_global_mappings_of_all_processes_def)
+     apply (rule_tac x = "root s" in bexI, force)
+     apply (clarsimp simp: mmu_layout_def dest!: root_map_rootsD)
+    prefer 2 apply (rule pt_table_lift_trace_upd', clarsimp)
+   apply (clarsimp simp: ptrace_set_def)
+   apply safe
+    apply (rule_tac a = xa in UN_I , clarsimp)
+    prefer 2 apply (rule_tac a = xa in UN_I  , clarsimp)
+    apply (subgoal_tac "ptable_trace' (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) xa =
+                       ptable_trace' (heap s) (root s) xa", clarsimp)
+    prefer 2
+    apply (subgoal_tac "ptable_trace' (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) xa =
+                       ptable_trace' (heap s) (root s) xa" , clarsimp)
+    apply (rule pt_trace_upd, clarsimp)
    apply (subgoal_tac "ptable_trace' (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) xa =
-                       ptable_trace' (heap s) (root s) xa")
-    apply clarsimp
-   prefer 2
-   apply (subgoal_tac "ptable_trace' (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) xa =
-                       ptable_trace' (heap s) (root s) xa")
-    apply clarsimp
-   apply (rule pt_trace_upd)
-   apply clarsimp
-  apply (subgoal_tac "ptable_trace' (heap s(Addr (vp - global_offset) \<mapsto> v)) (root s) xa =
-                      ptable_trace' (heap s) (root s) xa")
-   apply clarsimp
-  apply (rule pt_trace_upd)
-  apply clarsimp
-
-
+                      ptable_trace' (heap s) (root s) xa" , clarsimp)
+   apply (rule pt_trace_upd, clarsimp)
   apply (clarsimp simp: asids_consistent_def)
-  apply (drule_tac x = r in spec)
-  apply (drule_tac x = a in spec)
-  apply clarsimp
+  apply (drule_tac x = r in spec, drule_tac x = a in spec, clarsimp)
   apply (drule_tac x = va in spec)
   apply (erule disjE, simp)
   apply (subgoal_tac "pt_walk a (heap s(Addr (vp - global_offset) \<mapsto> v)) r va = 

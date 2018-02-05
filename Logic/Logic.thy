@@ -110,8 +110,6 @@ where
                         il = incon_load_incon snp_cur a (heap s)  \<union> incon_load2 snp_cur a (heap s) (root s) ; 
                              mode s = Kernel\<rbrakk> \<Longrightarrow> 
                            (UpdateASID a , s) \<Rightarrow>  Some (s \<lparr>asid := a , incon_set :=  il , ptable_snapshot := snp_cur \<rparr>)"
-   (* 'let' gives this error:
-      "Conclusion of introduction rule must be an inductive predicate" *)
 |
   UpdateASIDFail:  "mode s = User \<Longrightarrow> (UpdateASID a , s) \<Rightarrow>  None"
 |
@@ -137,67 +135,6 @@ inductive_cases
   UpdateAE [elim!]:"(UpdateASID a , s) \<Rightarrow>  s'" and
   SetME [elim!]:   "(SetMode flg, s) \<Rightarrow>  s'" 
  
-
-
-(* first do it without the root_map *)
-
-(*
-
-definition "snp_incon_subset s \<equiv>  {(a,v). ptable_snapshot s a v = Incon }  \<subseteq>  incon_set s"
-(*
-
-lemma [simp]:
-  "\<lbrakk>(x1 ::= x2, s) \<Rightarrow> Some s' ; snp_incon_subset s\<rbrakk> \<Longrightarrow> snp_incon_subset s'"
-  apply (clarsimp simp: snp_incon_subset_def)
-  by force
-
-lemma [simp] :
-  "\<lbrakk>(Flush x, s) \<Rightarrow> Some s'; snp_incon_subset s\<rbrakk> \<Longrightarrow> snp_incon_subset s'"
-  apply (erule FlushE ; simp)
-  apply (induct x arbitrary: s s' ; clarsimp simp: snp_incon_subset_def split: if_split_asm)
-  by force+
-
-lemma [simp]:
-  "\<lbrakk>(UpdateTTBR0 x, s) \<Rightarrow> Some s'; snp_incon_subset s\<rbrakk> \<Longrightarrow> snp_incon_subset s'"
-  apply (clarsimp simp: snp_incon_subset_def)
-  by force
-
-lemma [simp]:
-  "\<lbrakk>(SetMode x, s) \<Rightarrow> Some s'; snp_incon_subset s\<rbrakk> \<Longrightarrow> snp_incon_subset s'"
-  apply (clarsimp simp: snp_incon_subset_def)
-  by force
-
-lemma  [simp]:
-  "\<lbrakk>(UpdateASID x, s) \<Rightarrow> Some s'; snp_incon_subset s\<rbrakk> \<Longrightarrow> snp_incon_subset s'"
-  apply (erule UpdateAE ; simp)
-  apply (clarsimp simp: snp_incon_subset_def incon_load_def snapshot_update_current'_def
-         snapshot_update_current_def snapshot_update_new'_def snapshot_update_new_def split: if_split_asm)
-  by force+
- 
-*)
-
-theorem snap_incon_subset_commnad_exec:
-  shows "(c,s) \<Rightarrow> s' \<Longrightarrow> snp_incon_subset s \<Longrightarrow> s' = Some s'' \<Longrightarrow> snp_incon_subset s''"
-proof (induct arbitrary: s'' rule: big_step_induct)
-next
-  case (Assign lval s1 vp rval v pp)
-  thus ?case by (force simp: snp_incon_subset_def)
-next
-  case SetMode
-  thus ?case by (force simp: snp_incon_subset_def)
-next
-  case UpdateTTBR0
-  thus ?case by (force simp: snp_incon_subset_def)
-next 
-  case UpdateASID
-  thus ?case by (force simp: snp_incon_subset_def incon_load_def snapshot_update_current'_def
-                             snapshot_update_current_def snapshot_update_new'_def snapshot_update_new_def split: if_split_asm)
-next 
-  case (Flush s f)
-  thus ?case by (induct f; clarsimp simp: snp_incon_subset_def split: if_split_asm ; force)
-qed auto
-
-*)
 
 
 
@@ -332,14 +269,6 @@ lemma set_mode_sound[vcg]:
   apply (clarsimp simp: hoare_valid_def)
   by auto
 
-(*
-lemma snap_incon_subset_hoare_rule:
- " \<Turnstile> \<lbrace>P\<rbrace> c \<lbrace>Q\<rbrace> \<Longrightarrow> \<Turnstile> \<lbrace>\<lambda>s. snp_incon_subset s \<and> P s\<rbrace> c \<lbrace>\<lambda>s. snp_incon_subset s \<and> Q s\<rbrace>"
-  apply (clarsimp simp: hoare_valid_def)
-  apply (erule_tac x = s in allE)
-  apply (erule_tac x = s' in allE)
-  by (clarsimp simp: snap_incon_subset_commnad_exec)
-*)
 
 definition
   restrict :: "vaddr set \<Rightarrow> (vaddr \<Rightarrow> lookup_type) \<Rightarrow> (vaddr \<Rightarrow> lookup_type)"
