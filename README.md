@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/SEL4PROJ/tlb.svg?branch=master)](https://travis-ci.org/SEL4PROJ/tlb)
+[![Build Status](https://travis-ci.org/SEL4PROJ/tlb.svg?branch=ITP18)](https://travis-ci.org/SEL4PROJ/tlb)
 
 This folder contains .thy files for the project
 
