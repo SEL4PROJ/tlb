@@ -23,7 +23,7 @@ Theorems referred in the paper are
 
 `kernel_safe_assignemnt:` Case\_Study/Kernel\_Execution.thy
 
-`context_switch_invariants:` Case\_Study/Mode\_Switch.thy
+`context_switch_invariants:` Case\_Study/Context\_Switch.thy
 
 
 For refinement of the TLB model, please see the folder `MMU_ARMv7_Refinement_No_Fault`

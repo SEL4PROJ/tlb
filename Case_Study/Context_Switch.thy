@@ -1,4 +1,4 @@
-theory Mode_Switch
+theory Context_Switch
                   
 imports Kernel_Execution
         
