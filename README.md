@@ -15,13 +15,13 @@ To check the proofs, run
 
 Theorems referred in the paper are
 
-`safe_set_preserved:` Logic/Safe_Set.thy
+`safe_set_preserved:` Logic/Safe\_Set.thy
 
-`weak_pre_write:` Logic/Safe_Set.thy
+`weak_pre_write:` Logic/Safe\_Set.thy
 
 `user_safe_assignment:` Case\_Study/User\_Execution.thy
 
-`kernel_safe_assignemnt:` Case\_Study/Kernel\_Execution.thy
+`kernel_safe_assignment:` Case\_Study/Kernel\_Execution.thy
 
 `context_switch_invariants:` Case\_Study/Context\_Switch.thy
 
