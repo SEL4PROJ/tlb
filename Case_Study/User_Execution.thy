@@ -30,7 +30,7 @@ lemma mmu_layout_no_phy:
 
 
 
-lemma kernel_safe_assignemnt:
+lemma user_safe_assignment:
   "\<Turnstile> \<lbrace> \<lambda>s. mmu_layout s \<and> mode s = User \<and> \<I>\<C> s = {} \<and>
            aval lval s = Some vp \<and> aval rval s = Some v \<and> 
          ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some p \<rbrace>

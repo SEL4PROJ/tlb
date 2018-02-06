@@ -105,7 +105,7 @@ lemma  kernel_safe_region_ptable_trace'' [simp]:
 
 
 
-lemma kernel_safe_assignemnt:
+lemma kernel_safe_assignment:
   "\<Turnstile> \<lbrace>\<lambda>s. mmu_layout s \<and> mode s = Kernel \<and> safe_set (kernel_safe s) s \<and>
            asids_consistent {} s \<and>
            aval lval s = Some vp \<and> aval rval s = Some v \<and> 
