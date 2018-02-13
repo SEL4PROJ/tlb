@@ -26,15 +26,15 @@ where
 
 (* Address Range of an Entry *)
 fun 
-  pde_entry_range :: "pde_entry \<Rightarrow> va set"
+  pde_entry_range :: "pde_entry \<Rightarrow> vaddr set"
 where
-  "pde_entry_range (EntryPDE a va pa f) =  {(ucast va::32 word) << 20 ..
+  "pde_entry_range (EntryPDE a va pa f) =  Addr ` {(ucast va::32 word) << 20 ..
                                                             ((ucast va::32 word) << 20) + (2^20 - 1)}" 
 
 
 (* Address Range of an entry with ASID tag *)
 definition 
-  pde_entry_range_asid_tags :: "pde_entry \<Rightarrow> (asid \<times> va) set"
+  pde_entry_range_asid_tags :: "pde_entry \<Rightarrow> (asid \<times> vaddr) set"
 where
   "pde_entry_range_asid_tags E \<equiv> image (\<lambda>v. (pde_entry_asid E , v)) (pde_entry_range E)"
  
@@ -43,7 +43,7 @@ where
 
 (* Set of all the entries covering a virtual address and an ASID *)
 definition 
-  pde_entry_set :: "pde_cache \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> (pde_entry set)"
+  pde_entry_set :: "pde_cache \<Rightarrow> asid \<Rightarrow> vaddr \<Rightarrow> (pde_entry set)"
 where
   "pde_entry_set t a v \<equiv> {E\<in>t. (a,v) : pde_entry_range_asid_tags E } "
 
@@ -51,7 +51,7 @@ where
 
 (* Lookup for a virtual address along with an ASID *)
 definition 
-  lookup_pde :: "pde_cache \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> lookup_pde_type" 
+  lookup_pde :: "pde_cache \<Rightarrow> asid \<Rightarrow> vaddr \<Rightarrow> lookup_pde_type" 
 where  
   "lookup_pde t a va \<equiv> if pde_entry_set t a va = {} then Miss_pde
                    else if \<exists>x. pde_entry_set t a va = {x} then Hit_pde (the_elem (pde_entry_set t a va)) 
