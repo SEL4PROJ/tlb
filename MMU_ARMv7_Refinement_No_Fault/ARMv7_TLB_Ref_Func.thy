@@ -146,8 +146,8 @@ lemma typ_incon_prim_parameter'2 [simp]:
 
 definition
   "consistent0 m asid ttbr0 tlb va \<equiv>
-     lookup tlb asid (addr_val va) = Hit (pt_walk asid m ttbr0 va) \<or>
-     lookup tlb asid (addr_val va) = Miss"
+     lookup tlb asid va = Hit (pt_walk asid m ttbr0 va) \<or>
+     lookup tlb asid va = Miss"
 
 
 abbreviation
@@ -162,7 +162,7 @@ definition
 definition 
    asid_va_incon :: "tlb \<Rightarrow> (asid \<times> vaddr) set"
 where                                                         
-  "asid_va_incon tlb  \<equiv>  {(asid, va). lookup tlb asid (addr_val va) = Incon}"
+  "asid_va_incon tlb  \<equiv>  {(asid, va). lookup tlb asid va = Incon}"
 
 
 definition
@@ -187,7 +187,7 @@ definition
    asid_va_hit_incon :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
 where                                                         
   "asid_va_hit_incon s  \<equiv>  {(asid, va). asid = ASID s \<and>  
-                            (\<exists>x. lookup (state.more s) asid (addr_val va) = Hit x \<and> x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) va ) }"
+                            (\<exists>x. lookup (state.more s) asid va = Hit x \<and> x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) va ) }"
 
 definition                              
    asid_va_incon_tlb_mem :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
@@ -199,7 +199,7 @@ where
 definition 
   snapshot_of_tlb :: "tlb \<Rightarrow>  asid \<Rightarrow> vaddr \<Rightarrow> lookup_type"
 where                                                                
-  "snapshot_of_tlb t \<equiv> (\<lambda> a v. lookup t a (addr_val v))"
+  "snapshot_of_tlb t \<equiv> (\<lambda> a v. lookup t a v)"
 
 
 definition 
@@ -234,8 +234,8 @@ declare trim_state_def [simp add]
 
 lemma consistent_not_Incon:
   "consistent0 m asid ttbr0 tlb va = 
-  (lookup tlb asid (addr_val va) \<noteq> Incon \<and> (\<forall>e. lookup tlb asid (addr_val va) = Hit e \<longrightarrow> e = pt_walk asid m ttbr0 va))"
-  by (cases "lookup tlb asid (addr_val va)"; simp add: consistent0_def)
+  (lookup tlb asid va \<noteq> Incon \<and> (\<forall>e. lookup tlb asid va = Hit e \<longrightarrow> e = pt_walk asid m ttbr0 va))"
+  by (cases "lookup tlb asid va"; simp add: consistent0_def)
 
 
 lemma tlb_relD:
@@ -248,7 +248,7 @@ lemma tlb_rel_consistent:
           consistent s va"
   apply (drule tlb_relD)
   apply clarsimp
-  apply (drule tlb_mono [of _ _ "ASID s" "(addr_val va)"])
+  apply (drule tlb_mono [of _ _ "ASID s" "va"])
   by (auto simp: consistent0_def less_eq_lookup_type typ_det_tlb_def state.defs)
 
 
@@ -263,7 +263,7 @@ lemma tlb_rel_sat_no_flt_consistent:
   "\<lbrakk> tlb_rel_sat_no_flt s t; consistent t va \<rbrakk> \<Longrightarrow> consistent s va"
   apply (drule  tlb_rel_no_flt_satD)
   apply clarsimp
-  apply (drule tlb_mono [of _ _ "ASID s" "(addr_val va)"])
+  apply (drule tlb_mono [of _ _ "ASID s" va])
   apply (auto simp: consistent0_def less_eq_lookup_type)
   done
 
@@ -309,26 +309,27 @@ lemma va_12_right [simp]:
   by word_bitwise
 
 lemma asid_entry_range [simp, intro!]:
-  "addr_val va \<in> entry_range (pt_walk asid m ttbr0 va)"
+  "va \<in> entry_range (pt_walk asid m ttbr0 va)"
   apply (clarsimp simp: entry_range_def pt_walk_def Let_def)
-  by ((((cases "get_pde m ttbr0 va" ; clarsimp) , case_tac a ; clarsimp) , 
-      case_tac "get_pte m x3 va" ; clarsimp) , case_tac a ; clarsimp)
-
-lemma asid_entry_range1 [simp, intro!]:
-  "va \<in> entry_range (pt_walk asid m ttbr0 (Addr va))"
-  apply (clarsimp simp: entry_range_def pt_walk_def Let_def)
-  by ((((cases "get_pde m ttbr0 (Addr va)" ; clarsimp) , case_tac a ; clarsimp) , 
-      case_tac "get_pte m x3 (Addr va)" ; clarsimp) , case_tac a ; clarsimp)
+  apply (cases "get_pde m ttbr0 va" ; clarsimp simp: image_iff)
+   apply (rule_tac x = "addr_val va" in bexI; clarsimp)
+  apply (case_tac a; clarsimp simp: image_iff)
+     apply (rule_tac x = "addr_val va" in bexI; clarsimp)+
+   apply (case_tac "get_pte m x3 va"; clarsimp simp: image_iff )
+    apply (rule_tac x = "addr_val va" in bexI; clarsimp)
+   apply (case_tac a; clarsimp simp: image_iff)
+  by (rule_tac x = "addr_val va" in bexI; clarsimp)+
+ 
 
 
 lemma lookup_refill:
-  "lookup tlb asid (addr_val va) = Miss \<Longrightarrow>
-   lookup (insert (pt_walk asid m ttbr va) tlb) asid (addr_val va) = Hit (pt_walk asid m ttbr va)"
+  "lookup tlb asid va = Miss \<Longrightarrow>
+   lookup (insert (pt_walk asid m ttbr va) tlb) asid va = Hit (pt_walk asid m ttbr va)"
    by (clarsimp simp: lookup_def entry_set_insert [where e="pt_walk asid m ttbr va"] split: if_split_asm)
 
 
 lemma consistent_insert [simp, intro!]:
-  "lookup tlb asid (addr_val va) = Miss \<Longrightarrow>
+  "lookup tlb asid va = Miss \<Longrightarrow>
   consistent0 m asid ttbr (insert (pt_walk asid m ttbr va) tlb) va"
   by (simp add: consistent0_def lookup_refill)
 
@@ -344,7 +345,8 @@ lemma lookup_incon_subset [simp]:
 
 
 lemma  lookup_saturated_no_flt_miss_is_fault:
-  "lookup (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (addr_val va) = Miss \<Longrightarrow>
+  "lookup (tlb_sat_no_flt_set s \<union> 
+     {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) va = Miss \<Longrightarrow>
     is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)  "
   apply (clarsimp simp: lookup_def entry_set_def entry_range_asid_tags_def split: if_split_asm)
   by force
@@ -360,7 +362,7 @@ lemma
 
 lemma
   "\<lbrakk>consistent (typ_sat_no_flt_tlb s) va ; 
-    lookup (tlb_sat_no_flt_set s) (ASID s) (addr_val va) = Hit x3 \<rbrakk> \<Longrightarrow>  x3 = pt_walk (ASID s) (MEM s) (TTBR0 s) va"
+    lookup (tlb_sat_no_flt_set s) (ASID s) va = Hit x3 \<rbrakk> \<Longrightarrow>  x3 = pt_walk (ASID s) (MEM s) (TTBR0 s) va"
   apply (clarsimp simp: consistent0_def )
 done
 

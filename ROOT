@@ -22,10 +22,9 @@ session PTABLE = Word_Lib +
 
 
 (* Collection of base theories that change rarely *)
-session L3_LIB = Word_Lib +
+session L3_LIB = PTABLE +
   theories
     "L3_Lib/L3_Lib"
-    "Page_Tables/PageTable_seL4"
 
 (* MMU_ARM *)
 session MMU_ARM = L3_LIB +
@@ -51,7 +50,7 @@ session MMU_CASE = ARM_REF +
     "Invalidation_Operations/Invalid_Ops"
 
 
-session LOGIC =  PTABLE +
+session LOGIC =  ARM_REF +
    theories
    "Logic/Safe_Set" 
 
