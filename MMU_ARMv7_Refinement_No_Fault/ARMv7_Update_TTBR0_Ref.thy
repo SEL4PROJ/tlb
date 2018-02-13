@@ -43,21 +43,21 @@ lemma  sat_no_fault_elem:
   by (clarsimp simp: saturated_no_flt_def  no_faults_def)
 
 lemma lookup_in_no_flt:
-  " lookup {e \<in> range (pt_walk a m r). \<not> is_fault e} a (addr_val v) = Hit (pt_walk a m r v) \<Longrightarrow>
+  " lookup {e \<in> range (pt_walk a m r). \<not> is_fault e} a (  v) = Hit (pt_walk a m r v) \<Longrightarrow>
      \<not>is_fault (pt_walk a m r v)"
   apply (drule lookup_in_tlb)
   by blast
 
 
 lemma saturated_no_flt_pt_walk:
-  "\<lbrakk> saturated_no_flt (typ_sat_no_flt_tlb s) ;  no_faults (tlb_sat_no_flt_set s); lookup (tlb_sat_no_flt_set s) (ASID s) (addr_val b) = Hit x; 
+  "\<lbrakk> saturated_no_flt (typ_sat_no_flt_tlb s) ;  no_faults (tlb_sat_no_flt_set s); lookup (tlb_sat_no_flt_set s) (ASID s) (  b) = Hit x; 
     is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) b)\<rbrakk> \<Longrightarrow>  x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) b "
   apply (frule sat_state_tlb')
   apply clarsimp
-  apply (subgoal_tac "   lookup ( tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (addr_val b) = Hit (pt_walk (ASID s) (MEM s) (TTBR0 s) b)")
+  apply (subgoal_tac "   lookup ( tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  b) = Hit (pt_walk (ASID s) (MEM s) (TTBR0 s) b)")
    prefer 2
    apply simp
-  apply (thin_tac " lookup (tlb_sat_no_flt_set s) (ASID s) (addr_val b) = Hit (pt_walk (ASID s) (MEM s) (TTBR0 s) b)")
+  apply (thin_tac " lookup (tlb_sat_no_flt_set s) (ASID s) (  b) = Hit (pt_walk (ASID s) (MEM s) (TTBR0 s) b)")
   apply (thin_tac "tlb_sat_no_flt_set s = tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
   apply (drule lookup_hit_union_cases')
   apply (erule disjE)
@@ -81,9 +81,9 @@ lemma lookup_miss_union:
        
 lemma sat_no_flt_miss_fault:
   "\<lbrakk>saturated_no_flt (typ_sat_no_flt_tlb s); no_faults (tlb_sat_no_flt_set s); 
-      lookup (tlb_sat_no_flt_set s) (ASID s) (addr_val b) = Miss\<rbrakk> \<Longrightarrow> is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) b)"
-  apply (subgoal_tac " lookup (tlb_sat_no_flt_set s  \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (addr_val b) = Miss")
-   apply (thin_tac " lookup (tlb_sat_no_flt_set s) (ASID s) (addr_val b) = Miss")
+      lookup (tlb_sat_no_flt_set s) (ASID s) (  b) = Miss\<rbrakk> \<Longrightarrow> is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) b)"
+  apply (subgoal_tac " lookup (tlb_sat_no_flt_set s  \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  b) = Miss")
+   apply (thin_tac " lookup (tlb_sat_no_flt_set s) (ASID s) (  b) = Miss")
    apply (drule lookup_miss_union)
    apply clarsimp
    apply (drule lookup_miss_is_fault)
@@ -95,7 +95,7 @@ lemma sat_no_flt_miss_fault:
 
 
 lemma lookup_miss_snapshot:
-  "lookup t' a (addr_val v) = Miss \<Longrightarrow> 
+  "lookup t' a (  v) = Miss \<Longrightarrow> 
    snapshot_of_tlb (t \<union> t') a v = snapshot_of_tlb t a v"
   apply (drule_tac t = t in lookup_miss_union_equal)
   by (clarsimp simp: snapshot_of_tlb_def)
@@ -138,12 +138,12 @@ lemma update_ttbr0_sat_no_flt_abs_refine':
       apply (clarsimp simp: saturated_no_flt_pt_walk)
      apply (erule disjE, clarsimp)
       apply (frule lookup_range_fault_pt_walk)
-      apply (drule_tac x = "addr_val b" in bspec)
+      apply (drule_tac x = "  b" in bspec)
        apply (clarsimp simp: lookup_hit_entry_range)
       apply clarsimp
      apply clarsimp
      apply (frule lookup_range_fault_pt_walk)
-     apply (drule_tac x = "addr_val b" in bspec)
+     apply (drule_tac x = "  b" in bspec)
       apply (clarsimp simp: lookup_hit_entry_range)
      apply clarsimp
     apply (erule_tac P =  "is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) b)" in  disjE)
@@ -151,7 +151,7 @@ lemma update_ttbr0_sat_no_flt_abs_refine':
       apply (drule lookup_hit_union_cases')
       apply (erule disjE)
        apply (clarsimp simp: asid_va_incon_def)
-       apply (subgoal_tac "(ASID s, b) \<in> {(asid, va). asid = ASID s \<and> (\<exists>x. lookup (tlb_sat_no_flt_set s) asid (addr_val va) = Hit x \<and> x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) va)}")
+       apply (subgoal_tac "(ASID s, b) \<in> {(asid, va). asid = ASID s \<and> (\<exists>x. lookup (tlb_sat_no_flt_set s) asid (  va) = Hit x \<and> x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) va)}")
         apply blast
        apply (subgoal_tac "x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) b")
         apply clarsimp
@@ -159,16 +159,16 @@ lemma update_ttbr0_sat_no_flt_abs_refine':
       apply (erule disjE)
        apply (clarsimp)
        apply (frule lookup_range_fault_pt_walk)
-       apply (drule_tac x = "addr_val b" in bspec)
+       apply (drule_tac x = "  b" in bspec)
         apply (clarsimp simp: lookup_hit_entry_range)
        apply clarsimp
       apply (clarsimp)
       apply (frule lookup_range_fault_pt_walk)
-      apply (drule_tac x = "addr_val b" in bspec)
+      apply (drule_tac x = "  b" in bspec)
        apply (clarsimp simp: lookup_hit_entry_range)
       apply clarsimp
      apply (clarsimp simp: asid_va_incon_def)
-     apply (subgoal_tac "(ASID s, b) \<in> {(asid, va). asid = ASID s \<and> (\<exists>x. lookup (tlb_sat_no_flt_set s) asid (addr_val va) = Hit x \<and> x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) va)}")
+     apply (subgoal_tac "(ASID s, b) \<in> {(asid, va). asid = ASID s \<and> (\<exists>x. lookup (tlb_sat_no_flt_set s) asid (  va) = Hit x \<and> x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) va)}")
       apply blast
      apply clarsimp
      apply (rule_tac x = x in exI)
@@ -178,7 +178,7 @@ lemma update_ttbr0_sat_no_flt_abs_refine':
      apply (erule disjE)
       apply (clarsimp)
       apply (frule lookup_range_fault_pt_walk)
-      apply (drule_tac x = "addr_val b" in bspec)
+      apply (drule_tac x = "  b" in bspec)
        apply (clarsimp simp: lookup_hit_entry_range)
       apply clarsimp
      apply (clarsimp)
@@ -194,7 +194,7 @@ lemma update_ttbr0_sat_no_flt_abs_refine':
   using sat_no_flt_miss_fault apply fastforce
     apply clarsimp
     apply (frule lookup_range_fault_pt_walk)
-    apply (drule_tac x = "addr_val b" in bspec)
+    apply (drule_tac x = "  b" in bspec)
      apply (clarsimp simp: lookup_hit_entry_range)
     apply clarsimp
    prefer 2
@@ -235,10 +235,10 @@ lemma update_ttbr0_sat_no_flt_abs_refine':
     apply (erule_tac P = "is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) b)" in  disjE)
      apply (erule disjE)
       apply clarsimp
-      apply (subgoal_tac " lookup (tlb_sat_no_flt_set s  \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (addr_val b) = Hit x")
+      apply (subgoal_tac " lookup (tlb_sat_no_flt_set s  \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  b) = Hit x")
        prefer 2
   using sat_state_tlb' apply force
-      apply (thin_tac " lookup (tlb_sat_no_flt_set s) (ASID s) (addr_val b) =  Hit x")
+      apply (thin_tac " lookup (tlb_sat_no_flt_set s) (ASID s) (  b) =  Hit x")
       apply (drule lookup_hit_union_cases')
       apply (erule disjE)
        apply (clarsimp) 
@@ -247,16 +247,16 @@ lemma update_ttbr0_sat_no_flt_abs_refine':
        apply (clarsimp simp: saturated_no_flt_pt_walk)
       apply (erule disjE)
        apply (clarsimp)
-       apply (thin_tac "lookup {e \<in> range (pt_walk (ASID s) (MEM s) r). \<not> is_fault e} (ASID s) (addr_val b) = Hit (pt_walk (ASID s) (MEM s) r xb)")
+       apply (thin_tac "lookup {e \<in> range (pt_walk (ASID s) (MEM s) r). \<not> is_fault e} (ASID s) (  b) = Hit (pt_walk (ASID s) (MEM s) r xb)")
        apply (frule lookup_range_fault_pt_walk)
-       apply (drule_tac x = "addr_val b" in bspec)
+       apply (drule_tac x = "  b" in bspec)
         apply (clarsimp simp: lookup_hit_entry_range)
        apply clarsimp
        apply (simp add: sat_no_fault_elem)
       apply clarsimp
-      apply (thin_tac "lookup {e \<in> range (pt_walk (ASID s) (MEM s) r). \<not> is_fault e} (ASID s) (addr_val b) = Hit (pt_walk (ASID s) (MEM s) r xb)")
+      apply (thin_tac "lookup {e \<in> range (pt_walk (ASID s) (MEM s) r). \<not> is_fault e} (ASID s) (  b) = Hit (pt_walk (ASID s) (MEM s) r xb)")
       apply (frule lookup_range_fault_pt_walk)
-      apply (drule_tac x = "addr_val b" in bspec)
+      apply (drule_tac x = "  b" in bspec)
        apply (clarsimp simp: lookup_hit_entry_range)
       apply clarsimp
       apply (simp add: sat_no_fault_elem)
@@ -265,19 +265,19 @@ lemma update_ttbr0_sat_no_flt_abs_refine':
      apply (clarsimp simp: saturated_no_flt_pt_walk)
     apply (erule_tac P = "is_fault (pt_walk (ASID s) (MEM s) r b)" in disjE)
      apply (frule lookup_range_fault_pt_walk)
-     apply (drule_tac x = "addr_val b" in bspec)
+     apply (drule_tac x = "  b" in bspec)
       apply (clarsimp simp: lookup_hit_entry_range)
      apply clarsimp
     apply (erule disjE)
      apply clarsimp
      apply (frule lookup_range_fault_pt_walk)
-     apply (drule_tac x = "addr_val b" in bspec)
+     apply (drule_tac x = "  b" in bspec)
       apply (clarsimp simp: lookup_hit_entry_range)
      apply clarsimp
     apply (subgoal_tac "pt_walk (ASID s) (MEM s) r xb = pt_walk (ASID s) (MEM s) r b")
      apply force  
     apply (frule lookup_range_fault_pt_walk)
-    apply (drule_tac x = "addr_val b" in bspec)
+    apply (drule_tac x = "  b" in bspec)
      apply (clarsimp simp: lookup_hit_entry_range)
     apply clarsimp
    apply (erule disjE)

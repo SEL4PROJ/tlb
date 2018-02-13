@@ -34,14 +34,14 @@ definition
  definition   
   "(Flush_varange vset :: ('a tlb_state_scheme \<Rightarrow> _))  = do {
       tlb   <- read_state tlb_set;
-      update_state (\<lambda>s. s\<lparr> tlb_set := tlb - \<Union>((\<lambda> v. {e\<in>tlb. addr_val v \<in> entry_range e}) ` vset) - 
+      update_state (\<lambda>s. s\<lparr> tlb_set := tlb - \<Union>((\<lambda> v. {e\<in>tlb. v \<in> entry_range e}) ` vset) - 
                                              tlb_evict (typ_tlb s) \<rparr>)}"
 
 definition   
   "(Flush_ASIDvarange a vset :: ('a tlb_state_scheme \<Rightarrow> _))  = do {
       tlb   <- read_state tlb_set;
       update_state (\<lambda>s. s\<lparr> tlb_set := tlb -
-                   (\<Union>v\<in> vset. {e \<in> tlb. (a, addr_val v) \<in> entry_range_asid_tags e}) - 
+                   (\<Union>v\<in> vset. {e \<in> tlb. (a,  v) \<in> entry_range_asid_tags e}) - 
                                              tlb_evict (typ_tlb s) \<rparr>)}"
   instance ..
 end
@@ -70,13 +70,13 @@ definition
  definition   
   "(Flush_varange vset :: ('a tlb_det_state_scheme \<Rightarrow> _))  = do {
       tlb   <- read_state tlb_det_set;
-      update_state (\<lambda>s. s\<lparr> tlb_det_set := tlb - \<Union>((\<lambda> v. {e\<in>tlb. addr_val v \<in> entry_range e}) ` vset)\<rparr>)}"
+      update_state (\<lambda>s. s\<lparr> tlb_det_set := tlb - \<Union>((\<lambda> v. {e\<in>tlb.   v \<in> entry_range e}) ` vset)\<rparr>)}"
 
 definition   
   "(Flush_ASIDvarange a vset :: ('a tlb_det_state_scheme \<Rightarrow> _))  = do {
       tlb   <- read_state tlb_det_set;
       update_state (\<lambda>s. s\<lparr> tlb_det_set := tlb - 
-          (\<Union>v\<in>vset. {e \<in> tlb. (a, addr_val v) \<in> entry_range_asid_tags e})\<rparr>)}"
+          (\<Union>v\<in>vset. {e \<in> tlb. (a,   v) \<in> entry_range_asid_tags e})\<rparr>)}"
   instance ..
 end
 
@@ -133,7 +133,7 @@ definition
       asid <- read_state ASID;
       let all_non_fault_entries = {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
       update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := 
-              (tlb - (\<Union>v\<in>vset. {e \<in> tlb. addr_val v \<in> entry_range e})) \<union> all_non_fault_entries \<rparr>)} "
+              (tlb - (\<Union>v\<in>vset. {e \<in> tlb.   v \<in> entry_range e})) \<union> all_non_fault_entries \<rparr>)} "
 
 definition   
   "(Flush_ASIDvarange a vset :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
@@ -143,7 +143,7 @@ definition
       asid <- read_state ASID;
       let all_non_fault_entries = {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
       update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := 
-              (tlb - (\<Union>v\<in>vset. {e \<in> tlb. (a, addr_val v) \<in> entry_range_asid_tags e}))
+              (tlb - (\<Union>v\<in>vset. {e \<in> tlb. (a,   v) \<in> entry_range_asid_tags e}))
                                   \<union> all_non_fault_entries \<rparr>)} "
 
 (* print_context *)                      
