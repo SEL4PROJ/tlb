@@ -87,7 +87,29 @@ where
   "is_a_va_present t a v \<equiv> (a,v) : a_va_set t"
 
 
-(* Selective invalidation of a virtual address for an ASID *)
+
+definition
+  Flush_TLB :: "tlb \<Rightarrow> tlb"
+where
+  "Flush_TLB t  \<equiv> {}"
+
+
+definition
+  Flush_ASID :: "tlb \<Rightarrow> asid  \<Rightarrow> tlb"
+where
+  "Flush_ASID t a \<equiv> t - {e\<in>t. asid_entry e = a}"
+
+definition
+  Flush_varange :: "tlb \<Rightarrow> vaddr set  \<Rightarrow> tlb"
+where
+  "Flush_varange t V \<equiv>   t - (\<Union>v\<in>V. {e \<in> t. v \<in> entry_range e})"
+
+
+definition
+  Flush_ASIDvarange :: "tlb \<Rightarrow> asid \<Rightarrow> vaddr set  \<Rightarrow> tlb"
+where
+  "Flush_ASIDvarange t a V \<equiv>  t - (\<Union>v\<in>V. {e \<in> t. (a, v) \<in> entry_range_asid_tags e})"
+
 
 definition
   a_va_sel_invalidate :: "tlb \<Rightarrow> asid \<Rightarrow> vaddr \<Rightarrow> tlb"
