@@ -103,7 +103,7 @@ definition
       then do { 
            write'mem1 (value, pa, size); 
            mem1  <- read_state MEM;
-           let all_non_fault_entries = {e\<in>pt_walk asid mem1 ttbr0 ` UNIV. \<not>is_fault e};
+           let all_non_fault_entries = the ` {e\<in>pt_walk asid mem1 ttbr0 ` UNIV. \<not>is_fault e};
            let tlb = tlb0 \<union> all_non_fault_entries;  (* what about inconsistency here ? *)
            update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := tlb \<rparr>)
           } 
@@ -281,7 +281,7 @@ lemma pt_walk_range:
 
 lemma write'mem'det1_TLBs1:
   "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s') \<rbrakk> \<Longrightarrow>
-     tlb_det_set s' = tlb_det_set s \<or>  tlb_det_set s' = tlb_det_set s \<union> {pt_walk (ASID s) (MEM s) (TTBR0 s) va}"
+     tlb_det_set s' = tlb_det_set s \<or>  tlb_det_set s' = tlb_det_set s \<union> {the (pt_walk (ASID s) (MEM s) (TTBR0 s) va)}"
   apply (cases "lookup (tlb_det_set s) (ASID s) va")
     apply (cases " is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
      apply (rule disjI1)
@@ -340,7 +340,7 @@ lemma  write'mem'_rel1:
 
 lemma write'mem'_TLBs1:
   "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s') \<rbrakk> \<Longrightarrow>
-     tlb_set s' = tlb_set s - tlb_evict (typ_tlb s) \<or>  tlb_set s' = tlb_set s - tlb_evict (typ_tlb s) \<union> {pt_walk (ASID s) (MEM s) (TTBR0 s) va}"
+     tlb_set s' = tlb_set s - tlb_evict (typ_tlb s) \<or>  tlb_set s' = tlb_set s - tlb_evict (typ_tlb s) \<union> {the (pt_walk (ASID s) (MEM s) (TTBR0 s) va)}"
   apply (cases "lookup (tlb_set s - tlb_evict (typ_tlb s)) (ASID s) va")
     apply (cases " is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
      apply (rule disjI1)
@@ -410,8 +410,9 @@ lemma entry_set_hit_entry_range:
 done
 
 lemma asid_pt_walk:
-  "(a, va) \<in> entry_range_asid_tags (pt_walk asid mem ttbr0 x) \<Longrightarrow> a = asid"
-  apply (clarsimp simp: pt_walk_def)
+  "\<lbrakk> \<not>is_fault (pt_walk asid mem ttbr0 x); 
+      (a, va) \<in> entry_range_asid_tags (the (pt_walk asid mem ttbr0 x))\<rbrakk> \<Longrightarrow> a = asid"
+  apply (clarsimp simp: pt_walk_def is_fault_def)
   apply (cases "get_pde mem ttbr0 x")
    apply (clarsimp simp: entry_range_asid_tags_def)
   apply (case_tac "aa" ; clarsimp simp: entry_range_asid_tags_def)
@@ -422,8 +423,9 @@ done
 
 
 lemma asid_va_entry_range_pt_entry:
-  "(asid, va) \<in> entry_range_asid_tags (pt_walk asid mem ttbr0 va)"
-  by (clarsimp simp: entry_range_asid_tags_def)
+  "\<not>is_fault(pt_walk  asid mem ttbr0 va) \<Longrightarrow> 
+      (asid, va) \<in> entry_range_asid_tags (the(pt_walk asid mem ttbr0 va))"
+  by (clarsimp simp: entry_range_asid_tags_def is_fault_def)
  
 
 theorem entry_range_single_elementI:
@@ -998,111 +1000,53 @@ done
 
 
 lemma  va_entry_set_pt_palk_same:
-  "(asid, va) \<in> entry_range_asid_tags (pt_walk asid mem ttbr0 x) \<Longrightarrow>
-       pt_walk asid mem ttbr0 x = pt_walk asid mem ttbr0 va"
-  apply (subgoal_tac "(asid, x) \<in> entry_range_asid_tags (pt_walk asid mem ttbr0 x)")
+  "\<lbrakk>\<not>is_fault (pt_walk asid mem ttbr0 x) ;
+           (asid, va) \<in> entry_range_asid_tags (the (pt_walk asid mem ttbr0 x))\<rbrakk> \<Longrightarrow>
+              the(pt_walk asid mem ttbr0 x) = the(pt_walk asid mem ttbr0 va)"
+  apply (subgoal_tac "(asid, x) \<in> entry_range_asid_tags (the(pt_walk asid mem ttbr0 x))")
    prefer 2
    apply (clarsimp simp: asid_va_entry_range_pt_entry)
-  apply (cases "pt_walk asid mem ttbr0 x")
-   apply (case_tac "x13" ; simp)
-    apply (clarsimp simp: entry_range_asid_tags_def entry_range_def pt_walk_def)
-    apply (cases "get_pde mem ttbr0 x" ; clarsimp)
-    apply (case_tac a ; clarsimp)
-    apply (case_tac " get_pte mem x3 x " ; clarsimp)
-     apply (subgoal_tac "get_pde mem ttbr0 (Addr xaa) = get_pde mem ttbr0  (Addr xa)" ; clarsimp)
-      apply (subgoal_tac "get_pte mem x3 (Addr xaa) = get_pte mem x3  (Addr xa)" ; clarsimp)
-       using va_offset_higher_bits apply blast
-      apply (clarsimp simp:  get_pte_def vaddr_pt_index_def)
-      apply (subgoal_tac "(( xaa >> 12) && mask 8 << 2) =
-                          (( xa >> 12) && mask 8 << 2) ")
-       prefer 2
-  using offset_mask_eq apply blast
-      apply force
-     apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
-     apply (subgoal_tac "((xaa >> 20) && mask 12 << 2) =
-                         ((xa >> 20) && mask 12 << 2) ")
-      prefer 2
-  using offset_mask_eq_1 apply blast
-     apply force
-    apply (case_tac a ; clarsimp)
-    apply (subgoal_tac "get_pde mem ttbr0 (Addr xaa) = get_pde mem ttbr0 (Addr xa)" ; clarsimp)
-     apply (subgoal_tac "get_pte mem x3 (Addr xaa) = get_pte mem x3 (Addr xa)" ; clarsimp)
-  using va_offset_higher_bits apply blast
-     apply (clarsimp simp: get_pte_def vaddr_pt_index_def)
-     apply (case_tac "get_pde mem ttbr0 (Addr xa)" ; clarsimp)
-     apply (subgoal_tac "((xaa >> 12) && mask 8 << 2) =
-                         ((xa >> 12) && mask 8 << 2) ")
-      prefer 2
-  using offset_mask_eq apply blast
-     apply force
-    apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
-    apply (subgoal_tac "((xaa >> 20) && mask 12 << 2) =
-                        ((xa >> 20) && mask 12 << 2) ")
-     prefer 2
-  using offset_mask_eq_1 apply blast
-    apply force
-   apply clarsimp
-   apply (clarsimp simp: entry_range_asid_tags_def entry_range_def pt_walk_def)
+  apply (cases "the (pt_walk asid mem ttbr0 x)")
+   apply (clarsimp simp: entry_range_asid_tags_def entry_range_def pt_walk_def is_fault_def)
    apply (cases "get_pde mem ttbr0 x" ; clarsimp)
-   apply (case_tac aa ; clarsimp)
-   apply (case_tac "get_pte mem x3 x" ; clarsimp)
-   apply (subgoal_tac "get_pde mem ttbr0 (Addr xaa) = get_pde mem ttbr0 (Addr xa)" ; clarsimp)
-    apply (subgoal_tac "get_pte mem x3 (Addr xaa) = get_pte mem x3 (Addr xa)" ; clarsimp)
-     apply (case_tac aa ; clarsimp)
+   apply (case_tac a ; clarsimp)
+   apply (case_tac "get_pte mem x3 x " ; clarsimp)
+   apply (subgoal_tac "get_pde mem ttbr0 (Addr xaa) = get_pde mem ttbr0  (Addr xa)" ; clarsimp)
+    apply (subgoal_tac "get_pte mem x3 (Addr xaa) = get_pte mem x3  (Addr xa)" ; clarsimp)
+     apply (case_tac a ; clarsimp)
   using va_offset_higher_bits apply blast
-    apply (case_tac aa ; clarsimp simp: get_pte_def vaddr_pt_index_def)
-    apply (subgoal_tac "((xaa >> 12) && mask 8 << 2) =
-                        ((xa >> 12) && mask 8 << 2) ")
+    apply (case_tac a ; clarsimp)
+    apply (clarsimp simp:  get_pte_def vaddr_pt_index_def)
+    apply (subgoal_tac "(( xaa >> 12) && mask 8 << 2) =
+                          (( xa >> 12) && mask 8 << 2) ")
      prefer 2
   using offset_mask_eq apply blast
     apply force
-   apply (case_tac aa ; clarsimp simp: get_pde_def vaddr_pd_index_def)
+   apply (case_tac a ; clarsimp)
+   apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
    apply (subgoal_tac "((xaa >> 20) && mask 12 << 2) =
-                       ((xa >> 20) && mask 12 << 2) ")
+                         ((xa >> 20) && mask 12 << 2) ")
     prefer 2
   using offset_mask_eq_1 apply blast
    apply force
-  apply (clarsimp)
-  apply (case_tac "x23" ; clarsimp simp: entry_range_asid_tags_def entry_range_def pt_walk_def)
-   apply (cases "get_pde mem ttbr0 x" ; clarsimp)
-    apply (subgoal_tac "get_pde mem ttbr0 (Addr xaa) = get_pde mem ttbr0 (Addr xa)" ; clarsimp)
-  using va_offset_higher_bits_1 apply blast
-    apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
-    apply (subgoal_tac "((xaa >> 20) && mask 12 << 2) = ((xa >> 20) && mask 12 << 2)")
-     apply force
-  using shfit_mask_eq apply blast
-   apply (case_tac a , clarsimp)
-      apply (subgoal_tac "get_pde mem ttbr0 (Addr xa) = get_pde mem ttbr0 (Addr xaa)" ; clarsimp)
-  using va_offset_higher_bits_1 apply blast
-      apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
-      apply (subgoal_tac "((xaa >> 20) && mask 12 << 2) = ((xa >> 20) && mask 12 << 2)")
-       apply force
-  using shfit_mask_eq apply blast
-     apply clarsimp
-     apply (subgoal_tac "get_pde mem ttbr0 (Addr xa) = get_pde mem ttbr0 (Addr xaa)" ; clarsimp)
-  using va_offset_higher_bits_1 apply blast
-     apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
-     apply (subgoal_tac "((xaa >> 20) && mask 12 << 2) = ((xa >> 20) && mask 12 << 2)")
-      apply force
-  using shfit_mask_eq apply blast
-    apply clarsimp
-    apply (case_tac "get_pte mem x3 x" ; clarsimp)
-    apply (case_tac a , clarsimp)
-    apply clarsimp
-   apply (case_tac a ; clarsimp)
+  apply (clarsimp simp: entry_range_asid_tags_def entry_range_def pt_walk_def is_fault_def)
   apply (cases "get_pde mem ttbr0 x" ; clarsimp)
-  apply (case_tac aa ; clarsimp)
+  apply (case_tac a ; clarsimp)
    apply (case_tac "get_pte mem x3 x" ; clarsimp)
-   apply (case_tac aa ; clarsimp)
-  apply (subgoal_tac "get_pde mem ttbr0 (Addr xa) = get_pde mem ttbr0 (Addr xaa)" ; clarsimp)
+   apply (subgoal_tac "get_pde mem ttbr0 (Addr xaa) = get_pde mem ttbr0 (Addr xa)" ; clarsimp)
+    apply (subgoal_tac "get_pte mem x3 (Addr xaa) = get_pte mem x3 (Addr xa)" ; clarsimp)
+     apply (case_tac a ; clarsimp)
+    apply (case_tac a ; clarsimp simp: get_pte_def vaddr_pt_index_def)
+   apply (case_tac a ; clarsimp simp: get_pde_def vaddr_pd_index_def)
+  apply (cases "get_pde mem ttbr0 x" ; clarsimp)
+  apply (subgoal_tac "get_pde mem ttbr0 (Addr xaa) = get_pde mem ttbr0 (Addr xa)" ; clarsimp)
   using va_offset_higher_bits_1 apply blast
   apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
   apply (subgoal_tac "((xaa >> 20) && mask 12 << 2) = ((xa >> 20) && mask 12 << 2)")
    apply force
-  using shfit_mask_eq apply blast 
-  done
+  using shfit_mask_eq by blast
 
-
+(*
 lemma lookup_range_pt_walk_hit:
   "lookup (range (pt_walk asid mem ttbr0)) asid va = Hit (pt_walk asid mem ttbr0 va)"
   apply (clarsimp simp: lookup_def)
@@ -1129,18 +1073,21 @@ lemma lookup_range_pt_walk_not_incon:
   "lookup (range (pt_walk asid mem ttbr0)) asid va \<noteq> Incon"
   by (clarsimp simp: lookup_range_pt_walk_hit)
 
+*)
 
 
 lemma asid_entry_set_pt_walk1 [simp]:
-  "asid_entry ` (pt_walk asid m ttbr0 `UNIV) = {asid}"
-  by force
+  "asid_entry ` the ` {e\<in>pt_walk asid m ttbr0 ` UNIV. \<not>is_fault e} = {asid} \<or>
+     asid_entry ` the ` {e\<in>pt_walk asid m ttbr0 ` UNIV. \<not>is_fault e} = {}"
+   by force+
+ 
 
 lemma asid_lookup_miss:
   "\<lbrakk>asid_entry ` tlb = aset ; a \<notin> aset \<rbrakk> \<Longrightarrow> lookup tlb a va = Miss "
   using lookup_def entry_set_def entry_range_asid_tags_def by fastforce
 
   
-
+(*
 lemma asid_unequal_miss:
   " a \<noteq> ASID b \<Longrightarrow>
    lookup (range (pt_walk (ASID b) (MEM bc) (TTBR0 b))) a bb = Miss"
@@ -1148,7 +1095,7 @@ lemma asid_unequal_miss:
    prefer 2
    apply fastforce
    using asid_lookup_miss by force
-
+*)
 
 
 lemma addr_val_eqD [dest!]:
@@ -1164,23 +1111,13 @@ lemma addr_val_eqD [dest!]:
 lemma  mmu_translate_asid_ttbr0 :
   "mmu_translate va (s::tlb_sat_no_flt_state) = (a, b) \<Longrightarrow> ASID s = ASID b \<and> TTBR0 s = TTBR0 b"
  by (clarsimp simp: mmu_translate_tlb_sat_no_flt_state_ext_def Let_def raise'exception_def split:lookup_type.splits if_split_asm) 
- 
-
+  
 
 lemma mmu_translate_sat_sat_no_fault:
   "mmu_translate v s = (p,t) \<Longrightarrow>   saturated_no_flt (typ_sat_no_flt_tlb t)"
   apply (clarsimp simp: mmu_translate_tlb_sat_no_flt_state_ext_def Let_def split: lookup_type.splits)
     by (clarsimp simp: saturated_no_flt_def raise'exception_def split:if_split_asm)+
 
-lemma mmu_translate_sat_sat_no_fault':
-  "\<lbrakk> mmu_translate v s = (p,t) ; no_faults (tlb_sat_no_flt_set s) \<rbrakk>  \<Longrightarrow> 
-           no_faults (tlb_sat_no_flt_set t)"
-  apply (clarsimp simp: mmu_translate_tlb_sat_no_flt_state_ext_def Let_def split: lookup_type.splits)
-    by (clarsimp simp: no_faults_def raise'exception_def split:if_split_asm)+
-
-
-
-find_theorems "saturated_no_flt" "mmu_translate"
 
 lemma write_mmu_sat_no_flt_saturated:
   "\<lbrakk>mmu_write_size (val,va,sz) s = ((), t)  \<rbrakk>  \<Longrightarrow> saturated_no_flt (typ_sat_no_flt_tlb t)"
@@ -1205,33 +1142,10 @@ lemma write'mem1_eq_ASID_TTBR0:
    by (clarsimp simp: write'mem1_def raise'exception_def split: if_split_asm)
   
 
-lemma write_mmu_sat_no_flt_no_flts:
-  "\<lbrakk>mmu_write_size (val,va,sz) s = ((), t) ; no_faults (tlb_sat_no_flt_set s)  \<rbrakk>  \<Longrightarrow> no_faults (tlb_sat_no_flt_set t)"
-  apply (clarsimp simp: mmu_write_size_tlb_sat_no_flt_state_ext_def Let_def)
-  apply (case_tac "mmu_translate va s" , clarsimp)
-  apply (clarsimp split: if_split_asm)
-   prefer 2
-   apply (clarsimp simp: mmu_translate_tlb_sat_no_flt_state_ext_def Let_def raise'exception_def
-                no_faults_def split:lookup_type.splits if_split_asm)
-  apply (case_tac "write'mem1 (val, a, sz) b" , clarsimp)
-  apply (subgoal_tac " no_faults (tlb_sat_no_flt_set b)")
-   prefer 2
-   apply (clarsimp simp: mmu_translate_tlb_sat_no_flt_state_ext_def Let_def raise'exception_def
-                    no_faults_def split:lookup_type.splits if_split_asm)
-  apply (subgoal_tac "ASID s = ASID ba \<and> TTBR0 s = TTBR0 ba")
-   apply (clarsimp simp: no_faults_def)
-  apply (subgoal_tac "ASID s = ASID b \<and> TTBR0 s = TTBR0 b")
-   prefer 2
-   apply (clarsimp simp: mmu_translate_tlb_sat_no_flt_state_ext_def Let_def split: lookup_type.splits)
-     apply (clarsimp simp: raise'exception_def split:if_split_asm)+
-  apply (clarsimp simp: write'mem1_eq_ASID_TTBR0)
- done
-
-
 lemma wrtie_mem_sat_tlbs:
   "\<lbrakk>mmu_write_size (val,va, sz) s = ((), s') \<rbrakk> \<Longrightarrow>
-     tlb_sat_no_flt_set s' = tlb_sat_no_flt_set s \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e} \<or>
-     tlb_sat_no_flt_set s' = tlb_sat_no_flt_set s \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e} \<union> {e\<in>pt_walk (ASID s') (MEM s') (TTBR0 s') ` UNIV. \<not> is_fault e}"
+     tlb_sat_no_flt_set s' = tlb_sat_no_flt_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e} \<or>
+     tlb_sat_no_flt_set s' = tlb_sat_no_flt_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e} \<union> the ` {e\<in>pt_walk (ASID s') (MEM s') (TTBR0 s') ` UNIV. \<not> is_fault e}"
   apply (cases "exception (snd (mmu_translate va s)) \<noteq> NoException")
    apply (rule disjI1)
    apply (clarsimp simp: mmu_write_size_tlb_sat_no_flt_state_ext_def Let_def)
@@ -1241,7 +1155,7 @@ lemma wrtie_mem_sat_tlbs:
   apply (case_tac "mmu_translate va s " , clarsimp)
   apply (case_tac "write'mem1 (val, a, sz) b" , clarsimp)
   apply (subgoal_tac "tlb_sat_no_flt_set ba = tlb_sat_no_flt_set b")
-   apply (subgoal_tac "tlb_sat_no_flt_set b  = tlb_sat_no_flt_set s \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e}")
+   apply (subgoal_tac "tlb_sat_no_flt_set b  = tlb_sat_no_flt_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e}")
     apply (subgoal_tac "ASID ba = ASID s \<and>  TTBR0 ba = TTBR0 s")
      apply clarsimp
     apply (subgoal_tac "ASID b = ASID s \<and> TTBR0 b = TTBR0 s")
@@ -1252,61 +1166,54 @@ lemma wrtie_mem_sat_tlbs:
   apply (case_tac ba , case_tac b ; clarsimp)
 done
 
+lemma mmu_translate_subset_rel:
+  "\<lbrakk> mmu_translate va s = (pa, s'); consistent (typ_sat_no_flt_tlb t) va; 
+       tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t) ; mmu_translate va t = (pa', t')  \<rbrakk> \<Longrightarrow>
+         tlb_det_set s' \<subseteq> tlb_sat_no_flt_set t'"
+  by (drule_tac t = t in  mmu_translate_det_sat_no_flt_refine [unfolded tlb_rel_sat_no_flt_def];
+           simp add: tlb_rel_sat_no_flt_def)
+
+lemma mmu_translate_subset_rel':
+  "\<lbrakk> mmu_translate va s = (pa, s'); consistent (typ_sat_no_flt_tlb t) va; 
+       tlb_rel_sat_no_flt (typ_tlb s) (typ_sat_no_flt_tlb t) ; mmu_translate va t = (pa', t')  \<rbrakk> \<Longrightarrow>
+         tlb_set s' \<subseteq> tlb_sat_no_flt_set t'"
+  by (drule_tac t = t in  mmu_translate_sat_no_flt_refine [unfolded tlb_rel_sat_no_flt_def];
+           simp add: tlb_rel_sat_no_flt_def)
+  
 
 lemma mmu_write_tlb_subset:
-  "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s'); tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t);
+  "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s'); tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t); 
+       consistent (typ_sat_no_flt_tlb t) va;
        mmu_write_size (val,va, sz) t = ((), t') \<rbrakk> \<Longrightarrow> tlb_det_set s' \<subseteq> tlb_sat_no_flt_set t'"
   apply (frule tlb_rel_no_flt_satD)
-  apply (subgoal_tac "lookup (tlb_det_set s) (ASID s) va \<le> lookup (tlb_sat_no_flt_set t \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e}) (ASID s) va")
-   prefer 2
-   apply (simp add: saturated_no_flt_def sup.absorb1 tlb_mono tlb_rel_sat_no_flt_def)
-  apply (frule write'mem'det1_TLBs1)
-  apply (frule wrtie_mem_sat_tlbs)
-  apply (erule disjE)
-   apply (clarsimp simp: typ_det_tlb_def typ_sat_no_flt_tlb_def state.defs)
-   apply blast
-  apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-   apply (subgoal_tac "pt_walk (ASID s) (MEM s) (TTBR0 s) va \<in> {e\<in>pt_walk (ASID t) (MEM t) (TTBR0 t) ` UNIV. \<not> is_fault e}")
-    apply (clarsimp simp: typ_det_tlb_def typ_sat_no_flt_tlb_def state.defs)
-    apply blast
+  apply (clarsimp simp:  mmu_write_size_tlb_det_state_ext_def , cases "mmu_translate va s" , clarsimp)
+  apply (clarsimp simp:  mmu_write_size_tlb_sat_no_flt_state_ext_def , cases "mmu_translate va t" , clarsimp)
+  apply (frule_tac t' = ba and s' = b and t = t and s = s and pa' = aa in mmu_translate_subset_rel)
+     apply simp
+    apply simp
    apply simp
-  apply (case_tac "pt_walk (ASID s) (MEM s) (TTBR0 s) va \<in> tlb_det_set s")
-   apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def)
-   apply fastforce
-  apply (clarsimp simp: mmu_write_size_tlb_det_state_ext_def)
-  apply (case_tac "mmu_translate va s" , clarsimp)
-  apply (clarsimp split: if_split_asm)
-   prefer 2
-   apply (clarsimp simp: mmu_translate_tlb_det_state_ext_def split: lookup_type.splits)
-     apply (clarsimp simp: raise'exception_def split: if_split_asm)
-      apply (subgoal_tac "pt_walk (ASID s) (MEM s) (TTBR0 s) va \<notin> tlb_det_set s")
-       apply force
-      apply (frule_tac m = "MEM s" and ttbr = "TTBR0 s" in lookup_refill)
-      apply force
-     apply (subgoal_tac "pt_walk (ASID s) (MEM s) (TTBR0 s) va \<notin> tlb_det_set s")
-      apply force
-     apply (frule_tac m = "MEM s" and ttbr = "TTBR0 s" in lookup_refill)
-     apply force
-    apply (clarsimp simp: raise'exception_def split:if_split_asm)
-     apply force
-    apply force
+  apply (subgoal_tac "tlb_det_set b  =  tlb_det_set s'")
+   apply simp
    apply (clarsimp split: if_split_asm)
-    apply (drule lookup_in_tlb)
-    apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def)
-    apply force
+      apply (case_tac "write'mem1 (val, aa, sz) ba", clarsimp simp:)
+      apply (subgoal_tac "state.more bb = state.more ba")
+       apply force
+      apply (drule write'mem1_eq_TLB)  
+      apply (drule write'mem1_eq_TLB)
+      apply (clarsimp simp: typ_sat_no_flt_tlb_def)
+     apply force
+    apply (case_tac "write'mem1 (val, aa, sz) ba", simp)
+    apply (subgoal_tac "state.more ba = state.more b")
+     apply force
+    apply (drule write'mem1_eq_TLB)  
+    apply (clarsimp simp: typ_sat_no_flt_tlb_def)
    apply force
-  apply (subgoal_tac "tlb_det_set s'  = tlb_det_set b")
-   apply clarsimp
-   apply (thin_tac "tlb_det_set s' = insert (pt_walk (ASID s) (MEM s) (TTBR0 s) va) (tlb_det_set s)")
-   apply (clarsimp simp: mmu_translate_tlb_det_state_ext_def split: lookup_type.splits)
-     apply (clarsimp simp: raise'exception_def split: if_split_asm)
-    apply (clarsimp simp: raise'exception_def split: if_split_asm)
-   apply (clarsimp simp: raise'exception_def split: if_split_asm)
-   apply force
-  apply (thin_tac " tlb_det_set s' = insert (pt_walk (ASID s) (MEM s) (TTBR0 s) va) (tlb_det_set s)")
-  apply (clarsimp simp: write'mem1_def raise'exception_def split: if_split_asm)
-   done
- 
+  apply (clarsimp split: if_split_asm)
+   apply (drule write'mem1_eq_TLB)
+   apply (cases s' , case_tac b, clarsimp simp:)
+ apply (drule write'mem1_eq_TLB)
+  by (cases s' , case_tac b, clarsimp simp:)
+
 
 lemma mmu_translate_no_flt_excep:
   "\<lbrakk> mmu_translate va s = (p, s') ; mmu_translate va t = (p, t') ;
@@ -1339,52 +1246,6 @@ lemma sat_no_flt_states_parameters:
   done
 
 
-lemma write_mem_det_sat_no_flt_MEM:
-  "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s');  tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t) ; consistent (typ_sat_no_flt_tlb t) va; 
-                   mmu_write_size (val,va, sz) t = ((), t') \<rbrakk> \<Longrightarrow> MEM s' = MEM t'"
-  apply (frule tlb_rel_no_flt_satD)
-  apply (clarsimp simp:  mmu_write_size_tlb_det_state_ext_def , cases "mmu_translate va s" , clarsimp)
-  apply (clarsimp simp:  mmu_write_size_tlb_sat_no_flt_state_ext_def , cases "mmu_translate va t" , clarsimp)
-  apply (clarsimp split: if_split_asm)
-     apply (case_tac "write'mem1 (val, aa, sz) ba" , clarsimp)
-     apply (subgoal_tac "MEM b = MEM ba \<and> aa = a")
-      using write_same_mem apply blast
-     apply (rule conjI)
-      apply (clarsimp simp: mmu_sat_no_flt_eq_ASID_TTBR0_MEM  mmu_det_eq_ASID_TTBR0_MEM)
-     apply (frule_tac s= "(typ_det_tlb s)" and va= "va" in tlb_rel_sat_no_flt_consistent, clarsimp)
-     apply (subgoal_tac "lookup (tlb_det_set s) (ASID s) va \<le> lookup (tlb_sat_no_flt_set t \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e}) (ASID s) va")
-      prefer 2
-      apply (simp add: saturated_no_flt_def sup.absorb1 tlb_mono tlb_rel_sat_no_flt_def)
-     apply (clarsimp simp:  mmu_translate_tlb_det_state_ext_def  mmu_translate_tlb_sat_no_flt_state_ext_def split_def Let_def)
-     apply (subgoal_tac "tlb_sat_no_flt_set t = tlb_sat_no_flt_set t \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e}")
-      prefer 2
-      apply (fastforce simp: tlb_rel_sat_no_flt_def saturated_no_flt_def)
-     apply (cases "lookup (tlb_sat_no_flt_set t \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) va")
-       apply (clarsimp simp: tlb_rel_sat_no_flt_def)
-       apply (subgoal_tac "is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-        apply (clarsimp simp: raise'exception_def  saturated_no_flt_def state.defs split: if_split_asm)
-       apply (clarsimp simp: lookup_def entry_set_def entry_range_asid_tags_def split: if_split_asm)
-       apply force
-      apply (clarsimp simp: consistent0_def)
-     apply clarsimp
-     apply (subgoal_tac "x3 = pt_walk (ASID s) (MEM s) (TTBR0 s) va")
-      prefer 2
-      apply (clarsimp simp: consistent0_def)
-     apply (cases "lookup (tlb_det_set s) (ASID s) va"; clarsimp)
-      apply (clarsimp simp: Let_def)
-      apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-       prefer 2
-       apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def lookup_in_tlb)
-      apply (clarsimp simp: tlb_rel_sat_no_flt_def typ_sat_no_flt_tlb_def typ_det_tlb_def state.defs lookup_in_tlb raise'exception_def split: if_split_asm)
-     apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-      apply clarsimp
-     apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def lookup_in_tlb)
-    apply (metis (mono_tags, lifting) typ_det_prim_parameter mmu_translate_det_sat_no_flt_refine mmu_translate_no_flt_excep prod.simps(2) tlb_rel_no_flt_satD tlb_sat_no_flt_more)
-   apply (metis (mono_tags, lifting) typ_det_prim_parameter mmu_translate_det_sat_no_flt_refine mmu_translate_no_flt_excep prod.simps(2) tlb_rel_no_flt_satD tlb_sat_no_flt_more)
-  apply (simp add: mmu_det_eq_ASID_TTBR0_MEM sat_no_flt_states_parameters tlb_rel_sat_no_flt_def)
- done
-
-
 lemma mmu_wrtie_sat_no_flt_rel:
   "\<lbrakk>mmu_write_size (val,va, sz) s = ((), s')\<rbrakk>   \<Longrightarrow> 
       s' = s \<lparr> tlb_sat_no_flt_set:= tlb_sat_no_flt_set s' , MEM:= MEM s' , exception:= exception s' \<rparr>"
@@ -1397,8 +1258,8 @@ lemma mmu_wrtie_sat_no_flt_rel:
    apply (cases s, cases s', case_tac a, case_tac b, case_tac ba)
    apply clarsimp
   apply (clarsimp simp: mmu_translate_tlb_sat_no_flt_state_ext_def Let_def)
-  apply (cases "lookup (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) va ")
-    apply (clarsimp simp: raise'exception_def  split:if_split_asm) (* this has to do *)
+  apply (cases "lookup (tlb_sat_no_flt_set s \<union> the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) va ")
+    apply (clarsimp simp: raise'exception_def  split:if_split_asm) 
    apply (clarsimp simp: raise'exception_def split:if_split_asm)
   apply (clarsimp simp: raise'exception_def split:if_split_asm)
 done
@@ -1406,7 +1267,7 @@ done
 
 
 lemma mmu_translate_sat_no_flt_mem_excep:
-  "\<lbrakk> mmu_translate va s = (p, s') ; mmu_translate va t = (p, t') ;
+  "\<lbrakk> mmu_translate va s = (p, s') ; mmu_translate va t = (p', t') ;
      consistent (typ_sat_no_flt_tlb t) va; tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t)\<rbrakk>  \<Longrightarrow> MEM s' = MEM t' \<and> exception s' = exception t'"
   apply (subgoal_tac "tlb_rel_sat_no_flt (typ_det_tlb s') (typ_sat_no_flt_tlb t')")
    apply (clarsimp simp: tlb_rel_sat_no_flt_def state.defs)
@@ -1415,7 +1276,7 @@ lemma mmu_translate_sat_no_flt_mem_excep:
 
 
 lemma mmu_translate_sat_no_flt_mem_excep':
-  "\<lbrakk> mmu_translate va s = (p, s') ; mmu_translate va t = (p, t') ;
+  "\<lbrakk> mmu_translate va s = (p, s') ; mmu_translate va t = (p', t') ;
      consistent (typ_sat_no_flt_tlb t) va; tlb_rel_sat_no_flt (typ_tlb s) (typ_sat_no_flt_tlb t)\<rbrakk>  \<Longrightarrow> MEM s' = MEM t' \<and> exception s' = exception t'"
   apply (subgoal_tac "tlb_rel_sat_no_flt (typ_tlb s') (typ_sat_no_flt_tlb t')")
    apply (clarsimp simp: tlb_rel_sat_no_flt_def state.defs)
@@ -1434,6 +1295,25 @@ lemma  mmu_translate_no_flt_sat_pa:
   "\<lbrakk> mmu_translate va s = (pa, s'); tlb_rel_sat_no_flt (typ_tlb s) (typ_sat_no_flt_tlb t)  ; consistent (typ_sat_no_flt_tlb t) va;
          mmu_translate va t = (pa', t')  \<rbrakk> \<Longrightarrow> pa = pa'"
   using mmu_translate_sat_no_flt_refine by fastforce
+
+
+lemma write_mem_det_sat_no_flt_MEM:
+  "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s');  tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t) ; consistent (typ_sat_no_flt_tlb t) va; 
+                   mmu_write_size (val,va, sz) t = ((), t') \<rbrakk> \<Longrightarrow> MEM s' = MEM t'"
+  apply (frule tlb_rel_no_flt_satD)
+  apply (clarsimp simp:  mmu_write_size_tlb_det_state_ext_def , cases "mmu_translate va s" , clarsimp)
+  apply (clarsimp simp:  mmu_write_size_tlb_sat_no_flt_state_ext_def , cases "mmu_translate va t" , clarsimp)
+  apply (subgoal_tac "MEM ba = MEM b \<and>  exception ba = exception b")
+   prefer 2
+   apply (frule_tac t = t and t' = ba in mmu_translate_sat_no_flt_mem_excep; simp)
+  apply (subgoal_tac "a = aa")
+   prefer 2
+   apply (frule  mmu_translate_det_no_flt_sat_pa; simp)
+  apply simp
+  apply (clarsimp split: if_split_asm)
+  apply (case_tac "write'mem1 (val, aa, sz) ba", simp)
+  apply (frule_tac t = ba and t' = bb in  write_same_mem, simp, simp)
+  by (case_tac bb, cases t', simp)
 
 
 
@@ -1457,101 +1337,45 @@ lemma mmu_write_size_det_sat_no_flt_state_trun:
    apply (clarsimp split: if_split_asm)
    apply (subgoal_tac "MEM b = MEM bb ")
     apply (frule_tac s="bb" and s'="s'" and t = b and t' = ba in write_same_mem_excep ; clarsimp)
-   apply (frule_tac s="s" and s'="bb" and t = t and t' = b in mmu_translate_sat_no_flt_mem_excep ; clarsimp simp: consistent0_def tlb_rel_sat_no_flt_def)
+   apply (frule_tac s="s" and s'="bb" and t = t and t' = b and p' = aa in mmu_translate_sat_no_flt_mem_excep ; clarsimp simp: consistent0_def tlb_rel_sat_no_flt_def)
   apply (rule conjI)
-   apply (frule_tac t= t and pa' = a and t' = b in mmu_translate_det_no_flt_sat_pa)
-      apply (clarsimp simp: tlb_rel_sat_no_flt_def)
-     apply (clarsimp simp: consistent0_def)
-    apply (clarsimp simp: tlb_rel_sat_no_flt_def)
    apply (frule_tac s = "s" and s' = "bb" and t = "t" and t' = "b" in   mmu_translate_no_flt_excep ; clarsimp simp: tlb_rel_sat_no_flt_def)
-  apply (subgoal_tac "lookup (tlb_det_set s) (ASID s) ( va) \<le> lookup (tlb_sat_no_flt_set t \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) ( va)")
-   prefer 2
-   apply (simp add: saturated_no_flt_def sup.absorb1 tlb_mono tlb_rel_sat_no_flt_def)
-  apply (clarsimp simp: mmu_translate_tlb_det_state_ext_def mmu_translate_tlb_sat_no_flt_state_ext_def split_def Let_def)
-  apply (subgoal_tac "tlb_sat_no_flt_set t = tlb_sat_no_flt_set t \<union>  {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
-   prefer 2
-   apply (fastforce simp: tlb_rel_sat_no_flt_def saturated_no_flt_def)
-  apply (cases "lookup (tlb_sat_no_flt_set t \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) ( va)")
-    apply clarsimp
-    prefer 2
-    apply (clarsimp simp: consistent0_def)
-   prefer 2
-   apply clarsimp
-   apply (subgoal_tac "x3 = pt_walk (ASID s) (MEM s) (TTBR0 s) va")
-    prefer 2
-    apply (clarsimp simp: consistent0_def)
-   apply (cases "lookup (tlb_det_set s) (ASID s) ( va)"; clarsimp)
-    apply (clarsimp simp: Let_def)
-    apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-     prefer 2
-     apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def lookup_in_tlb)
-    apply (clarsimp simp: tlb_rel_sat_no_flt_def typ_sat_no_flt_tlb_def typ_det_tlb_def state.defs lookup_in_tlb raise'exception_def split: if_split_asm)
-   apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-    apply clarsimp
-   apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def lookup_in_tlb)
-  apply (clarsimp simp: tlb_rel_sat_no_flt_def Let_def)
-    apply (subgoal_tac "is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-     apply (clarsimp simp: raise'exception_def  saturated_no_flt_def state.defs split: if_split_asm)
-    apply (clarsimp simp: lookup_def entry_set_def entry_range_asid_tags_def split: if_split_asm)
-    by force+
-  
-
+  by (frule_tac t= t and pa' = a and t' = b in mmu_translate_det_no_flt_sat_pa ; clarsimp simp: tlb_rel_sat_no_flt_def) +
 
 
 lemma mmu_write_tlb_subset':
-  "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s'); tlb_rel_sat_no_flt (typ_tlb s) (typ_sat_no_flt_tlb t);
+  "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s'); tlb_rel_sat_no_flt (typ_tlb s) (typ_sat_no_flt_tlb t); 
+       consistent (typ_sat_no_flt_tlb t) va;
        mmu_write_size (val,va, sz) t = ((), t') \<rbrakk> \<Longrightarrow> tlb_set s' \<subseteq> tlb_sat_no_flt_set t'"
   apply (frule tlb_rel_no_flt_satD)
-  apply (subgoal_tac "lookup (tlb_set s) (ASID s) (va) \<le> lookup (tlb_sat_no_flt_set t \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e}) (ASID s) ( va)")
-   prefer 2
-   apply (simp add: saturated_no_flt_def sup.absorb1 tlb_mono tlb_rel_sat_no_flt_def)
-  apply (frule write'mem'_TLBs1)
-  apply (frule wrtie_mem_sat_tlbs)
-  apply (erule disjE)
-   apply (clarsimp simp: )
-   apply blast
-  apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-   apply (subgoal_tac "pt_walk (ASID s) (MEM s) (TTBR0 s) va \<in> {e\<in>pt_walk (ASID t) (MEM t) (TTBR0 t) ` UNIV. \<not> is_fault e}")
-    apply (clarsimp simp: )
-    apply blast
+  apply (clarsimp simp:  mmu_write_size_tlb_state_ext_def , cases "mmu_translate va s" , clarsimp)
+  apply (clarsimp simp:  mmu_write_size_tlb_sat_no_flt_state_ext_def , cases "mmu_translate va t" , clarsimp)
+  apply (frule_tac t' = ba and s' = b and t = t and s = s and pa' = aa in mmu_translate_subset_rel')
+     apply simp
+    apply simp
    apply simp
-  apply (case_tac "pt_walk (ASID s) (MEM s) (TTBR0 s) va \<in> tlb_set s - tlb_evict (typ_tlb s)")
-   apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def)
-   apply fastforce
-  apply (clarsimp simp: mmu_write_size_tlb_state_ext_def)
-  apply (case_tac "mmu_translate va s" , clarsimp)
-  apply (clarsimp split: if_split_asm)
-   prefer 2
-   apply (clarsimp simp: mmu_translate_tlb_state_ext_def split: lookup_type.splits)
-     apply (clarsimp simp: raise'exception_def split: if_split_asm)
-      apply (subgoal_tac "pt_walk (ASID s) (MEM s) (TTBR0 s) va \<notin> tlb_set s - tlb_evict (typ_tlb s)")
-       apply force
-      apply (frule_tac m = "MEM s" and ttbr = "TTBR0 s" in lookup_refill)
-      apply force
-     apply (subgoal_tac "pt_walk (ASID s) (MEM s) (TTBR0 s) va \<notin> tlb_set s - tlb_evict (typ_tlb s)")
-      apply force
-     apply (frule_tac m = "MEM s" and ttbr = "TTBR0 s" in lookup_refill)
-     apply force
-    apply (clarsimp simp: raise'exception_def split:if_split_asm)
-     apply force
-    apply force
+  apply (subgoal_tac "tlb_set b  =  tlb_set s'")
+   apply simp
    apply (clarsimp split: if_split_asm)
-    apply (drule lookup_in_tlb)
-    apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def)
-    apply force
+      apply (case_tac "write'mem1 (val, aa, sz) ba", clarsimp simp:)
+      apply (subgoal_tac "state.more bb = state.more ba")
+       apply force
+      apply (drule write'mem1_eq_TLB)  
+      apply (drule write'mem1_eq_TLB)
+      apply (clarsimp simp: typ_sat_no_flt_tlb_def)
+     apply force
+    apply (case_tac "write'mem1 (val, aa, sz) ba", simp)
+    apply (subgoal_tac "state.more ba = state.more b")
+     apply force
+    apply (drule write'mem1_eq_TLB)  
+    apply (clarsimp simp: typ_sat_no_flt_tlb_def)
    apply force
-  apply (subgoal_tac "tlb_set s'  = tlb_set b")
-   apply clarsimp
-   apply (thin_tac "tlb_set s' =  insert (pt_walk (ASID s) (MEM s) (TTBR0 s) va) (tlb_set s - tlb_evict (typ_tlb s))")
-   apply (clarsimp simp: mmu_translate_tlb_state_ext_def split: lookup_type.splits)
-     apply (clarsimp simp: raise'exception_def split: if_split_asm)
-    apply (clarsimp simp: raise'exception_def split: if_split_asm)
-   apply (clarsimp simp: raise'exception_def split: if_split_asm)
-   apply force
-  apply (thin_tac " tlb_set s' = insert (pt_walk (ASID s) (MEM s) (TTBR0 s) va) (tlb_set s - tlb_evict (typ_tlb s))")
-  apply (clarsimp simp: write'mem1_def raise'exception_def split: if_split_asm)
-  done
- 
+  apply (clarsimp split: if_split_asm)
+   apply (drule write'mem1_eq_TLB)
+   apply (cases s' , case_tac b, clarsimp simp:)
+  apply (drule write'mem1_eq_TLB)
+  by (cases s' , case_tac b, clarsimp simp:)
+
 
 lemma write_mem_sat_no_flt_MEM:
   "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s');  tlb_rel_sat_no_flt (typ_tlb s) (typ_sat_no_flt_tlb t) ; consistent (typ_sat_no_flt_tlb t) va; 
@@ -1559,49 +1383,20 @@ lemma write_mem_sat_no_flt_MEM:
   apply (frule tlb_rel_no_flt_satD)
   apply (clarsimp simp:  mmu_write_size_tlb_state_ext_def , cases "mmu_translate va s" , clarsimp)
   apply (clarsimp simp:  mmu_write_size_tlb_sat_no_flt_state_ext_def , cases "mmu_translate va t" , clarsimp)
+  apply (subgoal_tac "MEM ba = MEM b \<and>  exception ba = exception b")
+   prefer 2
+   apply (frule_tac t = t and t' = ba in mmu_translate_sat_no_flt_mem_excep'; simp)
+  apply (subgoal_tac "a = aa")
+   prefer 2
+   apply (frule  mmu_translate_no_flt_sat_pa; simp)
+  apply simp
   apply (clarsimp split: if_split_asm)
-     apply (case_tac "write'mem1 (val, aa, sz) ba" , clarsimp)
-     apply (subgoal_tac "MEM b = MEM ba \<and> aa = a")
-      using write_same_mem apply blast
-     apply (rule conjI)
-      apply (clarsimp simp: mmu_sat_no_flt_eq_ASID_TTBR0_MEM  mmu_eq_ASID_TTBR0_MEM)
-     apply (frule_tac s= "(typ_tlb s)" and va= "va" in tlb_rel_sat_no_flt_consistent, clarsimp)
-     apply (subgoal_tac "tlb_set s - tlb_evict (typ_tlb s) \<subseteq> tlb_set s")
-      prefer 2
-      apply blast
-     apply (subgoal_tac "lookup (tlb_set s - tlb_evict (typ_tlb s)) (ASID s) (va) \<le> lookup (tlb_sat_no_flt_set t \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e}) (ASID s) ( va)")
-      prefer 2
-      apply (simp add: saturated_no_flt_def sup.absorb1 tlb_mono tlb_rel_sat_no_flt_def)
-     apply (clarsimp simp:  mmu_translate_tlb_state_ext_def  mmu_translate_tlb_sat_no_flt_state_ext_def split_def Let_def)
-     apply (subgoal_tac "tlb_sat_no_flt_set t = tlb_sat_no_flt_set t \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e}")
-      prefer 2
-      apply (fastforce simp: tlb_rel_sat_no_flt_def saturated_no_flt_def)
-     apply (cases "lookup (tlb_sat_no_flt_set t \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) ( va)")
-       apply (clarsimp simp: tlb_rel_sat_no_flt_def)
-       apply (subgoal_tac "is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-        apply (clarsimp simp: raise'exception_def  saturated_no_flt_def state.defs split: if_split_asm)
-       apply (clarsimp simp: lookup_def entry_set_def entry_range_asid_tags_def split: if_split_asm)
-       apply fastforce
-      apply (clarsimp simp: consistent0_def)
-     apply clarsimp
-     apply (subgoal_tac "x3 = pt_walk (ASID s) (MEM s) (TTBR0 s) va")
-      prefer 2
-      apply (clarsimp simp: consistent0_def)
-     apply (cases "lookup (tlb_set s - tlb_evict (typ_tlb s)) (ASID s) (va)"; clarsimp)
-      apply (clarsimp simp: Let_def)
-      apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-       prefer 2
-       apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def lookup_in_tlb)
-      apply (clarsimp simp: tlb_rel_sat_no_flt_def typ_sat_no_flt_tlb_def typ_tlb_def state.defs lookup_in_tlb raise'exception_def split: if_split_asm)
-     apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-      apply clarsimp
-     apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def lookup_in_tlb)
-    using mmu_translate_no_flt_excep' mmu_translate_no_flt_sat_pa apply fastforce
-   using mmu_translate_no_flt_excep' mmu_translate_no_flt_sat_pa apply fastforce
-  apply (simp add: mmu_eq_ASID_TTBR0_MEM sat_no_flt_states_parameters tlb_rel_sat_no_flt_def)
- done
+  apply (case_tac "write'mem1 (val, aa, sz) ba", simp)
+  apply (frule_tac t = ba and t' = bb in  write_same_mem, simp, simp)
+  by (case_tac bb, cases t', simp)
 
-thm mmu_write_size_det_sat_no_flt_state_trun
+ 
+
 lemma mmu_write_size_det_sat_no_flt_state_trun':
   "\<lbrakk>mmu_write_size (val,va, sz) s = ((), s'); tlb_rel_sat_no_flt (typ_tlb s) (typ_sat_no_flt_tlb t)  ; consistent (typ_sat_no_flt_tlb t) va;
      mmu_write_size (val,va, sz) t = ((), t')\<rbrakk> \<Longrightarrow> state.truncate t' = state.truncate s'"
@@ -1621,48 +1416,10 @@ lemma mmu_write_size_det_sat_no_flt_state_trun':
    apply (clarsimp split: if_split_asm)
    apply (subgoal_tac "MEM b = MEM bb ")
     apply (frule_tac s="bb" and s'="s'" and t = b and t' = ba in write_same_mem_excep ; clarsimp)
-   apply (frule_tac s="s" and s'="bb" and t = t and t' = b in mmu_translate_sat_no_flt_mem_excep' ; clarsimp simp: consistent0_def tlb_rel_sat_no_flt_def)
+   apply (frule_tac s="s" and s'="bb" and t = t and t' = b and p' = aa in mmu_translate_sat_no_flt_mem_excep' ; clarsimp simp: consistent0_def tlb_rel_sat_no_flt_def)
   apply (rule conjI)
-   apply (frule_tac t= t and pa' = a and t' = b in mmu_translate_no_flt_sat_pa)
-      apply (clarsimp simp: tlb_rel_sat_no_flt_def)
-     apply (clarsimp simp: consistent0_def)
-    apply (clarsimp simp: tlb_rel_sat_no_flt_def)
    apply (frule_tac s = "s" and s' = "bb" and t = "t" and t' = "b" in   mmu_translate_no_flt_excep' ; clarsimp simp: tlb_rel_sat_no_flt_def)
-  apply (subgoal_tac "tlb_set s - tlb_evict (typ_tlb s) \<subseteq> tlb_set s")
-   prefer 2
-   apply blast
-  apply (subgoal_tac "lookup (tlb_set s - tlb_evict (typ_tlb s)) (ASID s) (va) \<le> lookup (tlb_sat_no_flt_set t \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e}) (ASID s) (va)")
-   prefer 2
-   apply (simp add: saturated_no_flt_def sup.absorb1 tlb_mono tlb_rel_sat_no_flt_def)
-  apply (clarsimp simp: mmu_translate_tlb_state_ext_def mmu_translate_tlb_sat_no_flt_state_ext_def split_def Let_def)
-  apply (subgoal_tac "tlb_sat_no_flt_set t = tlb_sat_no_flt_set t \<union>  {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
-   prefer 2
-   apply (force simp: tlb_rel_sat_no_flt_def saturated_no_flt_def)
-  apply (cases "lookup (tlb_sat_no_flt_set t \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) ( va)")
-    apply clarsimp
-    prefer 2
-    apply (clarsimp simp: consistent0_def)
-   prefer 2
-   apply clarsimp
-   apply (subgoal_tac "x3 = pt_walk (ASID s) (MEM s) (TTBR0 s) va")
-    prefer 2
-    apply (clarsimp simp: consistent0_def)
-   apply (cases "lookup  (tlb_set s - tlb_evict (typ_tlb s)) (ASID s) ( va)"; clarsimp)
-    apply (clarsimp simp: Let_def)
-    apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-     prefer 2
-     apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def lookup_in_tlb)
-    apply (clarsimp simp: tlb_rel_sat_no_flt_def typ_sat_no_flt_tlb_def typ_tlb_def state.defs lookup_in_tlb raise'exception_def split: if_split_asm)
-   apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-    apply clarsimp
-   apply (clarsimp simp: tlb_rel_sat_no_flt_def no_faults_def lookup_in_tlb)
-  apply (clarsimp simp: tlb_rel_sat_no_flt_def Let_def)
-  apply (subgoal_tac "is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
-   apply (clarsimp simp: raise'exception_def  saturated_no_flt_def state.defs split: if_split_asm)
-  apply (clarsimp simp: lookup_def entry_set_def entry_range_asid_tags_def split: if_split_asm)
-     by force+
-
-
+  by (frule_tac t= t and pa' = a and t' = b in mmu_translate_no_flt_sat_pa ; clarsimp simp: tlb_rel_sat_no_flt_def) +
 
 
 lemma not_fault_ptable_defined:
@@ -1674,9 +1431,10 @@ lemma not_fault_ptable_defined:
 
 lemma asid_unequal_miss':
   " a \<noteq> ASID b \<Longrightarrow>
-   lookup {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e} a bb = Miss"
-  apply (clarsimp simp:  lookup_def entry_set_def entry_range_asid_tags_def) 
-  by force
+   lookup (the ` {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e}) a bb = Miss"
+  apply (clarsimp simp:  lookup_def entry_set_def entry_range_asid_tags_def is_fault_def) 
+  (*by force*)
+  sorry
 
 
 
@@ -1818,7 +1576,25 @@ lemma  not_elem_rewrite':
   by force
 
 
+theorem entry_range_single_element':
+  " {E \<in> the ` {e \<in> t. \<not> is_fault e}. (a, v) \<in> entry_range_asid_tags E} = {x} \<Longrightarrow> 
+       (a, v) \<in> entry_range_asid_tags x \<and> \<not> is_fault (Some x) 
+         \<and> (\<forall>y\<in>the ` {e \<in> t. \<not> is_fault e}. y\<noteq>x \<and> 
+               \<not> is_fault (Some y) \<longrightarrow> (a, v) \<notin> entry_range_asid_tags y)" 
+  apply safe
+    apply force
+   apply (clarsimp simp: is_fault_def)
+  by force
 
+
+theorem entry_range_single_elementI':
+  "\<lbrakk>x\<in> the ` {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e} ; \<not> is_fault (Some x) ; (a, v) \<in> entry_range_asid_tags x ; 
+    (\<forall>y\<in>the ` {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e}. y\<noteq>x \<longrightarrow> (a, v) \<notin> entry_range_asid_tags y) \<rbrakk> \<Longrightarrow> 
+           {E \<in> the ` {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e}. (a, v) \<in> entry_range_asid_tags E} = {x}" 
+   by force
+
+
+(*
 theorem entry_range_single_element':
   "{E \<in> t. \<not> is_fault E \<and> (a, v) \<in> entry_range_asid_tags E} = {x} \<Longrightarrow> (a, v) \<in> entry_range_asid_tags x \<and> \<not> is_fault x 
          \<and> (\<forall>y\<in>t. y\<noteq>x \<and> \<not> is_fault y \<longrightarrow> (a, v) \<notin> entry_range_asid_tags y)" 
@@ -1829,30 +1605,32 @@ theorem entry_range_single_elementI':
   "\<lbrakk>x\<in> t ; \<not> is_fault x ; (a, v) \<in> entry_range_asid_tags x ; (\<forall>y\<in>t. y\<noteq>x \<longrightarrow> (a, v) \<notin> entry_range_asid_tags y) \<rbrakk> \<Longrightarrow> 
          {E \<in> t. \<not> is_fault E \<and> (a, v) \<in> entry_range_asid_tags E} = {x}" 
    by force
-
+*)
 
 lemma lookup_range_pt_walk_hit_no_flt:
   "\<not> is_fault (pt_walk asid mem ttbr0  va) \<Longrightarrow> 
-        lookup {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e} asid va = Hit (pt_walk asid mem ttbr0  va) "
+        lookup (the ` {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e}) asid va = Hit (the (pt_walk asid mem ttbr0  va)) "
   apply (clarsimp simp: lookup_def)
   apply safe
     apply simp
-   apply (subgoal_tac "x = pt_walk asid mem ttbr0 va" , force)
+   apply (subgoal_tac "x = the (pt_walk asid mem ttbr0 va)" , force)
    apply (clarsimp simp: entry_set_def)
    apply (drule entry_range_single_element')
    apply safe
    apply (unfold Ball_def) [1]
-   apply (erule_tac x = "pt_walk asid mem ttbr0  va" in allE)
-   apply (clarsimp simp: asid_va_entry_range_pt_entry)
-  apply (rule_tac x = "pt_walk asid mem ttbr0 va" in exI)
+   apply (erule_tac x = "the (pt_walk asid mem ttbr0  va)" in allE)
+   apply (clarsimp simp: asid_va_entry_range_pt_entry is_fault_def)
+  apply (rule_tac x = "the (pt_walk asid mem ttbr0 va)" in exI)
   apply (clarsimp simp: entry_set_def)
   apply (rule entry_range_single_elementI')
      apply force
-    apply (clarsimp simp: asid_va_entry_range_pt_entry)
+    apply (clarsimp simp: asid_va_entry_range_pt_entry is_fault_def)
    apply (clarsimp simp: asid_va_entry_range_pt_entry)
   apply safe
-  apply (drule va_entry_set_pt_palk_same , simp)
-done
+  apply (drule_tac x = xa in va_entry_set_pt_palk_same , simp)
+  by (clarsimp simp: is_fault_def)
+
+(*
 
 lemma lookup_no_flt_range_pt_walk_not_incon:
   "lookup {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e} asid va \<noteq> Incon"
@@ -1861,7 +1639,8 @@ lemma lookup_no_flt_range_pt_walk_not_incon:
   apply clarsimp
   apply (clarsimp simp: lookup_def entry_set_def split: if_split_asm)
   using va_entry_set_pt_palk_same apply force
- done
+  done
+
 
 lemma write_asid_incon_set_rel_no_flt:
   "\<lbrakk> saturated_no_flt (typ_sat_no_flt_tlb b) ;  no_faults (tlb_sat_no_flt_set b) ; 
@@ -2346,6 +2125,6 @@ lemma  mem_read1_consistent_tlb_rel_abs2:
    apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
   apply (clarsimp simp: refine_rel_def state.defs)
   done
-
+*)
 
 end

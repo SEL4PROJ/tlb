@@ -25,8 +25,8 @@ type_synonym fl     = "8 word"
 
 
 datatype tlb_entry =
-    EntrySmall   asid vSm "pSm option" fl
-  | EntrySection asid vSe "pSe option" fl
+    EntrySmall   asid vSm pSm fl
+  | EntrySection asid vSe pSe fl
 
 type_synonym tlb = "tlb_entry set"
 
@@ -229,13 +229,10 @@ theorem  invalidating_corrupt_entries:
 datatype bpa = Bpsm "20 word" | Bpse "12 word"
 
 fun
-  bpa_entry :: "tlb_entry \<Rightarrow> bpa option"
+  bpa_entry :: "tlb_entry \<Rightarrow> bpa"
 where
-  "bpa_entry (EntrySmall _ _ p _)   = map_option Bpsm p"
-| "bpa_entry (EntrySection _ _ p _) = map_option Bpse p"
-
-definition
-  "is_fault e = (bpa_entry e = None)"
+  "bpa_entry (EntrySmall _ _ p _)   =  Bpsm p"
+| "bpa_entry (EntrySection _ _ p _) =  Bpse p"
 
 fun
   bpa_to_pa :: "vaddr \<Rightarrow> bpa \<Rightarrow> paddr"
@@ -246,7 +243,7 @@ where
 definition
   va_to_pa :: "vaddr \<Rightarrow> tlb_entry \<Rightarrow> paddr"
 where
-  "va_to_pa v t \<equiv> bpa_to_pa v (the (bpa_entry t))"
+  "va_to_pa v t \<equiv> bpa_to_pa v (bpa_entry t)"
 
 (* Uniqueness *)
 
@@ -694,23 +691,24 @@ where
 
 
 definition
- pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
+ pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry option"
 where
   "pt_walk asid heap ttbr0 v \<equiv>
       case get_pde heap ttbr0 v
-       of None                 \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
-       | Some InvalidPDE       \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
-       | Some ReservedPDE      \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
-       | Some (SectionPDE p a) \<Rightarrow>
-          EntrySection asid (ucast (addr_val v >> 20) :: 12 word)
-                            (Some  ((word_extract 31 20 (addr_val p)):: 12 word))  (0::8 word)
+       of None                 \<Rightarrow> None
+       | Some InvalidPDE       \<Rightarrow> None
+       | Some ReservedPDE      \<Rightarrow> None
+       | Some (SectionPDE p a) \<Rightarrow> Some (EntrySection asid (ucast (addr_val v >> 20) :: 12 word)
+                                       ((word_extract 31 20 (addr_val p)):: 12 word)  (0::8 word))
        | Some (PageTablePDE p) \<Rightarrow>
                (case get_pte heap p v
-                 of None                     \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
-                 |  Some InvalidPTE          \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
-                 |  Some (SmallPagePTE p1 a) \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word)
-                                            (Some  ((word_extract 31 12 (addr_val p1)):: 20 word)) 0)"
+                 of None                     \<Rightarrow> None
+                 |  Some InvalidPTE          \<Rightarrow> None
+                 |  Some (SmallPagePTE p1 a) \<Rightarrow> Some(EntrySmall asid (ucast (addr_val v >> 12) :: 20 word)
+                                                    ((word_extract 31 12 (addr_val p1):: 20 word)) 0))"
 
+definition
+  "is_fault (e::tlb_entry option) \<equiv> (e = None)"
 
 
 

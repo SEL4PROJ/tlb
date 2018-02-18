@@ -1,6 +1,6 @@
 theory PD_Cache
 imports 
- MMU_ARM.TLB
+ TLB
 begin
 
 

@@ -6,7 +6,6 @@ begin
 
 
 
-
 record tlb_state = state + 
            tlb_set :: "tlb_entry set "
 
@@ -146,7 +145,7 @@ lemma typ_incon_prim_parameter'2 [simp]:
 
 definition
   "consistent0 m asid ttbr0 tlb va \<equiv>
-     lookup tlb asid va = Hit (pt_walk asid m ttbr0 va) \<or>
+     (lookup tlb asid va = Hit (the (pt_walk asid m ttbr0 va)) \<and> \<not>is_fault (pt_walk asid m ttbr0 va)) \<or>
      lookup tlb asid va = Miss"
 
 
@@ -154,40 +153,60 @@ abbreviation
   "consistent (s::tlb_entry set state_scheme) \<equiv>
                consistent0 (MEM s) (ASID s) (TTBR0 s) (state.more s)"
 
-(* TLB doesn't store page faults in this level of the model *)
-definition
-  "no_faults tlb = (\<forall>e \<in> tlb. \<not>is_fault e)"
-
 
 definition 
    asid_va_incon :: "tlb \<Rightarrow> (asid \<times> vaddr) set"
-where                                                         
+where                                                        
   "asid_va_incon tlb  \<equiv>  {(asid, va). lookup tlb asid va = Incon}"
 
 
 definition
   saturated_no_flt :: "tlb_entry set state_scheme \<Rightarrow> bool"
 where
-  "saturated_no_flt s  \<equiv> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e} \<subseteq> state.more s"
+  "saturated_no_flt s  \<equiv> 
+       the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e} \<subseteq> state.more s"
 
 
 definition
   tlb_rel :: "tlb_entry set state_scheme \<Rightarrow> tlb_entry set state_scheme \<Rightarrow> bool"
 where
-  "tlb_rel s t \<equiv> state.truncate s = state.truncate t \<and> state.more s \<subseteq> state.more t  \<and> no_faults (state.more t)"
+  "tlb_rel s t \<equiv> state.truncate s = state.truncate t \<and> state.more s \<subseteq> state.more t "
 
 
 definition 
   tlb_rel_sat_no_flt :: "tlb_entry set state_scheme \<Rightarrow> tlb_entry set state_scheme \<Rightarrow> bool"
 where                                                                
-  "tlb_rel_sat_no_flt s t \<equiv> state.truncate s = state.truncate t \<and> state.more s \<subseteq> state.more t \<and> saturated_no_flt t \<and> no_faults (state.more t)"
+  "tlb_rel_sat_no_flt s t \<equiv> state.truncate s = state.truncate t \<and> state.more s \<subseteq> state.more t \<and> saturated_no_flt t"
+
+(*
+definition                              
+   asid_va_hit_incon :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
+where                                                         
+  "asid_va_hit_incon s  \<equiv>  {(asid, va). asid = ASID s \<and>  
+                            (\<exists>x. lookup (state.more s) asid va = Hit x \<and> x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) va )) }"
+*)
+
+
+definition                              
+   asid_va_hit_incon' :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
+where                                                         
+  "asid_va_hit_incon' s  \<equiv> 
+                  {(asid, va). asid = ASID s \<and>  
+                   (\<exists>x. lookup (state.more s) asid va = Hit x \<and> x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) va) \<and>
+                         \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) ) }"
+
+definition                              
+   asid_va_hit_incon'' :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
+where                                                         
+  "asid_va_hit_incon'' s  \<equiv> 
+                  {(asid, va). asid = ASID s \<and>  is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) \<and>
+                                        (\<exists>x. lookup (state.more s) asid va = Hit x) }"
 
 
 definition                              
    asid_va_hit_incon :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
 where                                                         
-  "asid_va_hit_incon s  \<equiv>  {(asid, va). asid = ASID s \<and>  
-                            (\<exists>x. lookup (state.more s) asid va = Hit x \<and> x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) va ) }"
+  "asid_va_hit_incon s  \<equiv>  asid_va_hit_incon' s \<union> asid_va_hit_incon'' s"
 
 definition                              
    asid_va_incon_tlb_mem :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
@@ -206,7 +225,7 @@ definition
   tlb_rel_abs' :: "tlb_entry set state_scheme \<Rightarrow> tlb_incon_set' state_scheme \<Rightarrow> bool"
 where                                                                
   "tlb_rel_abs' s t \<equiv> state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem s \<subseteq> incon_set (state.more t) \<and> 
-                       saturated_no_flt s \<and> no_faults (state.more s) \<and> 
+                       saturated_no_flt s \<and> 
                          (\<forall>a v. a \<noteq> ASID s \<longrightarrow> snapshot_of_tlb (state.more s) a v \<le> tlb_snapshot (state.more t) a  v) \<and>
                           {(a,v). tlb_snapshot (state.more t) a  v = Incon }  \<subseteq>  incon_set (state.more t)" 
 
@@ -234,8 +253,9 @@ declare trim_state_def [simp add]
 
 lemma consistent_not_Incon:
   "consistent0 m asid ttbr0 tlb va = 
-  (lookup tlb asid va \<noteq> Incon \<and> (\<forall>e. lookup tlb asid va = Hit e \<longrightarrow> e = pt_walk asid m ttbr0 va))"
-  by (cases "lookup tlb asid va"; simp add: consistent0_def)
+  (lookup tlb asid va \<noteq> Incon \<and> (\<forall>e. lookup tlb asid va = Hit e \<longrightarrow> e = the (pt_walk asid m ttbr0 va) 
+             \<and> pt_walk asid m ttbr0 va \<noteq> None))"
+  by (cases "lookup tlb asid va"; simp add: consistent0_def is_fault_def)
 
 
 lemma tlb_relD:
@@ -282,7 +302,22 @@ lemma entry_set_insert:
   by (auto simp add: entry_set_def entry_range_asid_tags_def)
 
 lemma asid_entry_pt_walk [simp]:
-  "asid_entry (pt_walk asid m ttbr0 va) = asid"
+  "pt_walk asid m ttbr0 va \<noteq> None \<Longrightarrow> asid_entry (the (pt_walk asid m ttbr0 va)) = asid"
+  apply (simp add: pt_walk_def Let_def)
+  apply ((((cases "get_pde m ttbr0 va" ; clarsimp) , case_tac a ; clarsimp) , 
+      case_tac "get_pte m x3 va" ; clarsimp) , case_tac a ; clarsimp)
+  done
+
+
+lemma asid_entry_pt_walk''' [simp]:
+  "\<not>is_fault(pt_walk asid m ttbr0 va) \<Longrightarrow> asid_entry (the (pt_walk asid m ttbr0 va)) = asid"
+  apply (simp add: pt_walk_def Let_def is_fault_def)
+  apply ((((cases "get_pde m ttbr0 va" ; clarsimp) , case_tac a ; clarsimp) , 
+      case_tac "get_pte m x3 va" ; clarsimp) , case_tac a ; clarsimp)
+  done
+
+lemma asid_entry_pt_walk' [simp]:
+  "pt_walk asid m ttbr0 va = Some x \<Longrightarrow> asid_entry (the (pt_walk asid m ttbr0 va)) = asid"
   apply (simp add: pt_walk_def Let_def)
   apply ((((cases "get_pde m ttbr0 va" ; clarsimp) , case_tac a ; clarsimp) , 
       case_tac "get_pte m x3 va" ; clarsimp) , case_tac a ; clarsimp)
@@ -309,29 +344,26 @@ lemma va_12_right [simp]:
   by word_bitwise
 
 lemma asid_entry_range [simp, intro!]:
-  "va \<in> entry_range (pt_walk asid m ttbr0 va)"
+  "pt_walk asid m ttbr0 va \<noteq> None \<Longrightarrow> va \<in> entry_range (the (pt_walk asid m ttbr0 va))"
   apply (clarsimp simp: entry_range_def pt_walk_def Let_def)
   apply (cases "get_pde m ttbr0 va" ; clarsimp simp: image_iff)
-   apply (rule_tac x = "addr_val va" in bexI; clarsimp)
   apply (case_tac a; clarsimp simp: image_iff)
-     apply (rule_tac x = "addr_val va" in bexI; clarsimp)+
    apply (case_tac "get_pte m x3 va"; clarsimp simp: image_iff )
-    apply (rule_tac x = "addr_val va" in bexI; clarsimp)
    apply (case_tac a; clarsimp simp: image_iff)
   by (rule_tac x = "addr_val va" in bexI; clarsimp)+
- 
+
 
 
 lemma lookup_refill:
-  "lookup tlb asid va = Miss \<Longrightarrow>
-   lookup (insert (pt_walk asid m ttbr va) tlb) asid va = Hit (pt_walk asid m ttbr va)"
-   by (clarsimp simp: lookup_def entry_set_insert [where e="pt_walk asid m ttbr va"] split: if_split_asm)
+  "pt_walk asid m ttbr va \<noteq> None \<and> lookup tlb asid va = Miss \<Longrightarrow>
+   lookup (insert (the(pt_walk asid m ttbr va)) tlb) asid va = Hit (the(pt_walk asid m ttbr va))"
+   by (clarsimp simp: lookup_def entry_set_insert [where e="the (pt_walk asid m ttbr va)"] split: if_split_asm)
 
 
 lemma consistent_insert [simp, intro!]:
-  "lookup tlb asid va = Miss \<Longrightarrow>
-  consistent0 m asid ttbr (insert (pt_walk asid m ttbr va) tlb) va"
-  by (simp add: consistent0_def lookup_refill)
+  "pt_walk asid m ttbr va \<noteq> None \<and> lookup tlb asid va = Miss \<Longrightarrow>
+  consistent0 m asid ttbr (insert (the(pt_walk asid m ttbr va)) tlb) va"
+  by (simp add: consistent0_def lookup_refill is_fault_def)
 
 
 
@@ -343,14 +375,27 @@ lemma lookup_incon_subset [simp]:
        lookup t a va = Incon"
   by (metis less_eq_lookup_type lookup_type.simps(3) tlb_mono)
 
+lemma  pt_walk_some_asid_entry [simp, intro!]:
+  "pt_walk (ASID s) (MEM s) (TTBR0 s) va = Some a \<Longrightarrow> 
+    asid_entry (the (pt_walk (ASID s) (MEM s) (TTBR0 s) va)) = ASID s"
+  by (clarsimp simp: pt_walk_def split: option.splits pde.splits pte.splits)
+
+
+
+
 
 lemma  lookup_saturated_no_flt_miss_is_fault:
-  "lookup (tlb_sat_no_flt_set s \<union> 
-     {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) va = Miss \<Longrightarrow>
-    is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)  "
-  apply (clarsimp simp: lookup_def entry_set_def entry_range_asid_tags_def split: if_split_asm)
+  "lookup (tlb_sat_no_flt_set s \<union>  
+        the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) va = Miss \<Longrightarrow>
+     pt_walk (ASID s) (MEM s) (TTBR0 s) va = None  "
+  apply (clarsimp simp: lookup_def entry_set_def entry_range_asid_tags_def is_fault_def split: if_split_asm)
+  apply (erule_tac x = "the (pt_walk (ASID s) (MEM s) (TTBR0 s) va)" in allE)
+  apply (erule disjE)
+   apply force
+  apply (cases "pt_walk (ASID s) (MEM s) (TTBR0 s) va ", simp)  
+  apply (drule pt_walk_some_asid_entry)
   by force
-
+ 
 
 lemma 
   "\<lbrakk>lookup (t1 \<union> t2) a va = Hit x ; t2 \<subseteq> t1 \<rbrakk>  \<Longrightarrow>  entry_set t1 a va = {x} "
@@ -361,8 +406,8 @@ lemma
 
 
 lemma
-  "\<lbrakk>consistent (typ_sat_no_flt_tlb s) va ; 
-    lookup (tlb_sat_no_flt_set s) (ASID s) va = Hit x3 \<rbrakk> \<Longrightarrow>  x3 = pt_walk (ASID s) (MEM s) (TTBR0 s) va"
+  "\<lbrakk>consistent (typ_sat_no_flt_tlb s) va ;  lookup (tlb_sat_no_flt_set s) (ASID s) va = Hit x3 \<rbrakk> \<Longrightarrow> 
+     x3 = the (pt_walk (ASID s) (MEM s) (TTBR0 s) va)"
   apply (clarsimp simp: consistent0_def )
 done
 
@@ -395,16 +440,15 @@ lemma write'mem1_rel:
    by (clarsimp simp: write'mem1_def raise'exception_def split: if_split_asm)
 
 
-
 lemma sat_state_tlb':
   "\<lbrakk> saturated_no_flt s \<rbrakk> \<Longrightarrow> 
-     state.more s = state.more s \<union> {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not> is_fault e}"
+     state.more s = state.more s \<union> the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}"
   by (fastforce simp: saturated_no_flt_def)
 
 
 lemma tlb_rel'_absD:
   "tlb_rel_abs' s t \<Longrightarrow>
-     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and>  saturated_no_flt s \<and> no_faults (state.more s) \<and> 
+     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and>  saturated_no_flt s \<and> 
                 asid_va_incon_tlb_mem s  \<subseteq> incon_set (state.more t) \<and> exception t = exception s"
   by (clarsimp simp: tlb_rel_abs'_def state.defs)
 
@@ -414,7 +458,5 @@ lemma refine_relD:
      ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s  \<and> exception t = exception s"
   apply (clarsimp simp: refine_rel_def)
   by (clarsimp simp:  state.defs)
-
-
 
 end
