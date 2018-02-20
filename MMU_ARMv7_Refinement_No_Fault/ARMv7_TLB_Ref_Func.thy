@@ -199,14 +199,32 @@ definition
    asid_va_hit_incon'' :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
 where                                                         
   "asid_va_hit_incon'' s  \<equiv> 
-                  {(asid, va). asid = ASID s \<and>  is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) \<and>
-                                        (\<exists>x. lookup (state.more s) asid va = Hit x) }"
+                  {(asid, va). asid = ASID s \<and>  (\<exists>x. lookup (state.more s) asid va = Hit x) \<and>
+                   is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) }"
+
+
+definition                              
+   asid_va_hit_incon_inter :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
+where                                                         
+  "asid_va_hit_incon_inter s  \<equiv>  asid_va_hit_incon' s \<union> asid_va_hit_incon'' s"
 
 
 definition                              
    asid_va_hit_incon :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
 where                                                         
-  "asid_va_hit_incon s  \<equiv>  asid_va_hit_incon' s \<union> asid_va_hit_incon'' s"
+  "asid_va_hit_incon s  \<equiv>  (\<lambda>va. (ASID s , va)) ` {va. \<exists>x. lookup (state.more s) (ASID s) va = Hit x \<and>
+                                                         ((x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) va) \<and>
+                                                               \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) ) \<or>
+                                                         is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ))}"
+
+
+
+
+lemma asid_calib_thm [simp]:
+  "asid_va_hit_incon s = asid_va_hit_incon_inter s"
+  apply (clarsimp simp: asid_va_hit_incon_def asid_va_hit_incon'_def asid_va_hit_incon''_def asid_va_hit_incon_inter_def)
+    by blast
+    
 
 definition                              
    asid_va_incon_tlb_mem :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"

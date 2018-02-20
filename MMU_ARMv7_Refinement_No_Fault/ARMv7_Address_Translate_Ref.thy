@@ -431,7 +431,7 @@ lemma mmu_sat_no_flt_eq_ASID_TTBR0_MEM:
 lemma not_member_incon_consistent':
   "\<lbrakk>(ASID s , va) \<notin>  asid_va_incon_tlb_mem (typ_sat_no_flt_tlb s) \<rbrakk> \<Longrightarrow> 
                                        consistent (typ_sat_no_flt_tlb s) va"
-  apply (clarsimp simp: asid_va_incon_tlb_mem_def asid_va_incon_def asid_va_hit_incon_def
+  apply (clarsimp simp: asid_va_incon_tlb_mem_def asid_va_incon_def asid_va_hit_incon_inter_def
       asid_va_hit_incon'_def asid_va_hit_incon''_def)
   apply (clarsimp simp: consistent0_def)
   by (clarsimp simp: lookup_def consistent0_def is_fault_def split: if_split_asm)
@@ -469,7 +469,7 @@ lemma mmu_translate_sat_abs_refine':
             tlb_rel_abs'  (typ_sat_no_flt_tlb s') (typ_incon' t')"
   apply (frule_tac s = s in tlb_rel_abs_consistent' ; clarsimp )
   apply (frule tlb_rel'_absD , clarsimp)
-  apply (frule_tac mmu_translate_sa_consistent' ; clarsimp simp: tlb_rel_abs'_def asid_va_incon_tlb_mem_def asid_va_hit_incon_def
+  apply (frule_tac mmu_translate_sa_consistent' ; clarsimp simp: tlb_rel_abs'_def asid_va_incon_tlb_mem_def asid_va_hit_incon_inter_def
       asid_va_hit_incon'_def asid_va_hit_incon''_def)
     (* TLB is not changing as s is already saturated *)
   apply (subgoal_tac "s' = s\<lparr>exception := exception s'\<rparr> \<and> t' = t\<lparr>exception := exception t'\<rparr>")

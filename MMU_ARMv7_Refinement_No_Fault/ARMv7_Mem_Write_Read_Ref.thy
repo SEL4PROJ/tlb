@@ -1689,7 +1689,7 @@ lemma write_asid_incon_set_rel_no_flt:
        asid_va_incon (tlb_sat_no_flt_set b) \<subseteq> incon_set(tlb_incon_set' ba) ;  asid_va_hit_incon (typ_sat_no_flt_tlb b) \<subseteq> incon_set(tlb_incon_set' ba)\<rbrakk> \<Longrightarrow>
       asid_va_incon (tlb_sat_no_flt_set b \<union> the ` {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e}) \<subseteq>
               incon_set (tlb_incon_set' ba) \<union> ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)"
-  apply (clarsimp simp: asid_va_incon_def ptable_comp_def  asid_va_hit_incon_def asid_va_hit_incon'_def asid_va_hit_incon''_def)
+  apply (clarsimp simp: asid_va_incon_def ptable_comp_def  asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def)
   apply (case_tac "a = ASID b" , clarsimp)
    prefer 2
    apply (drule union_incon_cases1)
@@ -1823,7 +1823,7 @@ lemma  write_asid_incon_set_rel_no_flt':
        asid_va_incon (tlb_sat_no_flt_set b) \<subseteq> incon_set (tlb_incon_set' ba) ;  asid_va_hit_incon (typ_sat_no_flt_tlb b) \<subseteq> incon_set(tlb_incon_set' ba)\<rbrakk> \<Longrightarrow>
       asid_va_hit_incon (typ_sat_no_flt_tlb (bb\<lparr>tlb_sat_no_flt_set := tlb_sat_no_flt_set b \<union> the ` {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e}\<rparr>)) \<subseteq> 
              incon_set(tlb_incon_set' ba) \<union> ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)"
-  apply (clarsimp simp: asid_va_hit_incon_def asid_va_hit_incon'_def asid_va_hit_incon''_def ptable_comp_def  asid_va_incon_def)
+  apply (clarsimp simp: asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def ptable_comp_def  asid_va_incon_def)
   apply (rule conjI)
    apply clarsimp
    apply (drule not_elem_rewrite')
@@ -2203,7 +2203,7 @@ lemma  mem_read1_consistent_tlb_rel_abs:
     apply (cases s', cases t')
     apply clarsimp
    apply (rule conjI)
-    apply (clarsimp simp: asid_va_incon_tlb_mem_def asid_va_incon_def asid_va_hit_incon_def asid_va_hit_incon'_def asid_va_hit_incon''_def)
+    apply (clarsimp simp: asid_va_incon_tlb_mem_def asid_va_incon_def asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def)
     apply (cases s', cases t')
     apply clarsimp
    apply (rule conjI)

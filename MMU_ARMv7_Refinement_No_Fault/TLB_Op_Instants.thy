@@ -88,7 +88,7 @@ begin
       update_state (\<lambda>s. s\<lparr> TTBR0 := r \<rparr>);
       mem   <- read_state MEM;
       asid <- read_state ASID;
-      let all_non_fault_entries = {e\<in>pt_walk asid mem r ` UNIV. \<not>is_fault e};
+      let all_non_fault_entries = the ` {e\<in>pt_walk asid mem r ` UNIV. \<not>is_fault e};
       tlb0   <- read_state tlb_sat_no_flt_set;
       let tlb = tlb0 \<union> all_non_fault_entries; 
       update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := tlb \<rparr>)} "
@@ -100,7 +100,7 @@ definition
       update_state (\<lambda>s. s\<lparr> ASID := a \<rparr>);
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
-      let all_non_fault_entries = {e\<in>pt_walk a mem ttbr0 ` UNIV. \<not>is_fault e};
+      let all_non_fault_entries = the ` {e\<in>pt_walk a mem ttbr0 ` UNIV. \<not>is_fault e};
       tlb0   <- read_state tlb_sat_no_flt_set;
       let tlb = tlb0 \<union> all_non_fault_entries; 
       update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := tlb \<rparr>)} "
@@ -111,7 +111,7 @@ definition
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
       asid <- read_state ASID;
-      let all_non_fault_entries = {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
+      let all_non_fault_entries = the ` {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
       update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := all_non_fault_entries \<rparr>)} "
 
 
@@ -121,7 +121,7 @@ definition
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
       asid <- read_state ASID;
-      let all_non_fault_entries = {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
+      let all_non_fault_entries = the ` {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
       update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := (tlb - {e\<in>tlb. asid_entry e = a}) \<union> 
                                                        all_non_fault_entries \<rparr>)} "
 
@@ -131,7 +131,7 @@ definition
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
       asid <- read_state ASID;
-      let all_non_fault_entries = {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
+      let all_non_fault_entries = the ` {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
       update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := 
               (tlb - (\<Union>v\<in>vset. {e \<in> tlb.   v \<in> entry_range e})) \<union> all_non_fault_entries \<rparr>)} "
 
@@ -141,7 +141,7 @@ definition
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
       asid <- read_state ASID;
-      let all_non_fault_entries = {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
+      let all_non_fault_entries = the ` {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
       update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := 
               (tlb - (\<Union>v\<in>vset. {e \<in> tlb. (a,   v) \<in> entry_range_asid_tags e}))
                                   \<union> all_non_fault_entries \<rparr>)} "
@@ -152,12 +152,12 @@ end
 
 
 
-
 definition 
   incon_load :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> (asid \<times> vaddr) set"
   where
   "incon_load snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
-                            {v. \<exists>x. snp a v = Hit x \<and> x \<noteq> pt_walk a m rt v}"
+                            {v. \<exists>x. snp a v = Hit x \<and> (x \<noteq> the (pt_walk a m rt v) \<and> \<not>is_fault (pt_walk a m rt v) \<or>
+                                                       is_fault (pt_walk a m rt v) )}"
 
 definition 
   miss_to_hit :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> (asid \<times> vaddr) set"
@@ -169,7 +169,7 @@ definition
   consistent_hit :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> (asid \<times> vaddr) set"
  where
   "consistent_hit snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
-                                 {v. snp a v = Hit (pt_walk a m rt v)}"
+                                 {v. snp a v = Hit (the (pt_walk a m rt v)) \<and> \<not>is_fault (pt_walk a m rt v)}"
 
 
 
@@ -178,8 +178,8 @@ definition
                           heap \<Rightarrow> ttbr0 \<Rightarrow>  (asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
 where
   "snapshot_update_new iset' m_to_h h_to_h hp ttbr0 \<equiv> (\<lambda>x y. if (x,y) \<in>  iset' then Incon 
-                                                     else if (x,y) \<in> m_to_h then Hit (pt_walk x hp ttbr0 y) 
-                                                     else if (x,y) \<in> h_to_h then Hit (pt_walk x hp ttbr0 y) 
+                                                     else if (x,y) \<in> m_to_h then Hit (the (pt_walk x hp ttbr0 y)) 
+                                                     else if (x,y) \<in> h_to_h then Hit (the(pt_walk x hp ttbr0 y)) 
                                                      else Miss)"
 
 definition 
@@ -194,7 +194,7 @@ definition
   snapshot_update_current :: "(asid \<times> vaddr) set \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow>(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
 where
   "snapshot_update_current iset' mem ttbr0  \<equiv> (\<lambda>x y. if (x,y) \<in>  iset' then Incon else 
-                            if (\<not>is_fault (pt_walk x mem ttbr0 y)) then  Hit (pt_walk x mem ttbr0 y) else Miss)"
+                            if (\<not>is_fault (pt_walk x mem ttbr0 y)) then  Hit (the (pt_walk x mem ttbr0 y)) else Miss)"
 
 
 
@@ -205,10 +205,14 @@ where
   "snapshot_update_current' snp iset' mem ttbr0 a \<equiv> snp (a := snapshot_update_current iset' mem ttbr0 a)"
 
 
+
+ 
+
 definition 
   incon_load2 :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr set"
   where
-  "incon_load2 snp a m rt \<equiv>  {v. \<exists>x. snp a v = Hit x \<and> x \<noteq> pt_walk a m rt v}"
+  "incon_load2 snp a m rt \<equiv>   {v. \<exists>x. snp a v = Hit x \<and> (x \<noteq> the (pt_walk a m rt v) \<and> \<not>is_fault (pt_walk a m rt v) \<or>
+                                                       is_fault (pt_walk a m rt v) )}"
 
 
 definition 
@@ -221,7 +225,7 @@ definition
   snapshot_update_current2 :: "vaddr set \<Rightarrow> heap \<Rightarrow> ttbr0  \<Rightarrow> (asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
 where
   "snapshot_update_current2 iset' mem ttbr0  \<equiv> (\<lambda>a v. if v \<in>  iset' then Incon else 
-                            if (\<not>is_fault (pt_walk a mem ttbr0 v)) then  Hit (pt_walk a mem ttbr0 v) else Miss)"
+                            if (\<not>is_fault (pt_walk a mem ttbr0 v)) then  Hit (the(pt_walk a mem ttbr0 v)) else Miss)"
 
 
 definition 
