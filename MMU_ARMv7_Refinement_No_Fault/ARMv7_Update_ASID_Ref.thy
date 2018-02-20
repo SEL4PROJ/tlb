@@ -21,7 +21,7 @@ lemma  update_ASID_det_sat_no_flt_refine:
          tlb_rel_sat_no_flt (typ_det_tlb s) (typ_sat_no_flt_tlb t) \<rbrakk> \<Longrightarrow> 
                   tlb_rel_sat_no_flt (typ_det_tlb s') (typ_sat_no_flt_tlb t')"
   apply (clarsimp simp: update_ASID_tlb_det_state_ext_def update_ASID_tlb_sat_no_flt_state_ext_def)
-  apply (clarsimp simp: tlb_rel_sat_no_flt_def saturated_no_flt_def no_faults_def)
+  apply (clarsimp simp: tlb_rel_sat_no_flt_def saturated_no_flt_def )
   apply (cases s, cases t , clarsimp simp: state.defs , force)
 done
 
@@ -45,11 +45,11 @@ lemma lookup_hit_diff_union_incon:
 
 lemma asid_va_incon_rewrite:
   "\<lbrakk> a \<noteq> ASID s\<rbrakk> \<Longrightarrow> 
-   asid_va_incon (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) =
+   asid_va_incon (tlb_sat_no_flt_set s \<union> the ` {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) =
      asid_va_incon (tlb_sat_no_flt_set s) \<union> 
-            ((\<lambda>v. (a, v) ) ` {v. \<exists>x. lookup (tlb_sat_no_flt_set s) a (  v) = Hit x \<and>
-                                       x \<noteq> pt_walk a (MEM s) (TTBR0 s) v \<and> \<not> is_fault (pt_walk a (MEM s) (TTBR0 s) v)})"
-  apply (clarsimp simp: asid_va_incon_def)
+            ((\<lambda>v. (a, v) ) ` {v. \<exists>x. lookup (tlb_sat_no_flt_set s) a v = Hit x \<and>
+                                       x \<noteq> the (pt_walk a (MEM s) (TTBR0 s) v) \<and> \<not> is_fault (pt_walk a (MEM s) (TTBR0 s) v)})"
+(*  apply (clarsimp simp: asid_va_incon_def)
   apply safe
     apply (case_tac "aa \<noteq> a")
      apply (drule union_incon_cases1)
@@ -76,14 +76,21 @@ lemma asid_va_incon_rewrite:
    apply (clarsimp simp: lookup_hit_diff_union_incon)
   using lookup_range_pt_walk_hit_no_flt apply force
   done
+*)
+sorry
 
 
+(*
+  (a, b) \<notin> Pair a ` {v. \<exists>x. tlb_snapshot (tlb_incon_set' t) a v = Hit x \<and>
+                                       (x \<noteq> the (pt_walk a (MEM s) (TTBR0 s) v) \<and> \<not> is_fault (pt_walk a (MEM s) (TTBR0 s) v) \<or> is_fault (pt_walk a (MEM s) (TTBR0 s) v))} 
+*)
 
 lemma tlb_snapshot_rewrite:
-  "(a, b) \<notin> Pair a ` {v. \<exists>x. tlb_snapshot (tlb_incon_set' t) a v = Hit x \<and> x \<noteq> pt_walk a (MEM s) (TTBR0 s) v} \<Longrightarrow>
+  "(a, b) \<notin> Pair a ` {v. \<exists>x. tlb_snapshot (tlb_incon_set' t) a v = Hit x \<and>
+                                       (x \<noteq> the (pt_walk a (MEM s) (TTBR0 s) v) \<and> \<not> is_fault (pt_walk a (MEM s) (TTBR0 s) v) \<or> is_fault (pt_walk a (MEM s) (TTBR0 s) v))} \<Longrightarrow>
      (a, b) \<in> Pair a ` {v.  tlb_snapshot (tlb_incon_set' t) a v = Miss} \<or> 
        (a, b) \<in> Pair a ` {v.  tlb_snapshot (tlb_incon_set' t) a v = Incon} \<or> 
-         (a, b) \<in> Pair a ` {v. \<exists>x. tlb_snapshot (tlb_incon_set' t) a v = Hit x \<and> x = pt_walk a (MEM s) (TTBR0 s) v}"
+         (a, b) \<in> Pair a ` {v. \<exists>x. tlb_snapshot (tlb_incon_set' t) a v = Hit x \<and> x = the(pt_walk a (MEM s) (TTBR0 s) v)}"
   apply (clarsimp simp: image_iff)
   using lookup_type.exhaust by auto
 
@@ -134,13 +141,14 @@ lemma not_miss_incon_hit':
 
 
 lemma not_fault_range_not_miss:
-  "\<not> is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) v) \<Longrightarrow> lookup (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  v) \<noteq> Miss"
+  "\<not> is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) v) \<Longrightarrow> 
+         lookup (tlb_sat_no_flt_set s \<union> the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) v \<noteq> Miss"
   apply (clarsimp simp:)
   apply (clarsimp simp: lookup_def entry_set_va_set  a_va_set_def split: if_split_asm)
-  apply (drule_tac x = "pt_walk (ASID s) (MEM s) (TTBR0 s) v" in bspec)
+  apply (drule_tac x = "the (pt_walk (ASID s) (MEM s) (TTBR0 s) v)" in bspec)
    apply (drule_tac x = "pt_walk (ASID s) (MEM s) (TTBR0 s) v" in spec)
    apply clarsimp
-   apply (insert asid_va_entry_range_pt_entry [of "ASID s" "  v" "MEM s" "TTBR0 s" ] , clarsimp)
+   apply (insert asid_va_entry_range_pt_entry [of "ASID s" "MEM s" "TTBR0 s" "v"], clarsimp)
   apply clarsimp
   done
 
@@ -155,7 +163,7 @@ lemma update_ASID_sat_no_flt_abs_refine':
   apply (case_tac "a = ASID s")
     (* when we update to the same ASID *)
    apply (subgoal_tac "tlb_sat_no_flt_set s = tlb_sat_no_flt_set s \<union> 
-         {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
+         the `{e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
     prefer 2
     apply (clarsimp simp:  saturated_no_flt_def) 
     apply blast
@@ -181,84 +189,148 @@ lemma update_ASID_sat_no_flt_abs_refine':
   apply (rule conjI)
    apply (clarsimp simp: asid_va_incon_tlb_mem_def)
    apply (rule conjI)
-    apply (subgoal_tac "asid_va_incon (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) =
+    apply (subgoal_tac "asid_va_incon (tlb_sat_no_flt_set s \<union> the `{e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) =
      asid_va_incon (tlb_sat_no_flt_set s) \<union> 
-            ((\<lambda>v. (a, v) ) ` {v. \<exists>x. lookup (tlb_sat_no_flt_set s) a (  v) = Hit x \<and>
-                                       x \<noteq> pt_walk a (MEM s) (TTBR0 s) v \<and> \<not> is_fault (pt_walk a (MEM s) (TTBR0 s) v)})")
+            ((\<lambda>v. (a, v) ) ` {v. \<exists>x. lookup (tlb_sat_no_flt_set s) a v = Hit x \<and>
+                                       x \<noteq> the (pt_walk a (MEM s) (TTBR0 s) v) \<and> \<not> is_fault (pt_walk a (MEM s) (TTBR0 s) v)})")
      prefer 2
      apply (clarsimp simp: asid_va_incon_rewrite)
     apply (simp only:)
-    apply (thin_tac "asid_va_incon (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) =
-     asid_va_incon (tlb_sat_no_flt_set s) \<union>
-     Pair a `
-     {v. \<exists>x. lookup (tlb_sat_no_flt_set s) a (  v) = Hit x \<and> x \<noteq> pt_walk a (MEM s) (TTBR0 s) v \<and> \<not> is_fault (pt_walk a (MEM s) (TTBR0 s) v)}")
+    apply (thin_tac "asid_va_incon (tlb_sat_no_flt_set s \<union> the ` {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) =
+                   asid_va_incon (tlb_sat_no_flt_set s) \<union>
+              Pair a `
+              {v. \<exists>x. lookup (tlb_sat_no_flt_set s) a v = Hit x \<and> x \<noteq> the (pt_walk a (MEM s) (TTBR0 s) v) \<and> \<not> is_fault (pt_walk a (MEM s) (TTBR0 s) v)}")
     apply (simp only: incon_load_def snapshot_update_current'_def snapshot_update_current_def)
     apply (subgoal_tac " Pair a `
-        {v. \<exists>x. lookup (tlb_sat_no_flt_set s) a (  v) = Hit x \<and> x \<noteq> pt_walk a (MEM s) (TTBR0 s) v \<and> \<not> is_fault (pt_walk a (MEM s) (TTBR0 s) v)}
+        {v. \<exists>x. lookup (tlb_sat_no_flt_set s) a (  v) = Hit x \<and> x \<noteq> the (pt_walk a (MEM s) (TTBR0 s) v) \<and> \<not> is_fault (pt_walk a (MEM s) (TTBR0 s) v)}
         \<subseteq> incon_set (tlb_incon_set' t) \<union>
            Pair a `
            {v. \<exists>x. ((tlb_snapshot (tlb_incon_set' t))
                     (ASID s :=
                        \<lambda>y. if (ASID s, y) \<in> {ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t) then Incon
-                           else if \<not> is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) y) then Hit (pt_walk (ASID s) (MEM s) (TTBR0 s) y)
+                           else if \<not> is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) y) then Hit (the (pt_walk (ASID s) (MEM s) (TTBR0 s) y))
                                 else Miss))
                     a v =
                    Hit x \<and>
-                   x \<noteq> pt_walk a (MEM s) (TTBR0 s) v}")
+                   x \<noteq> the (pt_walk a (MEM s) (TTBR0 s) v)}")
      apply blast
     apply rule
     apply (clarsimp simp: snapshot_of_tlb_def)
     apply (subgoal_tac " tlb_snapshot (tlb_incon_set' t) a x = Hit xa \<or>  tlb_snapshot (tlb_incon_set' t) a x = Incon")
      apply (erule disjE)
       apply force
-     (* last assumption of tlb_rel_abs' is needed here , in the case of update asid, only equality is required*)
+    (* last assumption of tlb_rel_abs' is needed here , in the case of update asid, only equality is required*)
      apply force
     apply (rule disjCI)
     apply (force simp: less_eq_lookup_type)
-   apply (clarsimp simp: asid_va_hit_incon_def)
+   apply (clarsimp simp: asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def)
    apply (clarsimp simp: incon_load_def snapshot_of_tlb_def  snapshot_update_current'_def snapshot_update_current_def)
-   apply (drule tlb_snapshot_rewrite)
-   apply (erule disjE)
-    apply (subgoal_tac "lookup (tlb_sat_no_flt_set s) a (  b) = Miss")
-     prefer 2
-     apply (clarsimp simp: image_iff)
-     apply (drule_tac x = a in spec, clarsimp)
-     apply (drule_tac x = b in spec)
+   apply (rule conjI)
+    apply clarsimp
+    apply (drule tlb_snapshot_rewrite)
+    apply (erule disjE)
+     apply (subgoal_tac "lookup (tlb_sat_no_flt_set s) a (  b) = Miss")
+      prefer 2
+      apply (clarsimp simp: image_iff)
+      apply (drule_tac x = a in spec, clarsimp)
+      apply (drule_tac x = b in spec)
+      apply force
+     apply (drule lookup_hit_union_cases')
+     apply (erule disjE , clarsimp)
+     apply (erule disjE)
+      apply clarsimp
+      apply (frule lookup_range_fault_pt_walk)
+      apply (subgoal_tac "(  xa) \<in> entry_range x")
+       apply force
+      apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
+     apply clarsimp
+    apply (erule disjE)
      apply force
     apply (drule lookup_hit_union_cases')
-    apply (erule disjE , clarsimp)
     apply (erule disjE)
      apply clarsimp
+     apply (subgoal_tac " x = the (pt_walk a (MEM s) (TTBR0 s) xa)")
+      apply clarsimp
+     apply (drule_tac x = a in spec, clarsimp)
+     apply (drule_tac x = xa in spec)
+     apply (force simp: less_eq_lookup_type)
+    apply (erule disjE , clarsimp)
      apply (frule lookup_range_fault_pt_walk)
      apply (subgoal_tac "(  xa) \<in> entry_range x")
       apply force
      apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
-    apply clarsimp
-   apply (erule disjE)
-    apply force
-   apply (drule lookup_hit_union_cases')
-   apply (erule disjE)
-    apply clarsimp
-    apply (subgoal_tac " x = pt_walk a (MEM s) (TTBR0 s) xa")
-     apply clarsimp
-    apply (drule_tac x = a in spec, clarsimp)
-    apply (drule_tac x = xa in spec)
-    apply (force simp: less_eq_lookup_type)
-   apply (erule disjE , clarsimp)
+    apply clarsimp    
     apply (frule lookup_range_fault_pt_walk)
     apply (subgoal_tac "(  xa) \<in> entry_range x")
      apply force
     apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
-   apply clarsimp    
-   apply (frule lookup_range_fault_pt_walk)
-   apply (subgoal_tac "(  xa) \<in> entry_range x")
-    apply force
-   apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
+   (* from here *)
+   apply (clarsimp)
+   apply (drule tlb_snapshot_rewrite)
+    apply (erule disjE)
+     apply (subgoal_tac "lookup (tlb_sat_no_flt_set s) a b = Miss")
+      prefer 2
+      apply (clarsimp simp: image_iff)
+      apply (drule_tac x = a in spec, clarsimp)
+      apply (drule_tac x = b in spec)
+      apply force
+     apply (drule lookup_hit_union_cases')
+     apply (erule disjE , clarsimp)
+     apply (erule disjE)
+      apply (clarsimp simp: lookup_miss_is_fault_intro)
+     apply (clarsimp simp: lookup_miss_is_fault_intro)
+    apply (erule disjE)
+     apply blast
+    apply clarsimp
+   apply (drule lookup_hit_union_cases')
+     apply (erule disjE , clarsimp)
+     
+     
+      find_theorems "lookup" "range" "pt_walk" "Miss"
+(*
+      apply (frule lookup_range_fault_pt_walk)
+      apply (subgoal_tac "(  xa) \<in> entry_range x")
+       apply force
+      apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
+     apply clarsimp
+    apply (erule disjE)
+     apply force
+    apply (drule lookup_hit_union_cases')
+    apply (erule disjE)
+     apply clarsimp
+     apply (subgoal_tac " x = the (pt_walk a (MEM s) (TTBR0 s) xa)")
+      apply clarsimp
+     apply (drule_tac x = a in spec, clarsimp)
+     apply (drule_tac x = xa in spec)
+     apply (force simp: less_eq_lookup_type)
+    apply (erule disjE , clarsimp)
+     apply (frule lookup_range_fault_pt_walk)
+     apply (subgoal_tac "(  xa) \<in> entry_range x")
+      apply force
+     apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
+    apply clarsimp    
+    apply (frule lookup_range_fault_pt_walk)
+    apply (subgoal_tac "(  xa) \<in> entry_range x")
+     apply force
+    apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
+
+
+*)
+
+
+
+
+
+
+
+
+
+
+
+prefer 3
 
   apply (rule conjI)
    apply (clarsimp simp: saturated_no_flt_def)
-  apply (rule conjI)
-   apply (clarsimp simp: no_faults_def)
   apply (rule conjI)
    apply (rule allI)
    apply (rule impI)
@@ -266,7 +338,7 @@ lemma update_ASID_sat_no_flt_abs_refine':
    apply (case_tac "aa \<noteq> ASID s")
     apply (simp only: snapshot_of_tlb_def snapshot_update_new'_def snapshot_update_new_def snapshot_update_current'_def snapshot_update_current_def)
     apply clarsimp
-    apply (subgoal_tac "lookup (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) aa (  v) =
+    apply (subgoal_tac "lookup (tlb_sat_no_flt_set s \<union> the ` {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) aa (  v) =
          lookup (tlb_sat_no_flt_set s) aa (  v)")
      apply clarsimp
     apply (rule lookup_miss_union_equal)
@@ -276,7 +348,7 @@ lemma update_ASID_sat_no_flt_abs_refine':
    apply clarsimp
    apply (rule conjI)
     apply clarsimp
-    apply (subgoal_tac "lookup (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  v) =
+    apply (subgoal_tac "lookup (tlb_sat_no_flt_set s \<union> the ` {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  v) =
                lookup (tlb_sat_no_flt_set s) (ASID s) (  v)")
      prefer 2
      apply (rule lookup_miss_union_equal)
@@ -286,26 +358,26 @@ lemma update_ASID_sat_no_flt_abs_refine':
      prefer 2
      apply (clarsimp simp:  asid_va_incon_tlb_mem_def asid_va_incon_def)
      apply force
-    apply (subgoal_tac "lookup (tlb_sat_no_flt_set s) (ASID s) (  v) = Miss \<or> lookup (tlb_sat_no_flt_set s) (ASID s) (  v) = Hit (pt_walk (ASID s) (MEM s) (TTBR0 s) v)")
+    apply (subgoal_tac "lookup (tlb_sat_no_flt_set s) (ASID s) (  v) = Miss \<or> lookup (tlb_sat_no_flt_set s) (ASID s) (  v) = Hit (the(pt_walk (ASID s) (MEM s) (TTBR0 s) v))")
      apply force
     apply (rule disjI2)
-    apply (clarsimp simp:  asid_va_incon_tlb_mem_def asid_va_hit_incon_def)
+    apply (clarsimp simp:  asid_va_incon_tlb_mem_def asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def)
     apply (subgoal_tac "lookup (tlb_sat_no_flt_set s) (ASID s) (  v) \<noteq> Miss")
      apply (subgoal_tac "\<exists>x\<in>tlb_sat_no_flt_set s. lookup (tlb_sat_no_flt_set s) (ASID s) (  v) = Hit x")
-      apply force
+      apply fastforce
      apply (clarsimp simp: lookup_def entry_set_def split: if_split_asm) 
      apply blast
     apply (subgoal_tac "lookup (tlb_sat_no_flt_set s \<union> 
-         {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  v) \<noteq> Miss")
+         the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  v) \<noteq> Miss")
      apply (subgoal_tac "tlb_sat_no_flt_set s = tlb_sat_no_flt_set s \<union> 
-         {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
+         the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
       prefer 2
       apply (clarsimp simp:  saturated_no_flt_def) 
       apply blast
      apply clarsimp
     apply (clarsimp simp:  not_fault_range_not_miss)
    apply clarsimp
-   apply (subgoal_tac "lookup (tlb_sat_no_flt_set s \<union> {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  v) =
+   apply (subgoal_tac "lookup (tlb_sat_no_flt_set s \<union> the ` {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  v) =
                lookup (tlb_sat_no_flt_set s) (ASID s) (  v)")
     prefer 2
     apply (rule lookup_miss_union_equal)
@@ -323,16 +395,17 @@ lemma update_ASID_sat_no_flt_abs_refine':
    apply (erule disjE)
     apply clarsimp
    apply clarsimp
-   apply (clarsimp simp:  asid_va_incon_tlb_mem_def asid_va_hit_incon_def)
-   apply (case_tac "x \<noteq> pt_walk (ASID s) (MEM s) (TTBR0 s) v")
+   apply (clarsimp simp:  asid_va_incon_tlb_mem_def asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def )
+   apply (case_tac "x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) v)")
     apply blast
-   apply (clarsimp simp: no_faults_def)
   apply (clarsimp simp: snapshot_of_tlb_def snapshot_update_new'_def snapshot_update_new_def snapshot_update_current'_def snapshot_update_current_def incon_load_def miss_to_hit_def consistent_hit_def
       split: if_split_asm)
-  by force
+  apply fastforce
+  apply (clarsimp simp: snapshot_of_tlb_def snapshot_update_new'_def snapshot_update_new_def snapshot_update_current'_def snapshot_update_current_def incon_load_def miss_to_hit_def consistent_hit_def
+      split: if_split_asm)
+  apply fastforce
 
-
-
+sorry
 
 lemma update_ASID_sat_no_flt_abs_refine'2:
   "\<lbrakk> update_ASID a (s::tlb_incon_state') = ((), s') ;  update_ASID a (t::tlb_incon_state) = ((), t'); 
