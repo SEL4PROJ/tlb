@@ -156,8 +156,9 @@ definition
   incon_load :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> (asid \<times> vaddr) set"
   where
   "incon_load snp a m rt \<equiv> (\<lambda>v. (a, v) ) ` 
-                            {v. \<exists>x. snp a v = Hit x \<and> (x \<noteq> the (pt_walk a m rt v) \<and> \<not>is_fault (pt_walk a m rt v) \<or>
+                            {v. \<exists>x. snp a v = Hit x \<and> ((x \<noteq> the (pt_walk a m rt v) \<and> \<not>is_fault (pt_walk a m rt v)) \<or>
                                                        is_fault (pt_walk a m rt v) )}"
+
 
 definition 
   miss_to_hit :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> (asid \<times> vaddr) set"
@@ -211,7 +212,7 @@ where
 definition 
   incon_load2 :: "(asid \<Rightarrow> vaddr \<Rightarrow> lookup_type) \<Rightarrow> asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr set"
   where
-  "incon_load2 snp a m rt \<equiv>   {v. \<exists>x. snp a v = Hit x \<and> (x \<noteq> the (pt_walk a m rt v) \<and> \<not>is_fault (pt_walk a m rt v) \<or>
+  "incon_load2 snp a m rt \<equiv>   {v. \<exists>x. snp a v = Hit x \<and> ((x \<noteq> the (pt_walk a m rt v) \<and> \<not>is_fault (pt_walk a m rt v)) \<or>
                                                        is_fault (pt_walk a m rt v) )}"
 
 
@@ -233,7 +234,7 @@ definition
                                  heap \<Rightarrow> ttbr0 \<Rightarrow> asid \<Rightarrow> (asid \<Rightarrow> vaddr \<Rightarrow> lookup_type)"
 where
   "snapshot_update_current'2 snp iset' mem ttbr0 a \<equiv> snp (a := snapshot_update_current2 iset' mem ttbr0 a)"
-
+                                                                      
 
 instantiation tlb_incon_state'_ext :: (type) reg_tlb_op   
 begin

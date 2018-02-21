@@ -153,7 +153,6 @@ lemma not_fault_range_not_miss:
   done
 
 
-
 lemma update_ASID_sat_no_flt_abs_refine':
   "\<lbrakk> update_ASID a (s::tlb_sat_no_flt_state) = ((), s') ;  update_ASID a (t::tlb_incon_state') = ((), t'); 
         tlb_rel_abs' (typ_sat_no_flt_tlb s) (typ_incon' t) \<rbrakk> \<Longrightarrow> 
@@ -176,13 +175,12 @@ lemma update_ASID_sat_no_flt_abs_refine':
    apply (rule conjI)
     apply clarsimp
     apply (clarsimp simp: snapshot_of_tlb_def snapshot_update_current'_def snapshot_update_current_def
-                        snapshot_update_new'_def  snapshot_update_new_def)
+      snapshot_update_new'_def  snapshot_update_new_def)
    apply (clarsimp simp: snapshot_of_tlb_def snapshot_update_current'_def snapshot_update_current_def
-                        snapshot_update_new'_def  snapshot_update_new_def incon_load_def)
+      snapshot_update_new'_def  snapshot_update_new_def incon_load_def)
    apply (simp split: if_split_asm)
    apply force  
-
-(* when we update to the new ASID *)
+    (* when we update to the new ASID *)
   apply (clarsimp simp: tlb_rel_abs'_def)
   apply (rule conjI)
    apply (clarsimp simp: state.defs)
@@ -224,9 +222,8 @@ lemma update_ASID_sat_no_flt_abs_refine':
     apply (rule disjCI)
     apply (force simp: less_eq_lookup_type)
    apply (clarsimp simp: asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def)
-   apply (clarsimp simp: incon_load_def snapshot_of_tlb_def  snapshot_update_current'_def snapshot_update_current_def)
    apply (rule conjI)
-    apply clarsimp
+    apply (clarsimp simp: incon_load_def snapshot_of_tlb_def  snapshot_update_current'_def snapshot_update_current_def)
     apply (drule tlb_snapshot_rewrite)
     apply (erule disjE)
      apply (subgoal_tac "lookup (tlb_sat_no_flt_set s) a (  b) = Miss")
@@ -264,71 +261,30 @@ lemma update_ASID_sat_no_flt_abs_refine':
     apply (subgoal_tac "(  xa) \<in> entry_range x")
      apply force
     apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
-   (* from here *)
-   apply (clarsimp)
-   apply (drule tlb_snapshot_rewrite)
-    apply (erule disjE)
-     apply (subgoal_tac "lookup (tlb_sat_no_flt_set s) a b = Miss")
-      prefer 2
-      apply (clarsimp simp: image_iff)
-      apply (drule_tac x = a in spec, clarsimp)
-      apply (drule_tac x = b in spec)
-      apply force
+    (* from here *)
+   apply (subgoal_tac "
+            incon_load (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s) =
+            incon_load (tlb_snapshot (tlb_incon_set' t)) a (MEM s) (TTBR0 s)")
+    apply simp
+    apply (thin_tac "incon_load (snapshot_update_current' (tlb_snapshot (tlb_incon_set' t)) ({ASID s} \<times> UNIV \<inter> incon_set (tlb_incon_set' t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s) =
+            incon_load (tlb_snapshot (tlb_incon_set' t)) a (MEM s) (TTBR0 s)")
+    apply (simp only: incon_load_def snapshot_of_tlb_def)
+    apply clarsimp
+    apply (case_tac "tlb_snapshot (tlb_incon_set' t) a b")
+      prefer 3
+      apply clarsimp 
+     apply (subgoal_tac " lookup (tlb_sat_no_flt_set s) a b = Hit x")
+      apply (drule_tac x = a in spec, clarsimp, drule_tac x = b in spec, force)
      apply (drule lookup_hit_union_cases')
      apply (erule disjE , clarsimp)
-     apply (erule disjE)
+     apply (erule disjE, clarsimp) 
+      apply (frule lookup_range_fault_pt_walk)
+      apply (drule_tac x = b in bspec)
+       apply (clarsimp simp: lookup_hit_entry_range)
       apply (clarsimp simp: lookup_miss_is_fault_intro)
      apply (clarsimp simp: lookup_miss_is_fault_intro)
-    apply (erule disjE)
-     apply blast
-    apply clarsimp
-   apply (drule lookup_hit_union_cases')
-     apply (erule disjE , clarsimp)
-     
-     
-      find_theorems "lookup" "range" "pt_walk" "Miss"
-(*
-      apply (frule lookup_range_fault_pt_walk)
-      apply (subgoal_tac "(  xa) \<in> entry_range x")
-       apply force
-      apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
-     apply clarsimp
-    apply (erule disjE)
-     apply force
-    apply (drule lookup_hit_union_cases')
-    apply (erule disjE)
-     apply clarsimp
-     apply (subgoal_tac " x = the (pt_walk a (MEM s) (TTBR0 s) xa)")
-      apply clarsimp
-     apply (drule_tac x = a in spec, clarsimp)
-     apply (drule_tac x = xa in spec)
-     apply (force simp: less_eq_lookup_type)
-    apply (erule disjE , clarsimp)
-     apply (frule lookup_range_fault_pt_walk)
-     apply (subgoal_tac "(  xa) \<in> entry_range x")
-      apply force
-     apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
-    apply clarsimp    
-    apply (frule lookup_range_fault_pt_walk)
-    apply (subgoal_tac "(  xa) \<in> entry_range x")
-     apply force
-    apply (clarsimp simp: lookup_def lookup_hit_entry_range split: if_split_asm)
-
-
-*)
-
-
-
-
-
-
-
-
-
-
-
-prefer 3
-
+    apply blast
+   apply (clarsimp simp: snapshot_update_current'_def snapshot_update_current_def incon_load_def)
   apply (rule conjI)
    apply (clarsimp simp: saturated_no_flt_def)
   apply (rule conjI)
@@ -398,14 +354,14 @@ prefer 3
    apply (clarsimp simp:  asid_va_incon_tlb_mem_def asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def )
    apply (case_tac "x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) v)")
     apply blast
+   apply (clarsimp simp: snapshot_of_tlb_def snapshot_update_new'_def snapshot_update_new_def snapshot_update_current'_def snapshot_update_current_def incon_load_def miss_to_hit_def consistent_hit_def
+      split: if_split_asm)
+   apply fastforce
   apply (clarsimp simp: snapshot_of_tlb_def snapshot_update_new'_def snapshot_update_new_def snapshot_update_current'_def snapshot_update_current_def incon_load_def miss_to_hit_def consistent_hit_def
       split: if_split_asm)
   apply fastforce
-  apply (clarsimp simp: snapshot_of_tlb_def snapshot_update_new'_def snapshot_update_new_def snapshot_update_current'_def snapshot_update_current_def incon_load_def miss_to_hit_def consistent_hit_def
-      split: if_split_asm)
-  apply fastforce
+  done
 
-sorry
 
 lemma update_ASID_sat_no_flt_abs_refine'2:
   "\<lbrakk> update_ASID a (s::tlb_incon_state') = ((), s') ;  update_ASID a (t::tlb_incon_state) = ((), t'); 
