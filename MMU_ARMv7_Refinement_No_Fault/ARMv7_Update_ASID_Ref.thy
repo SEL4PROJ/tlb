@@ -415,6 +415,6 @@ lemma update_ASID_sat_no_flt_abs_refine'2:
   apply (clarsimp simp: less_eq_lookup_type)
   done
 
-  
+
 
 end
