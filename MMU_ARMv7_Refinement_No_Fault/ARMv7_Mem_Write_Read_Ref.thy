@@ -2092,6 +2092,23 @@ lemma write_refinement_incon_incon_only2:
 (* refinement for read theroems *)
 
 
+lemma mmu_read_sat_const:
+  "\<lbrakk> mmu_read_size (va, sz) s = (val, t); saturated (typ_sat_tlb s) \<rbrakk> \<Longrightarrow>
+          tlb_sat_set t = tlb_sat_set s"
+   apply (clarsimp simp: mmu_read_size_tlb_sat_state_ext_def)
+   apply (case_tac "mmu_translate va s", simp)
+   apply (subgoal_tac " tlb_sat_set s = tlb_sat_set b ")
+    prefer 2
+   apply (simp add: mmu_translate_saturated_tlb_unchange)
+   apply clarsimp
+    apply (clarsimp simp: mem_read1_def)
+    apply (clarsimp split: if_split_asm)
+       apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
+      apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
+     apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
+    apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
+   by (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
+
 
 
 lemma  mem_read1_consistent_tlb_rel_non_det:
