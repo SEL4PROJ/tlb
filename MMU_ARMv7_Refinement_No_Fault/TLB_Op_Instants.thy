@@ -81,68 +81,68 @@ definition
 end
 
 
-instantiation tlb_sat_no_flt_state_ext :: (type) reg_tlb_op   
+instantiation tlb_sat_state_ext :: (type) reg_tlb_op   
 begin
   definition   
-  "(update_TTBR0 r :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
+  "(update_TTBR0 r :: ('a tlb_sat_state_scheme \<Rightarrow> _))  = do {
       update_state (\<lambda>s. s\<lparr> TTBR0 := r \<rparr>);
       mem   <- read_state MEM;
       asid <- read_state ASID;
       let all_non_fault_entries = the ` {e\<in>pt_walk asid mem r ` UNIV. \<not>is_fault e};
-      tlb0   <- read_state tlb_sat_no_flt_set;
+      tlb0   <- read_state tlb_sat_set;
       let tlb = tlb0 \<union> all_non_fault_entries; 
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := tlb \<rparr>)} "
+      update_state (\<lambda>s. s\<lparr> tlb_sat_set := tlb \<rparr>)} "
 
-  thm update_TTBR0_tlb_sat_no_flt_state_ext_def
+  thm update_TTBR0_tlb_sat_state_ext_def
 
 definition   
-  "(update_ASID a :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
+  "(update_ASID a :: ('a tlb_sat_state_scheme \<Rightarrow> _))  = do {
       update_state (\<lambda>s. s\<lparr> ASID := a \<rparr>);
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
       let all_non_fault_entries = the ` {e\<in>pt_walk a mem ttbr0 ` UNIV. \<not>is_fault e};
-      tlb0   <- read_state tlb_sat_no_flt_set;
+      tlb0   <- read_state tlb_sat_set;
       let tlb = tlb0 \<union> all_non_fault_entries; 
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := tlb \<rparr>)} "
+      update_state (\<lambda>s. s\<lparr> tlb_sat_set := tlb \<rparr>)} "
 
 definition   
-  "(Flush_TLB :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
-       update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := {} \<rparr>);
+  "(Flush_TLB :: ('a tlb_sat_state_scheme \<Rightarrow> _))  = do {
+       update_state (\<lambda>s. s\<lparr> tlb_sat_set := {} \<rparr>);
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
       asid <- read_state ASID;
       let all_non_fault_entries = the ` {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := all_non_fault_entries \<rparr>)} "
+      update_state (\<lambda>s. s\<lparr> tlb_sat_set := all_non_fault_entries \<rparr>)} "
 
 
  definition   
-  "(Flush_ASID a :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_sat_no_flt_set;
+  "(Flush_ASID a :: ('a tlb_sat_state_scheme \<Rightarrow> _))  = do {
+      tlb   <- read_state tlb_sat_set;
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
       asid <- read_state ASID;
       let all_non_fault_entries = the ` {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := (tlb - {e\<in>tlb. asid_entry e = a}) \<union> 
+      update_state (\<lambda>s. s\<lparr> tlb_sat_set := (tlb - {e\<in>tlb. asid_entry e = a}) \<union> 
                                                        all_non_fault_entries \<rparr>)} "
 
 definition   
-  "(Flush_varange vset :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_sat_no_flt_set;
+  "(Flush_varange vset :: ('a tlb_sat_state_scheme \<Rightarrow> _))  = do {
+      tlb   <- read_state tlb_sat_set;
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
       asid <- read_state ASID;
       let all_non_fault_entries = the ` {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := 
+      update_state (\<lambda>s. s\<lparr> tlb_sat_set := 
               (tlb - (\<Union>v\<in>vset. {e \<in> tlb.   v \<in> entry_range e})) \<union> all_non_fault_entries \<rparr>)} "
 
 definition   
-  "(Flush_ASIDvarange a vset :: ('a tlb_sat_no_flt_state_scheme \<Rightarrow> _))  = do {
-      tlb   <- read_state tlb_sat_no_flt_set;
+  "(Flush_ASIDvarange a vset :: ('a tlb_sat_state_scheme \<Rightarrow> _))  = do {
+      tlb   <- read_state tlb_sat_set;
       mem   <- read_state MEM;
       ttbr0 <- read_state TTBR0;
       asid <- read_state ASID;
       let all_non_fault_entries = the ` {e\<in>pt_walk asid mem ttbr0 ` UNIV. \<not>is_fault e};
-      update_state (\<lambda>s. s\<lparr> tlb_sat_no_flt_set := 
+      update_state (\<lambda>s. s\<lparr> tlb_sat_set := 
               (tlb - (\<Union>v\<in>vset. {e \<in> tlb. (a,   v) \<in> entry_range_asid_tags e}))
                                   \<union> all_non_fault_entries \<rparr>)} "
 

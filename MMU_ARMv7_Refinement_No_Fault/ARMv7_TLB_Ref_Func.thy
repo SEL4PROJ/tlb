@@ -7,15 +7,15 @@ begin
 
 
 record tlb_state = state + 
-           tlb_set :: "tlb_entry set "
+           tlb_set :: "tlb_entry set"
 
 
 record tlb_det_state = state + 
            tlb_det_set :: "tlb_entry set"
 
 
-record tlb_sat_no_flt_state = state + 
-           tlb_sat_no_flt_set :: "tlb_entry set"
+record tlb_sat_state = state + 
+           tlb_sat_set :: "tlb_entry set"
 
 
 record tlb_incon_set' =
@@ -51,9 +51,9 @@ where
 
 
 definition 
-  typ_sat_no_flt_tlb :: "'a tlb_sat_no_flt_state_scheme \<Rightarrow> tlb_entry set state_scheme"
+  typ_sat_tlb :: "'a tlb_sat_state_scheme \<Rightarrow> tlb_entry set state_scheme"
 where
-  "typ_sat_no_flt_tlb s =  state.extend (state.truncate s) (tlb_sat_no_flt_set s)"
+  "typ_sat_tlb s =  state.extend (state.truncate s) (tlb_sat_set s)"
 
 
 
@@ -79,9 +79,9 @@ lemma tlb_det_more [simp]:
   by (clarsimp simp: typ_det_tlb_def state.defs)
 
 
-lemma tlb_sat_no_flt_more [simp]:
-  "state.more (typ_sat_no_flt_tlb s) = tlb_sat_no_flt_set s"
-  by (clarsimp simp: typ_sat_no_flt_tlb_def state.defs)
+lemma tlb_sat_more [simp]:
+  "state.more (typ_sat_tlb s) = tlb_sat_set s"
+  by (clarsimp simp: typ_sat_tlb_def state.defs)
 
 lemma tlb_incon_more' [simp]:
   "state.more (typ_incon' s) = tlb_incon_set' s"
@@ -100,9 +100,9 @@ lemma tlb_det_truncate [simp]:
   "state.truncate (typ_det_tlb s') = state.truncate s'"
   by (clarsimp simp: typ_det_tlb_def state.defs)
 
-lemma tlb_sat_no_flt_truncate [simp]:
-  "state.truncate (typ_sat_no_flt_tlb s') = state.truncate s'"
-  by (clarsimp simp: typ_sat_no_flt_tlb_def state.defs)
+lemma tlb_sat_truncate [simp]:
+  "state.truncate (typ_sat_tlb s') = state.truncate s'"
+  by (clarsimp simp: typ_sat_tlb_def state.defs)
 
 lemma tlb_incon_truncate' [simp]:
   "state.truncate (typ_incon' s') = state.truncate s'"
@@ -126,10 +126,10 @@ lemma typ_det_prim_parameter [simp]:
   by (clarsimp simp: typ_det_tlb_def state.defs)
 
 
-lemma typ_sat_no_flt_prim_parameter [simp]:
-  "ASID (typ_sat_no_flt_tlb s) = ASID s \<and> TTBR0 (typ_sat_no_flt_tlb s) =  TTBR0 s \<and> MEM (typ_sat_no_flt_tlb s) = MEM s \<and>
-      exception (typ_sat_no_flt_tlb s) = exception s"
-  by (clarsimp simp: typ_sat_no_flt_tlb_def state.defs)
+lemma typ_sat_prim_parameter [simp]:
+  "ASID (typ_sat_tlb s) = ASID s \<and> TTBR0 (typ_sat_tlb s) =  TTBR0 s \<and> MEM (typ_sat_tlb s) = MEM s \<and>
+      exception (typ_sat_tlb s) = exception s"
+  by (clarsimp simp: typ_sat_tlb_def state.defs)
 
 
 lemma typ_incon_prim_parameter' [simp]:
@@ -161,9 +161,9 @@ where
 
 
 definition
-  saturated_no_flt :: "tlb_entry set state_scheme \<Rightarrow> bool"
+  saturated :: "tlb_entry set state_scheme \<Rightarrow> bool"
 where
-  "saturated_no_flt s  \<equiv> 
+  "saturated s  \<equiv> 
        the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e} \<subseteq> state.more s"
 
 
@@ -174,9 +174,9 @@ where
 
 
 definition 
-  tlb_rel_sat_no_flt :: "tlb_entry set state_scheme \<Rightarrow> tlb_entry set state_scheme \<Rightarrow> bool"
+  tlb_rel_sat :: "tlb_entry set state_scheme \<Rightarrow> tlb_entry set state_scheme \<Rightarrow> bool"
 where                                                                
-  "tlb_rel_sat_no_flt s t \<equiv> state.truncate s = state.truncate t \<and> state.more s \<subseteq> state.more t \<and> saturated_no_flt t"
+  "tlb_rel_sat s t \<equiv> state.truncate s = state.truncate t \<and> state.more s \<subseteq> state.more t \<and> saturated t"
 
 (*
 definition                              
@@ -243,7 +243,7 @@ definition
   tlb_rel_abs' :: "tlb_entry set state_scheme \<Rightarrow> tlb_incon_set' state_scheme \<Rightarrow> bool"
 where                                                                
   "tlb_rel_abs' s t \<equiv> state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem s \<subseteq> incon_set (state.more t) \<and> 
-                       saturated_no_flt s \<and> 
+                       saturated s \<and> 
                          (\<forall>a v. a \<noteq> ASID s \<longrightarrow> snapshot_of_tlb (state.more s) a v \<le> tlb_snapshot (state.more t) a v) \<and>
                           {(a,v). tlb_snapshot (state.more t) a  v = Incon }  \<subseteq>  incon_set (state.more t)" 
 
@@ -291,15 +291,15 @@ lemma tlb_rel_consistent:
 
 
 
-lemma tlb_rel_no_flt_satD:
-  "tlb_rel_sat_no_flt s t \<Longrightarrow>
+lemma tlb_rel_satD:
+  "tlb_rel_sat s t \<Longrightarrow>
       ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and>  state.more s \<subseteq>  state.more t \<and> exception t = exception s"
-  by (clarsimp simp: tlb_rel_sat_no_flt_def state.defs)
+  by (clarsimp simp: tlb_rel_sat_def state.defs)
 
 
-lemma tlb_rel_sat_no_flt_consistent:
-  "\<lbrakk> tlb_rel_sat_no_flt s t; consistent t va \<rbrakk> \<Longrightarrow> consistent s va"
-  apply (drule  tlb_rel_no_flt_satD)
+lemma tlb_rel_sat_consistent:
+  "\<lbrakk> tlb_rel_sat s t; consistent t va \<rbrakk> \<Longrightarrow> consistent s va"
+  apply (drule  tlb_rel_satD)
   apply clarsimp
   apply (drule tlb_mono [of _ _ "ASID s" va])
   apply (auto simp: consistent0_def less_eq_lookup_type)
@@ -402,8 +402,8 @@ lemma  pt_walk_some_asid_entry [simp, intro!]:
 
 
 
-lemma  lookup_saturated_no_flt_miss_is_fault:
-  "lookup (tlb_sat_no_flt_set s \<union>  
+lemma  lookup_saturated_miss_is_fault:
+  "lookup (tlb_sat_set s \<union>  
         the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) va = Miss \<Longrightarrow>
      pt_walk (ASID s) (MEM s) (TTBR0 s) va = None  "
   apply (clarsimp simp: lookup_def entry_set_def entry_range_asid_tags_def is_fault_def split: if_split_asm)
@@ -424,7 +424,7 @@ lemma
 
 
 lemma
-  "\<lbrakk>consistent (typ_sat_no_flt_tlb s) va ;  lookup (tlb_sat_no_flt_set s) (ASID s) va = Hit x3 \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>consistent (typ_sat_tlb s) va ;  lookup (tlb_sat_set s) (ASID s) va = Hit x3 \<rbrakk> \<Longrightarrow> 
      x3 = the (pt_walk (ASID s) (MEM s) (TTBR0 s) va)"
   apply (clarsimp simp: consistent0_def )
 done
@@ -459,14 +459,14 @@ lemma write'mem1_rel:
 
 
 lemma sat_state_tlb':
-  "\<lbrakk> saturated_no_flt s \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk> saturated s \<rbrakk> \<Longrightarrow> 
      state.more s = state.more s \<union> the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}"
-  by (fastforce simp: saturated_no_flt_def)
+  by (fastforce simp: saturated_def)
 
 
 lemma tlb_rel'_absD:
   "tlb_rel_abs' s t \<Longrightarrow>
-     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and>  saturated_no_flt s \<and> 
+     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and>  saturated s \<and> 
                 asid_va_incon_tlb_mem s  \<subseteq> incon_set (state.more t) \<and> exception t = exception s"
   by (clarsimp simp: tlb_rel_abs'_def state.defs)
 
