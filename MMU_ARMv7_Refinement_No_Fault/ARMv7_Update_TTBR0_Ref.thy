@@ -211,5 +211,132 @@ lemma update_ttbr0_sat_abs_refine'2:
   by (clarsimp simp: ptable_comp_def ptable_comp'_def)
 
  
+(* new refinement *)
+
+lemma update_ttbr0_sat_abs2_refine':
+  "\<lbrakk> update_TTBR0 r (s::tlb_sat_state) = ((), s') ;  update_TTBR0 r (t::tlb_incon_state) = ((), t'); 
+             invar_rel (typ_sat_tlb s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                     invar_rel (typ_sat_tlb s') (typ_incon'2 t')"
+  apply (clarsimp simp: update_TTBR0_tlb_sat_state_ext_def update_TTBR0_tlb_incon_state_ext_def invar_rel_def)
+  apply (subgoal_tac "ASID t = ASID s \<and> TTBR0 t = TTBR0 s \<and> MEM t = MEM s")
+   prefer 2
+   apply (clarsimp simp:  typ_sat_tlb_def state.defs)
+  apply (rule conjI)
+   apply (clarsimp simp: typ_sat_tlb_def "state.defs")
+  apply (clarsimp simp: asid_va_incon_tlb_mem_n_def)
+  apply (rule conjI)
+   prefer 2
+   apply (rule conjI)
+    apply (clarsimp)
+    apply (clarsimp simp: asid_va_hit_incon_n_def  ptable_comp'_def)
+    apply (erule disjE)+
+       apply (drule lookup_hit_union_cases')
+       apply (erule disjE, clarsimp simp: lookup_miss_is_fault)
+       apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit)
+       apply (clarsimp simp: lookup_range_pt_walk_hit) 
+      apply (drule lookup_hit_union_cases')
+      apply (erule disjE, blast)
+      apply (erule disjE, clarsimp simp: lookup_miss_is_fault_intro) 
+      apply (clarsimp simp: lookup_miss_is_fault_intro)
+     apply (erule disjE)+    
+      apply (drule lookup_hit_union_cases')
+      apply (erule disjE, blast)
+      apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit) 
+      apply (clarsimp simp: lookup_range_pt_walk_hit)
+     apply (drule lookup_hit_union_cases')
+     apply (erule disjE, blast)
+     apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit) 
+     apply (clarsimp simp: lookup_range_pt_walk_hit)
+    apply (erule disjE)+  
+       apply (drule lookup_hit_union_cases')
+       apply (erule disjE, blast)
+       apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit) 
+       apply (clarsimp simp: lookup_range_pt_walk_hit)
+      apply (drule lookup_hit_union_cases')
+      apply (erule disjE, blast)
+      apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit) 
+      apply (clarsimp simp: lookup_range_pt_walk_hit)
+     apply (drule lookup_hit_union_cases')
+     apply (erule disjE, blast)
+     apply (erule disjE, clarsimp simp: lookup_miss_is_fault_intro) 
+     apply (clarsimp simp: lookup_miss_is_fault_intro)
+    apply (erule disjE)+  
+      apply (drule lookup_hit_union_cases')
+      apply (erule disjE, blast)
+      apply (erule disjE, clarsimp simp: lookup_miss_is_fault_intro) 
+      apply (clarsimp simp: lookup_miss_is_fault_intro)
+     apply (drule lookup_hit_union_cases')
+     apply (erule disjE, force)
+     apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit) 
+     apply (clarsimp simp: lookup_range_pt_walk_hit)
+    apply (erule disjE)+ 
+     apply (drule lookup_hit_union_cases')
+     apply (erule disjE, force)
+     apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit) 
+     apply (clarsimp simp: lookup_range_pt_walk_hit)
+    apply (drule lookup_hit_union_cases')
+    apply (erule disjE, force)
+    apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit) 
+    apply (clarsimp simp: lookup_range_pt_walk_hit)
+   prefer 2
+   apply (clarsimp)
+   apply (clarsimp simp:  asid_va_incon_n_def ptable_comp'_def  asid_va_hit_incon_n_def)
+   apply (erule disjE)+
+     apply (drule union_incon_cases1)
+     apply (erule disjE, blast)
+     apply (erule disjE, blast)
+     apply (erule disjE, blast)
+     apply (erule disjE, blast)
+     apply (erule disjE, clarsimp simp: lookup_range_pt_walk_not_incon)
+     apply blast
+    apply (drule union_incon_cases1)
+    apply (erule disjE, blast)
+    apply (erule disjE, blast)
+    apply (erule disjE, blast)
+    apply (erule disjE, blast)
+    apply (erule disjE, clarsimp simp: lookup_range_pt_walk_not_incon)
+    apply blast
+   apply (erule disjE)+
+     apply (drule union_incon_cases1)
+     apply (erule disjE, blast)
+     apply (erule disjE, blast)
+     apply (erule disjE, blast)
+     apply (erule disjE, blast)
+     apply (erule disjE, clarsimp simp: lookup_range_pt_walk_not_incon)
+     apply blast
+    apply (drule union_incon_cases1)
+    apply (erule disjE, blast)
+    apply (erule disjE, blast)
+    apply (erule disjE, blast)
+    apply (erule disjE, blast)
+    apply (erule disjE, clarsimp simp: lookup_range_pt_walk_not_incon)
+    apply blast
+   apply (erule disjE)+
+    apply (drule union_incon_cases1)
+    apply (erule disjE, blast)
+    apply (erule disjE, blast)
+    apply (erule disjE, blast)
+    apply (erule disjE, blast)
+    apply (erule disjE, clarsimp simp: lookup_range_pt_walk_not_incon)
+    apply blast
+   apply (drule union_incon_cases1)
+   apply (erule disjE, blast)
+   apply (erule disjE, clarsimp simp:) 
+  using Un_subset_iff lookup_range_pt_walk_hit sat_state_tlb' subsetI tlb_mono tlb_sat_more typ_sat_prim_parameter apply force[1]   
+   apply (erule disjE, clarsimp simp: lookup_range_pt_walk_not_incon')
+   apply (erule disjE, blast)  
+   apply (erule disjE, clarsimp simp: lookup_range_pt_walk_not_incon') 
+   apply blast
+  apply (rule conjI)
+   apply (clarsimp simp:  saturated_def)
+  apply (clarsimp)
+  apply (subgoal_tac "snapshot_of_tlb (tlb_sat_set s \<union> the `{e \<in> range (pt_walk (ASID s) (MEM s) r). \<not> is_fault e}) a v =
+                              snapshot_of_tlb  (tlb_sat_set s) a v")
+   apply clarsimp
+  apply (rule lookup_miss_snapshot)
+  by (clarsimp simp: asid_unequal_miss'')
+
+
+
 
 end
