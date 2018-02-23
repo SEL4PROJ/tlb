@@ -654,4 +654,152 @@ lemma mmu_translate_sat_abs_refine2:
       mmu_translate_sat_abs_refine_consistency2)
 
 
+
+(* refinement between saturated and second abstracted model *)
+
+
+lemma not_member_incon2_consistent':
+  "\<lbrakk>va \<notin>  asid_va_incon_tlb_mem_n (typ_sat_tlb s) \<rbrakk> \<Longrightarrow> 
+                                       consistent (typ_sat_tlb s) va"
+  apply (clarsimp simp: asid_va_incon_tlb_mem_n_def asid_va_incon_n_def asid_va_hit_incon_n_def)
+  apply (clarsimp simp: consistent0_def)
+  by (clarsimp simp: lookup_def consistent0_def is_fault_def split: if_split_asm)
+
+lemma tlb_rel_abs2_consistent' [simp]:
+  "\<lbrakk>va \<notin> iset (tlb_incon_set t) ;   invar_rel  (typ_sat_tlb s) (typ_incon'2 t)  \<rbrakk>  \<Longrightarrow> 
+           consistent (typ_sat_tlb s) va " 
+ apply (rule not_member_incon2_consistent' ; clarsimp)
+  apply (clarsimp simp: invar_rel_def)
+  apply (subgoal_tac "ASID s = ASID t" , simp)
+   apply blast
+  apply (cases s , cases t , clarsimp simp: state.defs)
+  done
+
+lemma mmu_translate_sat_abs2_refine_pa':
+  "\<lbrakk> mmu_translate va s = (pa, s');  mmu_translate va t = (pa', t') ;
+           va \<notin> iset (tlb_incon_set t) ; invar_rel  (typ_sat_tlb s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                                          pa = pa'"
+ apply (frule_tac s = s in tlb_rel_abs2_consistent' ; clarsimp )
+  apply (frule invar_relD , clarsimp)
+  apply (clarsimp simp: mmu_translate_tlb_incon_state_ext_def  Let_def)
+  apply (clarsimp simp: mmu_translate_tlb_sat_state_ext_def split_def Let_def)
+  apply (cases "lookup (tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e}) (ASID s) va")
+    apply clarsimp
+    apply (frule lookup_saturated_miss_is_fault)
+    apply (clarsimp simp: raise'exception_def is_fault_def split:if_split_asm)
+   apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e}")
+    prefer 2
+    apply (fastforce simp: saturated_def)
+   apply clarsimp
+   apply (clarsimp simp: consistent0_def)
+  apply clarsimp
+  apply (subgoal_tac "x3 = the (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
+   prefer 2
+   apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e}")
+    prefer 2
+    apply (fastforce simp: saturated_def)
+   apply (clarsimp simp: consistent0_def)
+  apply clarsimp
+  apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
+   prefer 2
+   apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e}")
+    prefer 2
+    apply (fastforce simp: saturated_def)
+   apply clarsimp
+   apply (clarsimp simp: is_fault_def lookup_in_tlb consistent0_def)
+  apply clarsimp
+ done
+
+
+lemma mmu_translate_sat_abs2_refine':
+   "\<lbrakk> mmu_translate va s = (pa, s');  mmu_translate va t = (pa', t') ;
+           va \<notin> iset (tlb_incon_set t) ;  invar_rel (typ_sat_tlb s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+             invar_rel (typ_sat_tlb s') (typ_incon'2 t')"
+ apply (frule_tac s = s in tlb_rel_abs2_consistent' ; clarsimp )
+  apply (frule invar_relD , clarsimp)
+  apply (frule_tac mmu_translate_sa_consistent' ; clarsimp simp: invar_rel_def asid_va_incon_tlb_mem_n_def asid_va_incon_n_def asid_va_hit_incon_n_def)
+    (* TLB is not changing as s is already saturated *)
+  apply (subgoal_tac "s' = s\<lparr>exception := exception s'\<rparr> \<and> t' = t\<lparr>exception := exception t'\<rparr>")
+   apply (subgoal_tac "exception t' = exception s'")
+    apply (cases t, cases t, cases s, cases s', clarsimp simp: state.defs saturated_def)
+   prefer 2
+   apply (frule mmu_translate_abs_rel'2, clarsimp)
+   apply (subgoal_tac "tlb_sat_set s' = tlb_sat_set s")
+    apply (drule mmu_sat_rel', clarsimp)
+  using mmu_translate_sat_TLB_union' sat_state_tlb' apply fastforce
+  apply (subgoal_tac "tlb_sat_set s' = tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e} \<and> ASID s' = ASID s  \<and> 
+                                              MEM s' = MEM s \<and> TTBR0 s' = TTBR0 s")
+   apply (clarsimp simp: mmu_translate_tlb_sat_state_ext_def split_def Let_def)
+   apply (cases "lookup (tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e}) (ASID s) va")
+     apply clarsimp
+     apply (frule lookup_saturated_miss_is_fault)
+     apply (clarsimp simp: mmu_translate_tlb_incon_state_ext_def raise'exception_def is_fault_def split:if_split_asm)
+    apply (clarsimp simp: consistent0_def)
+   apply clarsimp
+   apply (subgoal_tac "x3 = the (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
+    prefer 2
+    apply (clarsimp simp: consistent0_def)
+   apply clarsimp
+   apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
+    prefer 2
+    apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e}")
+     prefer 2
+     apply (fastforce simp: saturated_def)
+    apply clarsimp
+    apply (clarsimp simp: consistent0_def is_fault_def lookup_in_tlb)
+   apply (clarsimp simp: mmu_translate_tlb_incon_state_ext_def Let_def is_fault_def)
+  apply (clarsimp simp: mmu_translate_sat_TLB_union' mmu_sat_eq_ASID_TTBR0_MEM is_fault_def) 
+done
+
+
+
+lemma mmu_translate_sat_abs_refine2_consistency:
+   "\<lbrakk> mmu_translate va s = (pa, s');  mmu_translate va t = (pa', t') ;
+           va \<notin> iset (tlb_incon_set t) ; invar_rel (typ_sat_tlb s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                                  va \<notin> iset (tlb_incon_set t')"
+ apply (frule_tac s = s in tlb_rel_abs2_consistent' ; clarsimp )
+  apply (frule invar_relD , clarsimp)
+  apply (clarsimp simp: mmu_translate_tlb_incon_state_ext_def  Let_def)
+  apply (clarsimp simp: mmu_translate_tlb_sat_state_ext_def split_def Let_def)
+  apply (cases "lookup (tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e}) (ASID s) va")
+    apply clarsimp
+    apply (frule lookup_saturated_miss_is_fault)
+    apply (clarsimp simp: raise'exception_def split:if_split_asm)
+   apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e}")
+    prefer 2
+    apply (fastforce simp: saturated_def)
+   apply clarsimp
+   apply (clarsimp simp: consistent0_def)
+  apply clarsimp
+  apply (subgoal_tac "x3 = the (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
+   prefer 2
+   apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e}")
+    prefer 2
+    apply (fastforce simp: saturated_def)
+   apply (clarsimp simp: consistent0_def)
+  apply clarsimp
+  apply (subgoal_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)")
+   prefer 2
+   apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union> the ` {e\<in>pt_walk (ASID s) (MEM s) (TTBR0 s) ` UNIV. \<not>is_fault e}")
+    prefer 2
+    apply (fastforce simp: saturated_def)
+   apply clarsimp
+   apply (clarsimp simp: is_fault_def lookup_in_tlb consistent0_def)
+  apply clarsimp
+ done
+
+
+
+
+
+lemma mmu_translate_sat_abs2_refine:
+  "\<lbrakk> mmu_translate va s = (pa, s');  mmu_translate va t = (pa', t') ;
+           va \<notin> iset (tlb_incon_set t) ; invar_rel (typ_sat_tlb s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                              pa = pa' \<and>  invar_rel  (typ_sat_tlb s') (typ_incon'2 t')  \<and> 
+                              va \<notin> iset (tlb_incon_set t')"
+  by (clarsimp simp: mmu_translate_sat_abs2_refine_pa' mmu_translate_sat_abs2_refine'
+      mmu_translate_sat_abs_refine2_consistency)
+
+
+
 end
