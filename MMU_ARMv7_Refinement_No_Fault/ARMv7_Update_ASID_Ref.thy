@@ -420,5 +420,116 @@ lemma update_ASID_sat_abs_refine'2:
   done
 
 
+(* refinement between saturated and new abstracted model  *)
+
+lemma update_ASID_sat_abs2_refine:
+  "\<lbrakk> update_ASID a (s::tlb_sat_state) = ((), s') ;  update_ASID a (t::tlb_incon_state) = ((), t'); 
+        invar_rel (typ_sat_tlb s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> 
+                       invar_rel (typ_sat_tlb s') (typ_incon'2 t')"
+  apply (clarsimp simp: update_ASID_tlb_sat_state_ext_def update_ASID_tlb_incon_state_ext_def Let_def)
+  apply (frule invar_relD)
+  apply (case_tac "a = ASID s")
+    (* when we update to the same ASID *)
+   apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union> 
+         the `{e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
+    prefer 2
+    apply (clarsimp simp:  saturated_def) 
+    apply blast
+   apply clarsimp
+   apply (clarsimp simp: invar_rel_def)
+   apply (rule conjI)
+    apply (clarsimp simp: state.defs)
+   apply (rule conjI)
+    apply (clarsimp simp: snapshot_update_current'_def snapshot_update_current_def snapshot_update_current'2_def snapshot_update_current2_def 
+      incon_load_incon_def incon_load2_def incon_load_def)
+    apply force
+   apply clarsimp
+   apply (clarsimp simp: snapshot_of_tlb_def snapshot_update_current'_def snapshot_update_current_def
+      snapshot_update_new'_def  snapshot_update_new_def)
+   apply (clarsimp simp: snapshot_update_current'_def snapshot_update_current_def snapshot_update_current'2_def snapshot_update_current2_def 
+      incon_load_incon_def incon_load2_def incon_load_def split: if_split_asm)
+    (* when we update to the new ASID *)
+  apply (clarsimp simp: invar_rel_def)
+  apply (rule conjI)
+   apply (clarsimp simp: state.defs)
+  apply (rule conjI)
+   apply (subgoal_tac "incon_load_incon (snapshot_update_current'2 (snapshot (tlb_incon_set t)) (iset (tlb_incon_set t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s)  = 
+                       incon_load_incon (snapshot (tlb_incon_set t)) a (MEM s) (TTBR0 s) ")
+    prefer 2
+    apply (clarsimp simp: incon_load_incon_def snapshot_update_current'2_def snapshot_update_current2_def split: if_split_asm)
+   apply (subgoal_tac "incon_load2 (snapshot_update_current'2 (snapshot (tlb_incon_set t)) (iset (tlb_incon_set t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s)  = 
+                       incon_load2 (snapshot (tlb_incon_set t))  a (MEM s) (TTBR0 s) ")
+    prefer 2
+    apply (clarsimp simp: incon_load2_def snapshot_update_current'2_def snapshot_update_current2_def split: if_split_asm)
+   apply (simp only:)
+   apply (thin_tac "incon_load_incon (snapshot_update_current'2 (snapshot (tlb_incon_set t)) (iset (tlb_incon_set t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s)  = 
+                       incon_load_incon (snapshot (tlb_incon_set t)) a (MEM s) (TTBR0 s)")
+   apply (thin_tac "incon_load2 (snapshot_update_current'2 (snapshot (tlb_incon_set t)) (iset (tlb_incon_set t)) (MEM s) (TTBR0 s) (ASID s)) a (MEM s) (TTBR0 s)  = 
+                       incon_load2 (snapshot (tlb_incon_set t))  a (MEM s) (TTBR0 s)")
+   apply (clarsimp)
+   apply (drule_tac x = a in spec, simp add: snapshot_of_tlb_def)
+   apply (clarsimp simp: asid_va_incon_tlb_mem_n_def asid_va_incon_n_def asid_va_hit_incon_n_def)
+   apply (drule_tac x = x in spec)
+   apply (erule disjE)+
+    apply (clarsimp simp: incon_load2_def incon_load_incon_def)
+    apply (drule union_incon_cases1)
+    apply (erule disjE , clarsimp)
+    apply (erule disjE , clarsimp simp: less_eq_lookup_type lookup_range_pt_walk_hit)
+    apply (erule disjE , clarsimp simp: lookup_range_pt_walk_not_incon)
+    apply (erule disjE , clarsimp)
+    apply (erule disjE , clarsimp simp: lookup_range_pt_walk_not_incon')
+    apply (clarsimp)
+   apply clarsimp
+   apply (erule disjE)+
+    apply (clarsimp simp: incon_load2_def incon_load_incon_def)
+    apply (drule lookup_hit_union_cases')
+    apply (erule disjE , clarsimp simp: less_eq_lookup_type) 
+    apply (erule disjE , clarsimp simp:  lookup_range_pt_walk_hit)
+    apply (clarsimp simp: lookup_range_pt_walk_hit)
+   apply (clarsimp simp: incon_load2_def incon_load_incon_def)
+   apply (drule lookup_hit_union_cases')
+   apply (erule disjE , clarsimp simp: less_eq_lookup_type) 
+   apply (erule disjE , clarsimp simp:  lookup_miss_is_fault_intro) 
+   apply (clarsimp simp: lookup_miss_is_fault_intro)
+  apply (rule conjI)
+   apply (clarsimp simp: saturated_def)
+  apply (rule allI)
+  apply (rule impI)
+  apply (rule allI)
+  apply (case_tac "aa \<noteq> ASID s")
+   apply (subgoal_tac "snapshot_update_current'2 (snapshot (tlb_incon_set t)) (iset (tlb_incon_set t)) (MEM s) (TTBR0 s) (ASID s) aa v = 
+                         (snapshot (tlb_incon_set t)) aa v")
+    prefer 2
+    apply (clarsimp simp: snapshot_update_current'2_def snapshot_update_current2_def split: if_split_asm)
+   apply (simp only:)
+   apply (thin_tac " snapshot_update_current'2 (snapshot (tlb_incon_set t)) (iset (tlb_incon_set t)) (MEM s) (TTBR0 s) (ASID s) aa v = snapshot (tlb_incon_set t) aa v")
+   apply (simp only: snapshot_of_tlb_def)
+   apply (subgoal_tac "lookup (tlb_sat_set s \<union> the ` {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) aa (  v) =
+         lookup (tlb_sat_set s) aa (  v)")
+    apply clarsimp
+   apply (simp add: asid_unequal_miss'' lookup_miss_union_equal)
+  apply clarsimp
+  apply (simp only: snapshot_of_tlb_def)
+  apply (subgoal_tac "lookup (tlb_sat_set s \<union> the ` {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) (  v) =
+               lookup (tlb_sat_set s) (ASID s) (  v)")
+   prefer 2
+   apply (clarsimp simp: lookup_miss_union_equal asid_unequal_miss'')
+  apply (clarsimp)
+  apply (thin_tac "  lookup (tlb_sat_set s \<union> the ` {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) v = lookup (tlb_sat_set s) (ASID s) v")
+  apply (clarsimp simp: snapshot_update_current'2_def snapshot_update_current2_def split: if_split_asm)
+  apply (rule conjI)
+   apply clarsimp
+   apply (subgoal_tac "v \<notin>  asid_va_incon_tlb_mem_n (typ_sat_tlb s)")
+    prefer 2
+    apply blast
+   apply (clarsimp simp: asid_va_incon_tlb_mem_n_def asid_va_incon_n_def asid_va_hit_incon_n_def) 
+   apply (metis (no_types, hide_lams) less_eq_lookup_type lookup_type.exhaust)
+  apply clarsimp
+  apply (subgoal_tac "v \<notin>  asid_va_incon_tlb_mem_n (typ_sat_tlb s)")
+   prefer 2
+   apply blast
+  apply (clarsimp simp: asid_va_incon_tlb_mem_n_def asid_va_incon_n_def asid_va_hit_incon_n_def)
+  using not_miss_incon_hit by blast 
+
 
 end
