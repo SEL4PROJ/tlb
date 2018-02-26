@@ -62,6 +62,7 @@ lemma asid_va_incon_rewrite:
      apply clarsimp
      apply (subgoal_tac "pt_walk a (MEM s) (TTBR0 s) xb = pt_walk a (MEM s) (TTBR0 s) b")
       apply clarsimp
+  sledgehammer
      prefer 2
      apply (erule disjE)
       apply (clarsimp simp :lookup_range_pt_walk_not_incon')
@@ -72,11 +73,11 @@ lemma asid_va_incon_rewrite:
      apply blast
     prefer 2
     apply (subgoal_tac "tlb_sat_set s \<subseteq> tlb_sat_set s \<union> the ` {e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}")
-     apply (drule_tac a = aa and v = "  b" in tlb_mono)
+     apply (drule_tac a = aa and v = b in tlb_mono)
      apply force
     apply blast
    prefer 2
-   apply (subgoal_tac "lookup (the `{e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) a (  x) = Hit (the (pt_walk a (MEM s) (TTBR0 s) x))")
+   apply (subgoal_tac "lookup (the `{e \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault e}) a x = Hit (the (pt_walk a (MEM s) (TTBR0 s) x))")
     apply (clarsimp simp: lookup_hit_diff_union_incon)
   using lookup_range_pt_walk_hit apply force
 proof -

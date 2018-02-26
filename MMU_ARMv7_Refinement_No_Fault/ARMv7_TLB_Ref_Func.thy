@@ -270,9 +270,9 @@ definition
    asid_va_hit_incon_n :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
 where                                                         
   "asid_va_hit_incon_n s  \<equiv>   {va. \<exists>x. lookup (state.more s) (ASID s) va = Hit x \<and>
-                                                         ((x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) va) \<and>
-                                                               \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) ) \<or>
-                                                         is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ))}"
+                                   ((x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) va) \<and>
+                                     \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) ) \<or>
+                                      is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ))}"
 
 
 definition                              
@@ -285,9 +285,10 @@ where
 definition 
   invar_rel :: "tlb_entry set state_scheme  \<Rightarrow> tlb_incon_set state_scheme \<Rightarrow> bool"
 where                                                                
-"invar_rel s t \<equiv>  state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem_n s \<subseteq>   iset (state.more t) \<and> 
-                       saturated s  \<and> (\<forall>a v. a \<noteq> ASID s \<longrightarrow> snapshot_of_tlb (state.more s) a v \<le> snapshot (state.more t) a v)" 
-                       (* may have to add the incon equality here, go and see the asid_update, or may be not*)
+"invar_rel s t \<equiv>  state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem_n s \<subseteq>  iset (state.more t) \<and> 
+                       saturated s 
+    \<and> (\<forall>a v. a \<noteq> ASID s \<longrightarrow> snapshot_of_tlb (state.more s) a v \<le> snapshot (state.more t) a v)" 
+                       (* may have to add the incon equality here, or may be not*)
 
 consts tlb_evict :: "tlb_entry set state_scheme \<Rightarrow> tlb_entry set"
 
