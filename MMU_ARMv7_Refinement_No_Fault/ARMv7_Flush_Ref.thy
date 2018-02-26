@@ -830,7 +830,11 @@ proof -
       using a2 a1 by (simp add: diff_asid_lookup_union) }
   ultimately show "lookup (tlb_sat_set s - {t \<in> tlb_sat_set s. asid_entry t = a} \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v \<le> snapshot (tlb_incon_set t) aa v"
     by (metis (no_types) asid_entry_set_pt_walk1)
-next
+next 
+
+(*  how to go to prove now, from state *)
+have "?thesis" apply (clarsimp simp: invar_rel_def)
+
  (* to-ask-Gerwin  *)
 (*
    apply (subgoal_tac "ASID t = ASID s \<and> TTBR0 t = TTBR0 s \<and> MEM t = MEM s")
