@@ -18,14 +18,6 @@ record tlb_sat_state = state +
            tlb_sat_set :: "tlb_entry set"
 
 
-record tlb_incon_set' =
-  incon_set    :: "(asid \<times> vaddr) set"
-  tlb_snapshot :: "asid \<Rightarrow> vaddr \<Rightarrow> lookup_type"
-
-
-record tlb_incon_state' = state + 
-           tlb_incon_set' :: tlb_incon_set'
-
 
 record tlb_incon_set =
   iset     :: "vaddr set"
@@ -56,17 +48,10 @@ where
   "typ_sat_tlb s =  state.extend (state.truncate s) (tlb_sat_set s)"
 
 
-
 definition 
-  typ_incon' :: "'a tlb_incon_state'_scheme \<Rightarrow> tlb_incon_set' state_scheme"
+  typ_incon :: "'a tlb_incon_state_scheme \<Rightarrow> tlb_incon_set state_scheme"
 where
-  "typ_incon' s =  state.extend (state.truncate s) (tlb_incon_set' s)"
-
-
-definition 
-  typ_incon'2 :: "'a tlb_incon_state_scheme \<Rightarrow> tlb_incon_set state_scheme"
-where
-  "typ_incon'2 s =  state.extend (state.truncate s) (tlb_incon_set s)"
+  "typ_incon s =  state.extend (state.truncate s) (tlb_incon_set s)"
 
 
 lemma tlb_more [simp]:
@@ -83,13 +68,9 @@ lemma tlb_sat_more [simp]:
   "state.more (typ_sat_tlb s) = tlb_sat_set s"
   by (clarsimp simp: typ_sat_tlb_def state.defs)
 
-lemma tlb_incon_more' [simp]:
-  "state.more (typ_incon' s) = tlb_incon_set' s"
-  by (clarsimp simp: typ_incon'_def state.defs)
-
-lemma tlb_incon_more'2 [simp]:
-  "state.more (typ_incon'2 s) = tlb_incon_set s"
-  by (clarsimp simp: typ_incon'2_def state.defs)
+lemma tlb_incon_more [simp]:
+  "state.more (typ_incon s) = tlb_incon_set s"
+  by (clarsimp simp: typ_incon_def state.defs)
 
 
 lemma tlb_truncate [simp]:
@@ -104,14 +85,9 @@ lemma tlb_sat_truncate [simp]:
   "state.truncate (typ_sat_tlb s') = state.truncate s'"
   by (clarsimp simp: typ_sat_tlb_def state.defs)
 
-lemma tlb_incon_truncate' [simp]:
-  "state.truncate (typ_incon' s') = state.truncate s'"
-  by (clarsimp simp: typ_incon'_def state.defs)
-
-
 lemma tlb_incon_truncate'2 [simp]:
-  "state.truncate (typ_incon'2 s') = state.truncate s'"
-  by (clarsimp simp: typ_incon'2_def state.defs)
+  "state.truncate (typ_incon s') = state.truncate s'"
+  by (clarsimp simp: typ_incon_def state.defs)
 
 
 lemma typ_prim_parameter [simp]:
@@ -132,15 +108,10 @@ lemma typ_sat_prim_parameter [simp]:
   by (clarsimp simp: typ_sat_tlb_def state.defs)
 
 
-lemma typ_incon_prim_parameter' [simp]:
-  "ASID (typ_incon' s) = ASID s \<and> TTBR0 (typ_incon' s) =  TTBR0 s \<and> MEM (typ_incon' s) = MEM s \<and>
-      exception (typ_incon' s) = exception s"
-  by (clarsimp simp: typ_incon'_def state.defs)
-
-lemma typ_incon_prim_parameter'2 [simp]:
-  "ASID (typ_incon'2 s) = ASID s \<and> TTBR0 (typ_incon'2 s) =  TTBR0 s \<and> MEM (typ_incon'2 s) = MEM s \<and>
-      exception (typ_incon'2 s) = exception s"
-  by (clarsimp simp: typ_incon'2_def state.defs)
+lemma typ_incon_prim_parameter [simp]:
+  "ASID (typ_incon s) = ASID s \<and> TTBR0 (typ_incon s) =  TTBR0 s \<and> MEM (typ_incon s) = MEM s \<and>
+      exception (typ_incon s) = exception s"
+  by (clarsimp simp: typ_incon_def state.defs)
 
 
 definition
@@ -152,12 +123,6 @@ definition
 abbreviation
   "consistent (s::tlb_entry set state_scheme) \<equiv>
                consistent0 (MEM s) (ASID s) (TTBR0 s) (state.more s)"
-
-
-definition 
-   asid_va_incon :: "tlb \<Rightarrow> (asid \<times> vaddr) set"
-where                                                        
-  "asid_va_incon tlb  \<equiv>  {(asid, va). lookup tlb asid va = Incon}"
 
 
 definition
@@ -178,60 +143,6 @@ definition
 where                                                                
   "tlb_rel_sat s t \<equiv> state.truncate s = state.truncate t \<and> state.more s \<subseteq> state.more t \<and> saturated t"
 
-(*
-definition                              
-   asid_va_hit_incon :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
-where                                                         
-  "asid_va_hit_incon s  \<equiv>  {(asid, va). asid = ASID s \<and>  
-                            (\<exists>x. lookup (state.more s) asid va = Hit x \<and> x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) va )) }"
-*)
-
-
-definition                              
-   asid_va_hit_incon' :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
-where                                                         
-  "asid_va_hit_incon' s  \<equiv> 
-                  {(asid, va). asid = ASID s \<and>  
-                   (\<exists>x. lookup (state.more s) asid va = Hit x \<and> x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) va) \<and>
-                         \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) ) }"
-
-definition                              
-   asid_va_hit_incon'' :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
-where                                                         
-  "asid_va_hit_incon'' s  \<equiv> 
-                  {(asid, va). asid = ASID s \<and>  (\<exists>x. lookup (state.more s) asid va = Hit x) \<and>
-                   is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) }"
-
-
-definition                              
-   asid_va_hit_incon_inter :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
-where                                                         
-  "asid_va_hit_incon_inter s  \<equiv>  asid_va_hit_incon' s \<union> asid_va_hit_incon'' s"
-
-
-definition                              
-   asid_va_hit_incon :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
-where                                                         
-  "asid_va_hit_incon s  \<equiv>  (\<lambda>va. (ASID s , va)) ` {va. \<exists>x. lookup (state.more s) (ASID s) va = Hit x \<and>
-                                                         ((x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) va) \<and>
-                                                               \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) ) \<or>
-                                                         is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ))}"
-
-
-
-
-lemma asid_calib_thm [simp]:
-  "asid_va_hit_incon s = asid_va_hit_incon_inter s"
-  apply (clarsimp simp: asid_va_hit_incon_def asid_va_hit_incon'_def asid_va_hit_incon''_def asid_va_hit_incon_inter_def)
-    by blast
-    
-
-definition                              
-   asid_va_incon_tlb_mem :: "tlb_entry set state_scheme \<Rightarrow> (asid \<times> vaddr) set"
-where                                                         
-  "asid_va_incon_tlb_mem s  \<equiv>  asid_va_incon (state.more s) \<union> asid_va_hit_incon s "
-
-
 
 definition 
   snapshot_of_tlb :: "tlb \<Rightarrow>  asid \<Rightarrow> vaddr \<Rightarrow> lookup_type"
@@ -240,75 +151,30 @@ where
 
 
 definition 
-  tlb_rel_abs' :: "tlb_entry set state_scheme \<Rightarrow> tlb_incon_set' state_scheme \<Rightarrow> bool"
-where                                                                
-  "tlb_rel_abs' s t \<equiv> state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem s \<subseteq> incon_set (state.more t) \<and> 
-                       saturated s \<and> 
-                         (\<forall>a v. a \<noteq> ASID s \<longrightarrow> snapshot_of_tlb (state.more s) a v \<le> tlb_snapshot (state.more t) a v) \<and>
-                          {(a,v). tlb_snapshot (state.more t) a  v = Incon }  \<subseteq>  incon_set (state.more t)" 
-
-
-(* refinement relation for the last abstraction *)
-
-definition 
-  refine_rel :: "tlb_incon_set' state_scheme \<Rightarrow> tlb_incon_set state_scheme \<Rightarrow> bool"
-where  
-"refine_rel s t \<equiv> state.truncate s = state.truncate t \<and> 
-                   (\<forall>a v. a \<noteq> ASID s \<longrightarrow> ((tlb_snapshot (state.more s) a  v = Incon) = ((a,v) \<in> incon_set (state.more s)))) \<and> 
-                 (*done *)  (\<forall>a v. a \<noteq> ASID s \<longrightarrow> tlb_snapshot (state.more s) a  v \<le> snapshot (state.more t) a  v) \<and> 
-                   {v. (ASID s,v) \<in> incon_set (state.more s)}  \<subseteq>  iset (state.more t)" 
-
-
-
-definition 
-   asid_va_incon_n :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
+   incon_va_set :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
 where                                                        
-  "asid_va_incon_n s  \<equiv>  {va. lookup (state.more s) (ASID s) va = Incon}"
+  "incon_va_set s  \<equiv>  {va. lookup (state.more s) (ASID s) va = Incon}"
 
 
 definition                              
-   asid_va_hit_incon_n :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
+   ptable_tlb_va_incon :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
 where                                                         
-  "asid_va_hit_incon_n s  \<equiv>   {va. \<exists>x. lookup (state.more s) (ASID s) va = Hit x \<and>
-                                   ((x \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) va) \<and>
-                                     \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ) ) \<or>
-                                      is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va ))}"
-
-
-definition                              
-   asid_va_incon_tlb_mem_n :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
-where                                                         
-  "asid_va_incon_tlb_mem_n s  \<equiv>  asid_va_incon_n s \<union> asid_va_hit_incon_n s "
-
-
-definition                              
-   asid_va_hit_incon_new :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
-where                                                         
-  "asid_va_hit_incon_new s  \<equiv>   {va. \<exists>x. lookup (state.more s) (ASID s) va = Hit x \<and>
+  "ptable_tlb_va_incon s  \<equiv>   {va. \<exists>x. lookup (state.more s) (ASID s) va = Hit x \<and>
                                    is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)}"
 
 
-
 definition                              
-   asid_va_incon_tlb_mem_n' :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
+   incon_addrs :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
 where                                                         
-  "asid_va_incon_tlb_mem_n' s  \<equiv>  asid_va_incon_n s \<union> asid_va_hit_incon_new s"
+  "incon_addrs s  \<equiv>  incon_va_set s \<union> ptable_tlb_va_incon s "
 
-
-lemma to_do:
-  "saturated s  \<Longrightarrow> asid_va_incon_tlb_mem_n' s = asid_va_incon_tlb_mem_n s"
-  apply (clarsimp simp: saturated_def asid_va_incon_tlb_mem_n'_def asid_va_incon_tlb_mem_n_def
-    asid_va_incon_n_def asid_va_hit_incon_new_def asid_va_hit_incon_n_def)
-  apply (safe ; clarsimp)
-  sorry
 
 definition 
-  invar_rel :: "tlb_entry set state_scheme  \<Rightarrow> tlb_incon_set state_scheme \<Rightarrow> bool"
+  tlb_rel_abs :: "tlb_entry set state_scheme  \<Rightarrow> tlb_incon_set state_scheme \<Rightarrow> bool"
 where                                                                
-"invar_rel s t \<equiv>  state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem_n s \<subseteq>  iset (state.more t) \<and> 
-                       saturated s 
-    \<and> (\<forall>a v. a \<noteq> ASID s \<longrightarrow> snapshot_of_tlb (state.more s) a v \<le> snapshot (state.more t) a v)" 
-                       (* may have to add the incon equality here, or may be not*)
+"tlb_rel_abs s t \<equiv>  state.truncate s = state.truncate t \<and> incon_addrs s \<subseteq>  iset (state.more t) \<and> 
+                       saturated s \<and> (\<forall>a v. a \<noteq> ASID s \<longrightarrow> snapshot_of_tlb (state.more s) a v \<le> snapshot (state.more t) a v)" 
+                 
 
 consts tlb_evict :: "tlb_entry set state_scheme \<Rightarrow> tlb_entry set"
 
@@ -357,10 +223,6 @@ lemma tlb_rel_sat_consistent:
   apply (auto simp: consistent0_def less_eq_lookup_type)
   done
 
-
-(*find_theorems consistent
-  thm consistent_tlb_state_ext_def
-  help*)
 
 lemma lookup_in_tlb:
   "lookup tlb asid va = Hit e \<Longrightarrow> e \<in> tlb"
@@ -451,9 +313,6 @@ lemma  pt_walk_some_asid_entry [simp, intro!]:
   by (clarsimp simp: pt_walk_def split: option.splits pde.splits pte.splits)
 
 
-
-
-
 lemma  lookup_saturated_miss_is_fault:
   "lookup (tlb_sat_set s \<union>  
         the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) va = Miss \<Longrightarrow>
@@ -483,10 +342,6 @@ done
 
 
 
-
-(* IMPORTANT *)
-
-
 lemma write'mem1_eq_TLB:
   "\<lbrakk> write'mem1 (val, va, sz) s = ((), s') \<rbrakk>  \<Longrightarrow> state.more s' = state.more s"
    by (clarsimp simp: write'mem1_def raise'exception_def split: if_split_asm)
@@ -500,10 +355,8 @@ lemma write_same_mem:
 lemma write_same_mem_excep:
   "\<lbrakk> write'mem1 (val, pa, sz) s = ((), s') ; write'mem1 (val, pa, sz) t = ((), t') ;
       MEM s = MEM t ; exception s = exception t \<rbrakk>  \<Longrightarrow> exception s' = exception t'"
-   apply (clarsimp simp: write'mem1_def raise'exception_def split:if_split_asm)
-done
+   by (clarsimp simp: write'mem1_def raise'exception_def split:if_split_asm)
 
- 
 
 lemma write'mem1_rel:
   "\<lbrakk> write'mem1 (val, va, sz) s = ((), s') \<rbrakk>  \<Longrightarrow> s' = s \<lparr> MEM:= MEM s' , exception:= exception s' \<rparr>"
@@ -516,24 +369,11 @@ lemma sat_state_tlb':
   by (fastforce simp: saturated_def)
 
 
-lemma tlb_rel'_absD:
-  "tlb_rel_abs' s t \<Longrightarrow>
-     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s \<and>  saturated s \<and> 
-                asid_va_incon_tlb_mem s  \<subseteq> incon_set (state.more t) \<and> exception t = exception s"
-  by (clarsimp simp: tlb_rel_abs'_def state.defs)
-
-
-lemma refine_relD:
-  "refine_rel s t \<Longrightarrow>
-     ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s  \<and> exception t = exception s"
-  apply (clarsimp simp: refine_rel_def)
-  by (clarsimp simp:  state.defs)
-
-lemma invar_relD:
-  "invar_rel s t \<Longrightarrow>
+lemma tlb_rel_absD:
+  "tlb_rel_abs s t \<Longrightarrow>
      ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s   \<and>  saturated s \<and> 
-                asid_va_incon_tlb_mem_n s  \<subseteq> iset (state.more t) \<and> exception t = exception s"
-  apply (clarsimp simp: invar_rel_def )
-  by (clarsimp simp:  state.defs)
+                incon_addrs s  \<subseteq> iset (state.more t) \<and> exception t = exception s"
+  by (clarsimp simp: tlb_rel_abs_def state.defs)
+
 
 end

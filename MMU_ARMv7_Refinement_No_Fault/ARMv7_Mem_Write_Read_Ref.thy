@@ -131,50 +131,6 @@ where
 
 
 
-
-instantiation tlb_incon_state'_ext :: (type) mem_op    
-begin
-
-definition   
-  "(mmu_read  :: (vaddr  \<Rightarrow>  'a tlb_incon_state'_scheme \<Rightarrow> bool list \<times>  'a tlb_incon_state'_scheme))
-   \<equiv>  \<lambda>va. do {
-                     pa  \<leftarrow> mmu_translate va;
-                     mem1 pa
-  }"
-
-definition
- "(mmu_read_size  :: (vaddr \<times> nat \<Rightarrow>  'a tlb_incon_state'_scheme \<Rightarrow> bool list \<times>  'a tlb_incon_state'_scheme))
-  \<equiv> \<lambda>(va,size). do {
-                     pa  \<leftarrow> mmu_translate va;
-                     mem_read1 (pa , size)
-  }"
-
-
-definition   
-  "(mmu_write_size  :: (bool list \<times> vaddr \<times> nat \<Rightarrow> 'a tlb_incon_state'_scheme \<Rightarrow> unit \<times> 'a tlb_incon_state'_scheme))
-  \<equiv> \<lambda>(value, vaddr, size). do {
-      ttbr0 <- read_state TTBR0;
-      asid  <- read_state ASID;
-      mem   <- read_state MEM; 
-      paddr <- mmu_translate vaddr;
-      tlb_incon_set <- read_state tlb_incon_set'; 
-      exception <- read_state exception;
-      if exception = NoException 
-        then  do {
-                   write'mem1 (value, paddr, size);
-                   mem' <- read_state MEM;
-                   let ptable_asid_va = ptable_comp asid mem mem' ttbr0 ttbr0;
-                   let incon_set_n = incon_set tlb_incon_set \<union> ptable_asid_va;
-                   let tlb_incon_set = tlb_incon_set \<lparr>incon_set := incon_set_n \<rparr>;
-                   update_state (\<lambda>s. s\<lparr> tlb_incon_set' :=  tlb_incon_set \<rparr>)
-            }
-        else return ()
-   }"
-  instance ..
-end
-
-
-
 instantiation tlb_incon_state_ext :: (type) mem_op    
 begin
 
@@ -361,11 +317,6 @@ done
 
 
 
-lemma mmu_abs_rel:
-  "consistent s va \<Longrightarrow> (ASID s, va) \<notin> asid_va_incon (state.more s)"
-  by (clarsimp simp: consistent0_def  asid_va_incon_def state.defs)
-
-
 lemma write_mem_state_trun_equal:
   "\<lbrakk>  write'mem1 (val, pa, sz) s = ((), s'); write'mem1 (val, pa, sz) t = ((), t'); 
      state.truncate s = state.truncate t \<rbrakk>  \<Longrightarrow> state.truncate s' = state.truncate t'"
@@ -421,659 +372,11 @@ lemma asid_pt_walk:
 done
 
 
-
-lemma asid_va_entry_range_pt_entry:
-  "\<not>is_fault(pt_walk  asid mem ttbr0 va) \<Longrightarrow> 
-      (asid, va) \<in> entry_range_asid_tags (the(pt_walk asid mem ttbr0 va))"
-  by (clarsimp simp: entry_range_asid_tags_def is_fault_def)
- 
-
 theorem entry_range_single_elementI:
   "\<lbrakk>x\<in> t ; (a, v) \<in> entry_range_asid_tags x ; (\<forall>y\<in>t. y\<noteq>x \<longrightarrow> (a, v) \<notin> entry_range_asid_tags y) \<rbrakk> \<Longrightarrow> 
          {E \<in> t. (a, v) \<in> entry_range_asid_tags E} = {x}" 
    by force
 
-
-
-
-lemma va_offset_add:
-  " (va::32 word) : {ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12  .. 
-    (ucast (ucast (x >> 12):: 20 word) << 12) + mask 12 } \<Longrightarrow>
-      \<exists>a.  (0 \<le> a \<and> a \<le> mask 12) \<and>
-  va = (ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12)  + a"
-  apply (rule_tac x = "va - (ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12) " in exI)
-  apply (clarsimp simp: mask_def)
-  apply uint_arith
-done
-  
-
-lemma va_offset_add_1:
-  " (va::32 word) : {ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20  .. 
-    (ucast (ucast (x >> 20):: 12 word) << 20) + mask 20 } \<Longrightarrow>
-      \<exists>a.  (0 \<le> a \<and> a \<le> mask 20) \<and>
-      va = (ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20)  + a"
-  apply (rule_tac x = "va - (ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20) " in exI)
-  apply (clarsimp simp: mask_def)
-  apply uint_arith
-done
-
-lemma shift_to_mask:
-  "x AND NOT mask 12 = (ucast (ucast ((x::32 word) >> 12):: 20 word)::32 word) << 12"
-  apply (rule word_eqI)
-  apply (simp add : word_ops_nth_size word_size)
-  apply (simp add : nth_shiftr nth_shiftl nth_ucast)
-  apply auto
-done
-
-
-lemma shift_to_mask_1:
-  "x AND NOT mask 20 = (ucast (ucast ((x::32 word) >> 20):: 12 word)::32 word) << 20"
-  apply (rule word_eqI)
-  apply (simp add : word_ops_nth_size word_size)
-  apply (simp add : nth_shiftr nth_shiftl nth_ucast)
-  apply auto
-done
-
-
-
-
-lemma nth_bits_false:
-  "\<lbrakk>(n::nat) < 20; (a::32 word) \<le> 0xFFF\<rbrakk> \<Longrightarrow> \<not>(a !! (n + 12))"
-  apply word_bitwise
-  apply clarsimp
-  apply (case_tac "n = 0")
-   apply clarsimp
-  apply (case_tac "n = 1")
-   apply clarsimp
-  apply (case_tac "n = 2")
-   apply clarsimp
-  apply (case_tac "n = 3")
-   apply clarsimp
-  apply (case_tac "n = 4")
-   apply clarsimp
-  apply (case_tac "n = 5")
-   apply clarsimp
-  apply (case_tac "n = 6")
-   apply clarsimp
-  apply (case_tac "n = 7")
-   apply clarsimp
-  apply (case_tac "n = 8")
-   apply clarsimp
-  apply (case_tac "n = 9")
-   apply clarsimp
-  apply (case_tac "n = 10")
-   apply clarsimp
-  apply (case_tac "n = 11")
-   apply clarsimp
-  apply (case_tac "n = 12")
-   apply clarsimp
-  apply (case_tac "n = 13")
-   apply clarsimp
-  apply (case_tac "n = 14")
-   apply clarsimp
-  apply (case_tac "n = 15")
-   apply clarsimp
-  apply (case_tac "n = 16")
-   apply clarsimp
-  apply (case_tac "n = 17")
-   apply clarsimp
-  apply (case_tac "n = 18")
-   apply clarsimp
-  apply (case_tac "n = 19")
-   apply clarsimp
-  apply (thin_tac "\<not> a !! P" for P)+
-  apply arith
-done
-
-
-
-lemma nth_bits_false_1:
-  "\<lbrakk>(n::nat) < 12; (a::32 word) \<le> 0xFFFFF\<rbrakk> \<Longrightarrow> \<not>(a !! (n + 20))"
-  apply word_bitwise
-  apply clarsimp
-  apply (case_tac "n = 0")
-   apply clarsimp
-  apply (case_tac "n = 1")
-   apply clarsimp
-  apply (case_tac "n = 2")
-   apply clarsimp
-  apply (case_tac "n = 3")
-   apply clarsimp
-  apply (case_tac "n = 4")
-   apply clarsimp
-  apply (case_tac "n = 5")
-   apply clarsimp
-  apply (case_tac "n = 6")
-   apply clarsimp
-  apply (case_tac "n = 7")
-   apply clarsimp
-  apply (case_tac "n = 8")
-   apply clarsimp
-  apply (case_tac "n = 9")
-   apply clarsimp
-  apply (case_tac "n = 10")
-   apply clarsimp
-  apply (case_tac "n = 11")
-   apply clarsimp
-  apply (thin_tac "\<not> a !! P" for P)+
-  apply arith
-done
-
-
-
-lemma nth_bits_offset_equal: "\<lbrakk>n < 20 ; (a::32 word) \<le> 0x00000FFF \<rbrakk> \<Longrightarrow> 
-        (((x::32 word) && 0xFFFFF000) || a) !!  (n + 12) = x !! (n + 12)"
-  apply clarsimp
-  apply (rule iffI)
-   apply (erule disjE)
-    apply clarsimp
-   apply (clarsimp simp: nth_bits_false)
-  apply clarsimp
-  apply (simp only: test_bit_int_def [symmetric])
-  apply (case_tac "n = 0")
-   apply clarsimp
-  apply (case_tac "n = 1")
-   apply clarsimp
-  apply (case_tac "n = 2")
-   apply clarsimp
-  apply (case_tac "n = 3")
-   apply clarsimp
-  apply (case_tac "n = 4")
-   apply clarsimp
-  apply (case_tac "n = 5")
-   apply clarsimp
-  apply (case_tac "n = 6")
-   apply clarsimp
-  apply (case_tac "n = 7")
-   apply clarsimp
-  apply (case_tac "n = 8")
-   apply clarsimp
-  apply (case_tac "n = 9")
-   apply clarsimp
-  apply (case_tac "n = 10")
-   apply clarsimp
-  apply (case_tac "n = 11")
-   apply clarsimp
-  apply (case_tac "n = 12")
-   apply clarsimp
-  apply (case_tac "n = 13")
-   apply clarsimp
-  apply (case_tac "n = 14")
-   apply clarsimp
-  apply (case_tac "n = 15")
-   apply clarsimp
-  apply (case_tac "n = 16")
-   apply clarsimp
-  apply (case_tac "n = 17")
-   apply clarsimp
-  apply (case_tac "n = 18")
-   apply clarsimp
-  apply (case_tac "n = 19")
-   apply clarsimp
-  by presburger
-
-   
-
-
-lemma nth_bits_offset_equal_1: "\<lbrakk>n < 12 ; (a::32 word) \<le> 0x000FFFFF \<rbrakk> \<Longrightarrow> 
-        (((x::32 word) && 0xFFF00000) || a) !!  (n + 20) = x !! (n + 20)"
-  apply clarsimp
-  apply (rule iffI)
-   apply (erule disjE)
-    apply clarsimp
-   apply (clarsimp simp: nth_bits_false_1)
-  apply clarsimp
-  apply (simp only: test_bit_int_def [symmetric])
-  apply (case_tac "n = 0")
-   apply clarsimp
-  apply (case_tac "n = 1")
-   apply clarsimp
-  apply (case_tac "n = 2")
-   apply clarsimp
-  apply (case_tac "n = 3")
-   apply clarsimp
-  apply (case_tac "n = 4")
-   apply clarsimp
-  apply (case_tac "n = 5")
-   apply clarsimp
-  apply (case_tac "n = 6")
-   apply clarsimp
-  apply (case_tac "n = 7")
-   apply clarsimp
-  apply (case_tac "n = 8")
-   apply clarsimp
-  apply (case_tac "n = 9")
-   apply clarsimp
-  apply (case_tac "n = 10")
-   apply clarsimp
-  apply (case_tac "n = 11")
-   apply clarsimp
-  by presburger
-
-   
-lemma add_to_or:
-  "(a::32 word) \<le> 0xFFF \<Longrightarrow>
-     ((x::32 word) && 0xFFFFF000) + a =  (x && 0xFFFFF000) || a"
-  apply word_bitwise
-  apply clarsimp
-  using xor3_simps carry_simps apply auto
- done
-
-
-lemma add_to_or_1:
-  "(a::32 word) \<le> 0xFFFFF \<Longrightarrow>
-     ((x::32 word) && 0xFFF00000) + a =  (x && 0xFFF00000) || a"
-  apply word_bitwise
-  apply clarsimp
-  using xor3_simps carry_simps apply auto
-done
-
-
-lemma va_offset_higher_bits: 
-   " \<lbrakk>ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12 \<le> va ; 
-      va \<le> (ucast (ucast (x >> 12):: 20 word) << 12) + 0x00000FFF \<rbrakk> \<Longrightarrow>
-        (ucast (x >> 12)::20 word) = (ucast ((va:: 32 word) >> 12)::20 word)"
-  apply (subgoal_tac "(va::32 word) : {ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12  ..
-   (ucast (ucast (x >> 12):: 20 word) << 12) + mask 12 }")
-   prefer 2
-   apply (clarsimp simp: mask_def)
-  apply (frule va_offset_add)
-  apply simp
-  apply (erule exE)
-  apply (erule conjE)
-  apply (simp add: mask_def)
-  apply (subgoal_tac "(ucast ((((ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12)::32 word)  + a) >> 12):: 20 word) =
-                       (ucast (((ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12)::32 word)   >> 12):: 20 word) ")
-   apply clarsimp
-   apply (word_bitwise) [1]
-  apply (subgoal_tac "ucast ((ucast (ucast ((x::32 word) >> 12):: 20 word)::32 word) << 12 >> 12) =
-                      (ucast (x >> 12) :: 20 word)")
-   prefer 2
-   apply (word_bitwise) [1]
-  apply simp
-  apply (clarsimp simp: shift_to_mask [symmetric])
-  apply (rule word_eqI)
-  apply (simp only: nth_ucast)
-  apply clarsimp
-  apply (subgoal_tac "n < 20")
-   prefer 2
-   apply word_bitwise [1]
-  apply clarsimp
-  apply (clarsimp simp: nth_shiftr)
-  apply (clarsimp simp: mask_def)
-  apply (frule_tac a = a in nth_bits_offset_equal) apply clarsimp
-  apply (drule_tac x= x in add_to_or)
-  apply (simp only: )
- done
-
-
-
-lemma va_offset_higher_bits_1: 
-   " \<lbrakk>ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20 \<le> va ; 
-      va \<le> (ucast (ucast (x >> 20):: 12 word) << 20) + 0x000FFFFF \<rbrakk> \<Longrightarrow>
-        (ucast (x >> 20):: 12 word) = (ucast ((va:: 32 word) >> 20)::12 word)"
-  apply (subgoal_tac "(va::32 word) : {ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20 ..
-                      (ucast (ucast (x >> 20):: 12 word) << 20) + mask 20 }")
-   prefer 2
-   apply (clarsimp simp: mask_def)
-  apply (frule va_offset_add_1)
-  apply simp
-  apply (erule exE)
-  apply (erule conjE)
-  apply (simp add: mask_def)
-  apply (subgoal_tac "(ucast ((((ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20)::32 word)  + a) >> 20):: 12 word) =
-                      (ucast (((ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20)::32 word)   >> 20):: 12 word) ")
-   apply clarsimp
-   apply (word_bitwise) [1]
-  apply (subgoal_tac "ucast ((ucast (ucast ((x::32 word) >> 20):: 12 word)::32 word) << 20 >> 20) =
-   (ucast (x >> 20) :: 12 word)")
-   prefer 2
-   apply (word_bitwise) [1]
-  apply simp
-  apply (clarsimp simp: shift_to_mask_1 [symmetric])
-  apply (rule word_eqI)
-  apply (simp only: nth_ucast)
-  apply clarsimp
-  apply (subgoal_tac "n < 12")
-   prefer 2
-   apply word_bitwise [1]
-  apply clarsimp
-  apply (clarsimp simp: nth_shiftr)
-  apply (clarsimp simp: mask_def)
-  apply (frule_tac a = a in nth_bits_offset_equal_1) apply clarsimp
-  apply (drule_tac x= x in add_to_or_1)
-  apply (simp only: )
- done
-
-
-
-
-lemma nth_bits_offset: "\<lbrakk> n \<in> {12..31} ; (a::32 word) \<le> 0x00000FFF \<rbrakk> \<Longrightarrow> 
-        (x::32 word) !! n = (x && 0xFFFFF000 || a) !! n"
-  apply (rule iffI)
-   apply (case_tac "n = 12")
-    apply clarsimp
-   apply (case_tac "n = 13")
-    apply clarsimp
-   apply (case_tac "n = 14")
-    apply clarsimp
-   apply (case_tac "n = 15")
-    apply clarsimp
-   apply (case_tac "n = 16")
-    apply clarsimp
-   apply (case_tac "n = 17")
-    apply clarsimp
-   apply (case_tac "n = 18")
-    apply clarsimp
-   apply (case_tac "n = 19")
-    apply clarsimp
-   apply (case_tac "n = 20")
-    apply clarsimp
-   apply (case_tac "n = 21")
-    apply clarsimp
-   apply (case_tac "n = 22")
-    apply clarsimp
-   apply (case_tac "n = 23")
-    apply clarsimp
-   apply (case_tac "n = 24")
-    apply clarsimp
-   apply (case_tac "n = 25")
-    apply clarsimp
-   apply (case_tac "n = 26")
-    apply clarsimp
-   apply (case_tac "n = 27")
-    apply clarsimp
-   apply (case_tac "n = 28")
-    apply clarsimp
-   apply (case_tac "n = 29")
-    apply clarsimp
-   apply (case_tac "n = 30")
-    apply clarsimp
-   apply (case_tac "n = 31")
-    apply clarsimp
-   prefer 2
-   apply (case_tac "n = 12")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 13")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 14")
-    apply word_bitwise [1]  apply clarsimp
-   apply (case_tac "n = 15")
-    apply word_bitwise [1]  apply clarsimp
-   apply (case_tac "n = 16")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 17")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 18")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 19")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 20")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 21")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 22")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 23")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 24")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 25")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 26")
-    apply word_bitwise [1]  apply clarsimp
-   apply (case_tac "n = 27")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 28")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 29")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 30")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 31")
-    apply word_bitwise [1] apply clarsimp
-   apply clarsimp
-   apply arith
-  apply clarsimp
-  apply arith
-done
-
-
-
-
-lemma n_bit_shift:
-  "\<lbrakk> \<forall>n::nat. n \<in> {12 .. 31} \<longrightarrow>(a::32 word) !! n = (b::32 word) !! n  \<rbrakk>  \<Longrightarrow>  a >> 12 = b >> 12"
-  apply word_bitwise
-  by auto
- 
-
-
-lemma n_bit_shift_1:
-  "\<lbrakk> \<forall>n::nat. n \<in> {12 .. 31} \<longrightarrow>(a::32 word) !! n = (b::32 word) !! n  \<rbrakk>  \<Longrightarrow>  a >> 20 = b >> 20"
-  apply word_bitwise
-  by auto
-
-
-lemma n_bit_shift_2:
-  "\<lbrakk> \<forall>n::nat. n \<in> {20 .. 31} \<longrightarrow>(a::32 word) !! n = (b::32 word) !! n  \<rbrakk>  \<Longrightarrow>  a >> 20 = b >> 20"
-  apply word_bitwise
-  by auto
- 
-
-lemma offset_mask_eq:
- "\<lbrakk>ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12 \<le> va ; 
-      va \<le> (ucast (ucast (x >> 12):: 20 word) << 12) + 0x00000FFF\<rbrakk>
-          \<Longrightarrow> (( x >> 12) && mask 8 << 2) = 
-         ((va >> 12) && mask 8 << 2)"
-  apply (subgoal_tac "(va::32 word) : {ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12  ..
-                      (ucast (ucast (x >> 12):: 20 word) << 12) + mask 12 }")
-   prefer 2
-   apply (clarsimp simp: mask_def)
-  apply (frule va_offset_add)
-  apply simp
-  apply (erule exE)
-  apply (erule conjE)
-  apply (simp add: mask_def)
-  apply (rule_tac f = "(\<lambda>x. x && 0xFF << 2)" in  arg_cong)
-  apply (clarsimp simp: shift_to_mask [symmetric])
-  apply (simp add: mask_def)
-  apply (rule n_bit_shift)
-  apply (rule allI)
-  apply (rule impI)
-  apply (frule_tac x= x in add_to_or)
-  apply (frule_tac x= x in nth_bits_offset)
-   apply (simp only:)+
-done
- 
-
-
-
-lemma offset_mask_eq_1:
-  "\<lbrakk>ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12 \<le> va ; 
-      va \<le> (ucast (ucast (x >> 12):: 20 word) << 12) + 0x00000FFF\<rbrakk>
-          \<Longrightarrow>((x >> 20) && mask 12 << 2) =
-                          ((va >> 20) && mask 12 << 2)"
-  apply (subgoal_tac "(va::32 word) : {ucast (ucast ((x:: 32 word) >> 12):: 20 word) << 12  ..
-   (ucast (ucast (x >> 12):: 20 word) << 12) + mask 12 }")
-   prefer 2
-   apply (clarsimp simp: mask_def)
-  apply (frule va_offset_add)
-  apply simp
-  apply (erule exE)
-  apply (erule conjE)
-  apply (simp add: mask_def)
-  apply (rule_tac f = "(\<lambda>x. x && 0xFFF << 2)" in  arg_cong)
-  apply (clarsimp simp: shift_to_mask [symmetric])
-  apply (simp add: mask_def)
-  apply (rule n_bit_shift_1)
-  apply (rule allI)
-  apply (rule impI)
-  apply (frule_tac x= x in add_to_or)
-  apply (frule_tac x= x in nth_bits_offset)
-   apply (simp only:)+
-done
-
-lemma nth_bits_offset_1: "\<lbrakk> n \<in> {20..31} ; (a::32 word) \<le> 0x000FFFFF \<rbrakk> \<Longrightarrow> 
-        (x::32 word) !! n = (x && 0xFFF00000 || a) !! n"
-  apply (rule iffI)
-   apply (case_tac "n = 20")
-    apply clarsimp
-   apply (case_tac "n = 21")
-    apply clarsimp
-   apply (case_tac "n = 22")
-    apply clarsimp
-   apply (case_tac "n = 23")
-    apply clarsimp
-   apply (case_tac "n = 24")
-    apply clarsimp
-   apply (case_tac "n = 25")
-    apply clarsimp
-   apply (case_tac "n = 26")
-    apply clarsimp
-   apply (case_tac "n = 27")
-    apply clarsimp
-   apply (case_tac "n = 28")
-    apply clarsimp
-   apply (case_tac "n = 29")
-    apply clarsimp
-   apply (case_tac "n = 30")
-    apply clarsimp
-   apply (case_tac "n = 31")
-    apply clarsimp
-   prefer 2
-   apply (case_tac "n = 20")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 21")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 22")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 23")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 24")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 25")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 26")
-    apply word_bitwise [1]  apply clarsimp
-   apply (case_tac "n = 27")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 28")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 29")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 30")
-    apply word_bitwise [1] apply clarsimp
-   apply (case_tac "n = 31")
-    apply word_bitwise [1] apply clarsimp
-   apply clarsimp
-   apply arith
-  apply clarsimp
-  apply arith
-done
-
-
-
-lemma  shfit_mask_eq:
-  "\<lbrakk>ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20 \<le> va ; 
-      va \<le> (ucast (ucast (x >> 20):: 12 word) << 20) + 0x000FFFFF \<rbrakk>
-    \<Longrightarrow>   ((x >> 20) && mask 12 << 2) = ((va >> 20) && mask 12 << 2)"
-  apply (subgoal_tac "(va::32 word) : {ucast (ucast ((x:: 32 word) >> 20):: 12 word) << 20 ..
-   (ucast (ucast (x >> 20):: 12 word) << 20) + mask 20 }")
-   prefer 2
-   apply (clarsimp simp: mask_def)
-  apply (frule va_offset_add_1)
-  apply simp
-  apply (erule exE)
-  apply (erule conjE)
-  apply (simp add: mask_def)
-  apply (rule_tac f = "(\<lambda>x. x && 0xFFF << 2)" in  arg_cong)
-  apply (clarsimp simp: shift_to_mask_1 [symmetric])
-  apply (simp add: mask_def)
-  apply (rule n_bit_shift_2)
-  apply (rule allI)
-  apply (rule impI)
-  apply (frule_tac x= x in add_to_or_1)
-  apply (frule_tac x= x and a = a in nth_bits_offset_1)
-   apply (simp only:)+
-done
-
-
-
-lemma  va_entry_set_pt_palk_same:
-  "\<lbrakk>\<not>is_fault (pt_walk asid mem ttbr0 x) ;
-           (asid, va) \<in> entry_range_asid_tags (the (pt_walk asid mem ttbr0 x))\<rbrakk> \<Longrightarrow>
-              the(pt_walk asid mem ttbr0 x) = the(pt_walk asid mem ttbr0 va)"
-  apply (subgoal_tac "(asid, x) \<in> entry_range_asid_tags (the(pt_walk asid mem ttbr0 x))")
-   prefer 2
-   apply (clarsimp simp: asid_va_entry_range_pt_entry)
-  apply (cases "the (pt_walk asid mem ttbr0 x)")
-   apply (clarsimp simp: entry_range_asid_tags_def entry_range_def pt_walk_def is_fault_def)
-   apply (cases "get_pde mem ttbr0 x" ; clarsimp)
-   apply (case_tac a ; clarsimp)
-   apply (case_tac "get_pte mem x3 x " ; clarsimp)
-   apply (subgoal_tac "get_pde mem ttbr0 (Addr xaa) = get_pde mem ttbr0  (Addr xa)" ; clarsimp)
-    apply (subgoal_tac "get_pte mem x3 (Addr xaa) = get_pte mem x3  (Addr xa)" ; clarsimp)
-     apply (case_tac a ; clarsimp)
-  using va_offset_higher_bits apply blast
-    apply (case_tac a ; clarsimp)
-    apply (clarsimp simp:  get_pte_def vaddr_pt_index_def)
-    apply (subgoal_tac "(( xaa >> 12) && mask 8 << 2) =
-                          (( xa >> 12) && mask 8 << 2) ")
-     prefer 2
-  using offset_mask_eq apply blast
-    apply force
-   apply (case_tac a ; clarsimp)
-   apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
-   apply (subgoal_tac "((xaa >> 20) && mask 12 << 2) =
-                         ((xa >> 20) && mask 12 << 2) ")
-    prefer 2
-  using offset_mask_eq_1 apply blast
-   apply force
-  apply (clarsimp simp: entry_range_asid_tags_def entry_range_def pt_walk_def is_fault_def)
-  apply (cases "get_pde mem ttbr0 x" ; clarsimp)
-  apply (case_tac a ; clarsimp)
-   apply (case_tac "get_pte mem x3 x" ; clarsimp)
-   apply (subgoal_tac "get_pde mem ttbr0 (Addr xaa) = get_pde mem ttbr0 (Addr xa)" ; clarsimp)
-    apply (subgoal_tac "get_pte mem x3 (Addr xaa) = get_pte mem x3 (Addr xa)" ; clarsimp)
-     apply (case_tac a ; clarsimp)
-    apply (case_tac a ; clarsimp simp: get_pte_def vaddr_pt_index_def)
-   apply (case_tac a ; clarsimp simp: get_pde_def vaddr_pd_index_def)
-  apply (cases "get_pde mem ttbr0 x" ; clarsimp)
-  apply (subgoal_tac "get_pde mem ttbr0 (Addr xaa) = get_pde mem ttbr0 (Addr xa)" ; clarsimp)
-  using va_offset_higher_bits_1 apply blast
-  apply (clarsimp simp: get_pde_def vaddr_pd_index_def)
-  apply (subgoal_tac "((xaa >> 20) && mask 12 << 2) = ((xa >> 20) && mask 12 << 2)")
-   apply force
-  using shfit_mask_eq by blast
-
-(*
-lemma lookup_range_pt_walk_hit:
-  "lookup (range (pt_walk asid mem ttbr0)) asid va = Hit (pt_walk asid mem ttbr0 va)"
-  apply (clarsimp simp: lookup_def)
-  apply safe
-    apply simp
-   apply (subgoal_tac "x = pt_walk asid mem ttbr0 va" , force)
-   apply (clarsimp simp: entry_set_def)
-   apply (drule entry_range_single_element)
-   apply safe
-   apply (unfold Ball_def) [1]
-   apply (erule_tac x = "pt_walk asid mem ttbr0 va" in allE)
-   apply (clarsimp simp: asid_va_entry_range_pt_entry)
-  apply (rule_tac x = "pt_walk asid mem ttbr0 va" in exI)
-  apply (clarsimp simp: entry_set_def)
-  apply (rule entry_range_single_elementI)
-    apply force
-   apply (clarsimp simp: asid_va_entry_range_pt_entry)
-  apply safe
-  apply (drule va_entry_set_pt_palk_same , simp)
-done
- 
-
-lemma lookup_range_pt_walk_not_incon:
-  "lookup (range (pt_walk asid mem ttbr0)) asid va \<noteq> Incon"
-  by (clarsimp simp: lookup_range_pt_walk_hit)
-
-*)
 
 
 lemma asid_entry_set_pt_walk1 [simp]:
@@ -1087,17 +390,6 @@ lemma asid_lookup_miss:
   using lookup_def entry_set_def entry_range_asid_tags_def by fastforce
 
   
-(*
-lemma asid_unequal_miss:
-  " a \<noteq> ASID b \<Longrightarrow>
-   lookup (range (pt_walk (ASID b) (MEM bc) (TTBR0 b))) a bb = Miss"
-  apply (subgoal_tac "asid_entry ` ((pt_walk (ASID b) (MEM bc) (TTBR0 b)) `UNIV) = {ASID b}")
-   prefer 2
-   apply fastforce
-   using asid_lookup_miss by force
-*)
-
-
 lemma addr_val_eqD [dest!]:
   "addr_val a = addr_val b \<Longrightarrow> a = b"
   apply (cases a, cases b)
@@ -1474,13 +766,6 @@ lemma lookup_hit_miss_or_hit :
   by force+
 
 
-lemma lookup_hit_miss_or_hit' :
-  " lookup (t1 \<union> t2) a va = Hit x  \<Longrightarrow> 
-              lookup t2 a va = Miss \<or> (lookup t2 a va = Hit x)"
-  apply (clarsimp simp: lookup_def entry_set_def split: if_split_asm)
-  by force+
-
-
 lemma not_miss_incon_hit:
   "lookup t a va \<noteq> Miss \<Longrightarrow> lookup t a va = Incon \<or> (\<exists>x\<in>t. lookup t a va = Hit x)"
  apply (clarsimp simp: lookup_def entry_set_def split: if_split_asm)
@@ -1578,61 +863,6 @@ lemma  not_elem_rewrite':
   by force
 
 
-theorem entry_range_single_element':
-  " {E \<in> the ` {e \<in> t. \<not> is_fault e}. (a, v) \<in> entry_range_asid_tags E} = {x} \<Longrightarrow> 
-       (a, v) \<in> entry_range_asid_tags x \<and> \<not> is_fault (Some x) 
-         \<and> (\<forall>y\<in>the ` {e \<in> t. \<not> is_fault e}. y\<noteq>x \<and> 
-               \<not> is_fault (Some y) \<longrightarrow> (a, v) \<notin> entry_range_asid_tags y)" 
-  apply safe
-    apply force
-   apply (clarsimp simp: is_fault_def)
-  by force
-
-
-theorem entry_range_single_elementI':
-  "\<lbrakk>x\<in> the ` {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e} ; \<not> is_fault (Some x) ; (a, v) \<in> entry_range_asid_tags x ; 
-    (\<forall>y\<in>the ` {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e}. y\<noteq>x \<longrightarrow> (a, v) \<notin> entry_range_asid_tags y) \<rbrakk> \<Longrightarrow> 
-           {E \<in> the ` {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e}. (a, v) \<in> entry_range_asid_tags E} = {x}" 
-   by force
-
-
-(*
-theorem entry_range_single_element':
-  "{E \<in> t. \<not> is_fault E \<and> (a, v) \<in> entry_range_asid_tags E} = {x} \<Longrightarrow> (a, v) \<in> entry_range_asid_tags x \<and> \<not> is_fault x 
-         \<and> (\<forall>y\<in>t. y\<noteq>x \<and> \<not> is_fault y \<longrightarrow> (a, v) \<notin> entry_range_asid_tags y)" 
-   by force
-
-
-theorem entry_range_single_elementI':
-  "\<lbrakk>x\<in> t ; \<not> is_fault x ; (a, v) \<in> entry_range_asid_tags x ; (\<forall>y\<in>t. y\<noteq>x \<longrightarrow> (a, v) \<notin> entry_range_asid_tags y) \<rbrakk> \<Longrightarrow> 
-         {E \<in> t. \<not> is_fault E \<and> (a, v) \<in> entry_range_asid_tags E} = {x}" 
-   by force
-*)
-
-lemma lookup_range_pt_walk_hit:
-  "\<not> is_fault (pt_walk asid mem ttbr0  va) \<Longrightarrow> 
-        lookup (the ` {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e}) asid va = Hit (the (pt_walk asid mem ttbr0  va)) "
-  apply (clarsimp simp: lookup_def)
-  apply safe
-    apply simp
-   apply (subgoal_tac "x = the (pt_walk asid mem ttbr0 va)" , force)
-   apply (clarsimp simp: entry_set_def)
-   apply (drule entry_range_single_element')
-   apply safe
-   apply (unfold Ball_def) [1]
-   apply (erule_tac x = "the (pt_walk asid mem ttbr0  va)" in allE)
-   apply (clarsimp simp: asid_va_entry_range_pt_entry is_fault_def)
-  apply (rule_tac x = "the (pt_walk asid mem ttbr0 va)" in exI)
-  apply (clarsimp simp: entry_set_def)
-  apply (rule entry_range_single_elementI')
-     apply force
-    apply (clarsimp simp: asid_va_entry_range_pt_entry is_fault_def)
-   apply (clarsimp simp: asid_va_entry_range_pt_entry)
-  apply safe
-  apply (drule_tac x = xa in va_entry_set_pt_palk_same , simp)
-  by (clarsimp simp: is_fault_def)
-
-
 lemma lookup_range_pt_walk_not_incon:
   "lookup (the ` {e \<in> range (pt_walk asid mem ttbr0). \<not> is_fault e}) asid va \<noteq> Incon"
   apply (case_tac "\<not>is_fault (pt_walk asid mem ttbr0 va)")
@@ -1684,62 +914,13 @@ lemma lookup_range_pt_walk_not_incon:
 
 
 
-lemma write_asid_incon_set_rel:
-  "\<lbrakk> saturated (typ_sat_tlb b) ; 
-       asid_va_incon (tlb_sat_set b) \<subseteq> incon_set(tlb_incon_set' ba) ;  asid_va_hit_incon (typ_sat_tlb b) \<subseteq> incon_set(tlb_incon_set' ba)\<rbrakk> \<Longrightarrow>
-      asid_va_incon (tlb_sat_set b \<union> the ` {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e}) \<subseteq>
-              incon_set (tlb_incon_set' ba) \<union> ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)"
-  apply (clarsimp simp: asid_va_incon_def ptable_comp_def  asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def)
-  apply (case_tac "a = ASID b" , clarsimp)
-   prefer 2
-   apply (drule union_incon_cases1)
-   apply (erule disjE , force)
-   apply (erule disjE)
-    apply (drule_tac bb = " bb" and bc = bc in asid_unequal_miss' , clarsimp)
-   apply (erule disjE)
-    apply (drule_tac bb = " bb" and bc = bc in asid_unequal_miss' , clarsimp)
-   apply (erule disjE , force)
-   apply (erule disjE)
-    apply (drule_tac bb = " bb" and bc = bc in asid_unequal_miss' , clarsimp)
-   apply force
-  apply (drule union_incon_cases1 , clarsimp)
-  apply (erule disjE)
-   apply force
-  apply (erule disjE)
-   apply clarsimp
-   apply (drule not_elem_rewrite')
-   apply clarsimp
-   apply (case_tac "x = the (pt_walk (ASID b) (MEM b) (TTBR0 b) bb)")
-    prefer 2
-    apply force
-   apply (clarsimp simp:)
-   apply (erule disjE)
-    apply (clarsimp simp:) 
-    apply blast
-   apply (erule disjE)
-    apply blast
-   apply clarsimp
-   apply (clarsimp simp: lookup_def split:if_split_asm)
-   apply (subgoal_tac "(ASID b , bb) \<in> entry_range_asid_tags (the(pt_walk (ASID b) (MEM bc) (TTBR0 b) xb))")
-    prefer 2
-    apply (clarsimp simp: entry_set_hit_entry_range)
-   apply (drule_tac va = bb in va_entry_set_pt_palk_same; clarsimp)
-  apply (erule disjE , clarsimp simp: lookup_range_pt_walk_not_incon)
-  apply (erule disjE , force)
-  apply (erule disjE)
-   apply (clarsimp simp: lookup_range_pt_walk_not_incon)
-  apply force
-done
-
-
-
 lemma write_asid_incon_set_rel1:
   "\<lbrakk> saturated (typ_sat_tlb b) ; 
-       asid_va_incon_n (typ_sat_tlb b) \<subseteq> iset(tlb_incon_set ba) ;  asid_va_hit_incon_n (typ_sat_tlb b) \<subseteq> iset(tlb_incon_set ba) ; ASID b = ASID bb ; TTBR0 b = TTBR0 bb\<rbrakk> \<Longrightarrow>
-      asid_va_incon_n (typ_sat_tlb (bb\<lparr>tlb_sat_set := tlb_sat_set b \<union> the ` {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e}\<rparr>))
+       incon_va_set (typ_sat_tlb b) \<subseteq> iset(tlb_incon_set ba) ;  ptable_tlb_va_incon (typ_sat_tlb b) \<subseteq> iset(tlb_incon_set ba) ; ASID b = ASID bb ; TTBR0 b = TTBR0 bb\<rbrakk> \<Longrightarrow>
+      incon_va_set (typ_sat_tlb (bb\<lparr>tlb_sat_set := tlb_sat_set b \<union> the ` {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e}\<rparr>))
             \<subseteq> iset (tlb_incon_set ba) \<union> ptable_comp' (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)"
   apply (clarsimp)
-  apply (clarsimp simp: asid_va_incon_n_def ptable_comp'_def  asid_va_hit_incon_n_def)
+  apply (clarsimp simp: incon_va_set_def ptable_comp'_def  ptable_tlb_va_incon_def)
   apply (erule disjE)
    apply clarsimp
    apply (drule union_incon_cases1)
@@ -1798,32 +979,11 @@ lemma write_asid_incon_set_rel1:
   by blast
 
 
-
 lemma  lookup_miss_is_fault:
   "lookup (the ` {e \<in> range (pt_walk a m r). \<not> is_fault e}) a v = Miss \<Longrightarrow> is_fault (pt_walk a m r v)"
   apply (clarsimp simp: lookup_def entry_set_def split: if_split_asm)
   apply (drule_tac x = "the (pt_walk a m r v)" in spec)
    using asid_va_entry_range_pt_entry by force
-
-
-lemma lookup_range_fault_pt_walk:
-  "\<lbrakk>lookup (the ` {e \<in> range (pt_walk a m r). \<not> is_fault e}) a v = Hit x\<rbrakk>  \<Longrightarrow> 
-          \<forall>va\<in> entry_range x. x = the (pt_walk a m r va)"
-  apply (subgoal_tac "x \<in> the ` {e \<in> range (pt_walk a m r). \<not> is_fault e}")
-   prefer 2
-   using  lookup_in_tlb apply force
-  apply clarsimp
-  apply (rule va_entry_set_pt_palk_same, simp)
-  by (clarsimp simp: entry_range_asid_tags_def)
-
-
-
-lemma  lookup_hit_entry_range:
-  "lookup t a va = Hit x \<Longrightarrow> va \<in> entry_range x"
-  apply (clarsimp simp: lookup_def  entry_set_def entry_range_asid_tags_def  split:if_split_asm)
-  by force
-
-
 
 lemma  not_elem_rewrite'':
   "(ASID b, bb)
@@ -1884,115 +1044,18 @@ lemma  lookup_miss_is_fault_intro:
   using shfit_mask_eq by blast
 
 
-lemma  write_asid_incon_set_rel':
-  "\<lbrakk>saturated (typ_sat_tlb b) ; ASID bb = ASID b; MEM bb = MEM bc; TTBR0 bb = TTBR0 b ;
-       asid_va_incon (tlb_sat_set b) \<subseteq> incon_set (tlb_incon_set' ba) ;  asid_va_hit_incon (typ_sat_tlb b) \<subseteq> incon_set(tlb_incon_set' ba)\<rbrakk> \<Longrightarrow>
-      asid_va_hit_incon (typ_sat_tlb (bb\<lparr>tlb_sat_set := tlb_sat_set b \<union> the ` {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e}\<rparr>)) \<subseteq> 
-             incon_set(tlb_incon_set' ba) \<union> ptable_comp (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)"
-  apply (clarsimp simp: asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def ptable_comp_def  asid_va_incon_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (drule not_elem_rewrite')
-   apply clarsimp
-   apply (erule disjE)
-    apply (drule lookup_hit_union_cases')
-    apply (erule disjE)
-     apply blast
-    apply (erule disjE)
-     apply (clarsimp)
-     apply (subgoal_tac " x = the (pt_walk (ASID b) (MEM bc) (TTBR0 b) bd)")
-      apply clarsimp
-     apply (frule lookup_range_pt_walk_hit) 
-     apply clarsimp
-    apply (clarsimp)
-    apply (subgoal_tac " x = the (pt_walk (ASID b) (MEM bc) (TTBR0 b) bd)")
-     apply clarsimp
-    apply (frule lookup_range_pt_walk_hit) 
-    apply clarsimp
-   apply (drule lookup_hit_union_cases')
-   apply (erule disjE)
-    apply clarsimp
-    apply (clarsimp simp: lookup_miss_is_fault)
-   apply (erule disjE)
-    apply clarsimp
-    apply (subgoal_tac " x = the (pt_walk (ASID b) (MEM bc) (TTBR0 b) bd)")
-     apply clarsimp
-    apply (frule lookup_range_pt_walk_hit) 
-    apply clarsimp
-   apply (subgoal_tac " x = the (pt_walk (ASID b) (MEM bc) (TTBR0 b) bd)")
-    apply clarsimp
-   apply (frule lookup_range_pt_walk_hit) 
-   apply clarsimp
-  apply (clarsimp)
-  apply (drule not_elem_rewrite')
-  apply clarsimp
-  apply (drule lookup_hit_union_cases')
-  apply (erule disjE)
-   apply blast
-  apply (erule disjE)  
-  by (clarsimp simp: lookup_miss_is_fault_intro)+
-
-
 lemma  write_asid_incon_set_rel'1:
   "\<lbrakk>saturated (typ_sat_tlb b) ; ASID bb = ASID b; MEM bb = MEM bc; TTBR0 bb = TTBR0 b ;
-       asid_va_incon_n (typ_sat_tlb b) \<subseteq> iset (tlb_incon_set ba) ;  asid_va_hit_incon_n (typ_sat_tlb b) \<subseteq> iset(tlb_incon_set ba)\<rbrakk> \<Longrightarrow>
-      asid_va_hit_incon_n (typ_sat_tlb (bb\<lparr>tlb_sat_set := tlb_sat_set b \<union> the ` {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e}\<rparr>))
+       incon_va_set (typ_sat_tlb b) \<subseteq> iset (tlb_incon_set ba) ;  ptable_tlb_va_incon (typ_sat_tlb b) \<subseteq> iset(tlb_incon_set ba)\<rbrakk> \<Longrightarrow>
+      ptable_tlb_va_incon (typ_sat_tlb (bb\<lparr>tlb_sat_set := tlb_sat_set b \<union> the ` {e \<in> range (pt_walk (ASID b) (MEM bc) (TTBR0 b)). \<not> is_fault e}\<rparr>))
             \<subseteq> iset (tlb_incon_set ba) \<union> ptable_comp' (ASID b) (MEM b) (MEM bc) (TTBR0 b) (TTBR0 b)"
   apply (clarsimp)
-  apply (clarsimp simp: asid_va_hit_incon_n_def  asid_va_incon_n_def ptable_comp'_def)
-  apply (erule disjE)+
-     apply clarsimp 
-     apply (drule lookup_hit_union_cases')
-     apply (erule disjE, blast)
-     apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit) 
-     apply blast
-    apply (clarsimp)
-    apply (drule lookup_hit_union_cases')
-    apply (erule disjE, blast)
-    apply (erule disjE, clarsimp simp: lookup_miss_is_fault_intro)
-    apply blast
-   apply (erule disjE)+
-    apply (clarsimp)
-    apply (drule lookup_hit_union_cases')
-    apply (erule disjE, blast)
-    apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit) 
-    apply blast
-   apply blast
-  apply (erule disjE)+
-     apply (drule lookup_hit_union_cases')
-     apply (erule disjE, blast)
-     apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit) 
-     apply blast
-    apply (clarsimp)
-   apply (erule disjE)+
-    apply (drule lookup_hit_union_cases')
-    apply (erule disjE, blast)
-    apply (erule disjE, clarsimp simp: lookup_miss_is_fault_intro) 
-    apply blast
-   apply clarsimp
-   apply (drule lookup_hit_union_cases')
-   apply (erule disjE, clarsimp)
-    apply (subgoal_tac " lookup (tlb_sat_set b \<union> the ` {e \<in> range (pt_walk (ASID b) (MEM b) (TTBR0 b)). \<not> is_fault e}) (ASID b) x = Hit xa")
-     prefer 2
-     apply (clarsimp simp: saturated_def)
-     apply (metis (no_types, lifting) sup.orderE)
-    apply (thin_tac "lookup (tlb_sat_set b) (ASID b) x = Hit xa")
-    apply (drule lookup_hit_union_cases')
-    apply (erule disjE, clarsimp) apply force
-    apply (erule disjE, clarsimp)
-     apply (subgoal_tac "is_fault (pt_walk (ASID b) (MEM b) (TTBR0 b) x)")
-      apply (simp add: lookup_miss_is_fault_intro)   
-     apply (clarsimp)
-    apply force
-   apply (simp add: lookup_miss_is_fault_intro)  
-  apply clarsimp
-  apply (subgoal_tac "xa = the (pt_walk (ASID bb) (MEM b) (TTBR0 bb) x)")
-   apply clarsimp
+  apply (clarsimp simp: ptable_tlb_va_incon_def  incon_va_set_def ptable_comp'_def)
   apply (drule lookup_hit_union_cases')
-  apply (erule disjE, clarsimp simp:lookup_miss_is_fault) 
-  apply (erule disjE, clarsimp simp:  lookup_range_pt_walk_hit)
-  by (clarsimp, clarsimp simp:  lookup_range_pt_walk_hit) 
-
+  apply (erule disjE, blast)
+  apply (erule disjE, clarsimp simp: lookup_range_pt_walk_hit lookup_miss_is_fault_intro)  
+  by blast
+    
 
 
 
@@ -2015,14 +1078,9 @@ lemma lookup_miss_union_miss_miss:
 
 
 lemma mmu_translate_saturated_tlb_unchange:
-  "\<lbrakk> mmu_translate va s = (pa, s'); saturated (typ_sat_tlb s); no_faults (tlb_sat_set s)  \<rbrakk>
+  "\<lbrakk> mmu_translate va s = (pa, s'); saturated (typ_sat_tlb s) \<rbrakk>
        \<Longrightarrow> tlb_sat_set s' = tlb_sat_set s"
   by (metis (mono_tags, lifting) Collect_cong mmu_translate_sat_TLB_union' sat_state_tlb' tlb_sat_more typ_sat_prim_parameter)
-
-lemma mmu_translate_incon_unchange:
-  "\<lbrakk> mmu_translate va t = (aa, ba)\<rbrakk>  \<Longrightarrow> tlb_incon_set' ba = tlb_incon_set' t"
-  by (clarsimp simp: mmu_translate_tlb_incon_state'_ext_def Let_def raise'exception_def split: if_split_asm)
-
 
 
 lemma asid_unequal_miss'':
@@ -2058,112 +1116,6 @@ done
 
 
 
-lemma write_refinement_saturated_incon_only:        
-  "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s'); (ASID t, va) \<notin> incon_set (tlb_incon_set' t); 
-          tlb_rel_abs' (typ_sat_tlb s) (typ_incon' t) ;  mmu_write_size (val,va, sz) t = ((), t')  \<rbrakk> \<Longrightarrow> 
-                                 tlb_rel_abs' (typ_sat_tlb s') (typ_incon' t')"  
-  apply (frule_tac s = s in tlb_rel_abs_consistent' ; clarsimp )
-  apply (frule_tac tlb_rel'_absD , clarsimp)
-  apply (clarsimp simp:  mmu_write_size_tlb_sat_state_ext_def  mmu_write_size_tlb_incon_state'_ext_def)
-  apply (cases "mmu_translate va s" ,cases "mmu_translate va t" , clarsimp)
-  apply (frule_tac t=t and pa'= aa and t' = ba in   mmu_translate_sat_abs_refine)  apply clarsimp+
-  apply (clarsimp simp: tlb_rel_abs'_def)
-  apply (subgoal_tac "exception b = exception ba")
-   prefer 2 apply (case_tac b , case_tac ba , clarsimp simp: state.defs)
-  apply (clarsimp split: if_split_asm)
-  apply (case_tac "write'mem1 (val, aa, sz) b " , case_tac "write'mem1 (val, aa, sz) ba" , clarsimp simp: Let_def)
-  apply (subgoal_tac "state.truncate bb = state.truncate bc")
-   prefer 2 
-   using write_mem_state_trun_equal apply blast
-  apply (rule conjI , clarsimp simp: state.defs)
-  apply (subgoal_tac "MEM bb = MEM bc  \<and> MEM s = MEM b" , simp)
-   apply (subgoal_tac "ASID s = ASID b \<and> TTBR0 s = TTBR0 b" , simp)
-    apply (subgoal_tac "saturated (typ_sat_tlb b)")
-     prefer 2
-     using mmu_translate_sat_sat_no_fault apply blast
-    prefer 2
-    using mmu_sat_eq_ASID_TTBR0_MEM apply blast
-   prefer 2
-   apply (rule conjI)
-    apply (clarsimp simp: state.defs)
-   using mmu_sat_eq_ASID_TTBR0_MEM
-   apply blast
-  apply (simp only: asid_va_incon_tlb_mem_def)
-  apply simp
-   apply (rule conjI)
-    apply (drule_tac b = b and ba = ba and bc = bc in write_asid_incon_set_rel ; clarsimp)
-   apply (rule conjI)
-    apply (frule_tac bb = bb and bc = bc and ba = ba and b = b in  write_asid_incon_set_rel' ; clarsimp simp: write'mem1_eq_ASID_TTBR0)
-   apply (subgoal_tac "ASID b = ASID bb \<and> TTBR0 b = TTBR0 bb")
-    apply (rule conjI)
-     apply (clarsimp simp: saturated_def)
-    apply (rule conjI)
-     apply (clarsimp simp: snapshot_of_tlb_def)
-     apply (subgoal_tac " lookup (tlb_sat_set b \<union> the ` {e \<in> range (pt_walk (ASID bb) (MEM bc) (TTBR0 bb)). \<not> is_fault e}) a v = 
-                           lookup (tlb_sat_set b) a v")
-      apply clarsimp
-      apply (subgoal_tac "tlb_sat_set b = tlb_sat_set s \<and> tlb_incon_set' ba = tlb_incon_set' t")
-       apply clarsimp
-      apply (clarsimp simp: mmu_translate_saturated_tlb_unchange mmu_translate_incon_unchange)
-      apply (rule lookup_miss_union_equal)
-     apply (clarsimp simp: asid_unequal_miss'')
-    apply blast
-   apply (simp add: write'mem1_eq_ASID_TTBR0)
-   done
-
-
-lemma mmu_incon_eq_ASID_TTBR0_MEM:
-  "\<lbrakk> mmu_translate va (s::'a tlb_incon_state'_scheme) = (pa , s') \<rbrakk>  \<Longrightarrow> ASID s = ASID s' \<and> TTBR0 s = TTBR0 s' \<and>
-                     MEM s = MEM s'"
-  apply (clarsimp simp: mmu_translate_tlb_incon_state'_ext_def Let_def)
-  by (clarsimp simp:raise'exception_def Let_def split: if_split_asm)+
-
-
-
-lemma write_refinement_incon_incon_only2:        
-  "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s');  va \<notin> iset (tlb_incon_set t);
-          refine_rel (typ_incon' s) (typ_incon'2 t) ;  mmu_write_size (val,va, sz) t = ((), t')  \<rbrakk> \<Longrightarrow> 
-                                 refine_rel (typ_incon' s') (typ_incon'2 t')"  
-  apply (frule_tac s = s in tlb_rel_abs_consistent'2 ; clarsimp )
-  apply (frule_tac refine_relD , clarsimp)
-  apply (clarsimp simp: mmu_write_size_tlb_incon_state_ext_def  mmu_write_size_tlb_incon_state'_ext_def)
-  apply (cases "mmu_translate va s" ,cases "mmu_translate va t" , clarsimp)
-  apply (frule_tac t=t and pa'= aa and t' = ba in   mmu_translate_sat_abs_refine2)  apply clarsimp+
-  apply (clarsimp simp: refine_rel_def)
-  apply (subgoal_tac "exception b = exception ba")
-   prefer 2 apply (case_tac b , case_tac ba , clarsimp simp: state.defs)
-  apply (clarsimp split: if_split_asm)
-  apply (case_tac "write'mem1 (val, aa, sz) b " , case_tac "write'mem1 (val, aa, sz) ba" , clarsimp simp: Let_def)
-  apply (subgoal_tac "state.truncate bb = state.truncate bc")
-   prefer 2 
-  using write_mem_state_trun_equal apply blast
-  apply (rule conjI , clarsimp simp: state.defs)
-  apply (subgoal_tac "MEM bb = MEM bc  \<and> MEM s = MEM b" , simp)
-   apply (subgoal_tac "ASID s = ASID b \<and> TTBR0 s = TTBR0 b" , simp)
-    prefer 2
-  using mmu_incon_eq_ASID_TTBR0_MEM apply fastforce
-   prefer 2
-   apply (rule conjI)
-    apply (clarsimp simp: state.defs)
-  using mmu_incon_eq_ASID_TTBR0_MEM
-   apply fastforce
-  apply (rule conjI)
-   apply clarsimp
-   apply (subgoal_tac "ASID bb = ASID b" , simp)
-    apply (drule_tac x = a in spec)+
-    apply (clarsimp, (drule_tac x = v in spec)+, rule, simp ,erule disjE, simp)
-    apply (clarsimp simp: ptable_comp_def)
-   apply (simp add: write'mem1_eq_ASID_TTBR0)
-  apply (rule conjI)
-   apply (subgoal_tac "ASID bb = ASID b" , simp)
-   apply (simp add: write'mem1_eq_ASID_TTBR0)
-  apply (subgoal_tac "ASID bb = ASID b" , simp)
-   apply (clarsimp simp: ptable_comp'_def ptable_comp_def)
-   apply force
-  apply (clarsimp simp: ptable_comp'_def ptable_comp_def)
-  apply (simp add: write'mem1_eq_ASID_TTBR0)
-  done
-
 
 
 (* refinement between saturated and second abstracted model *)
@@ -2175,14 +1127,14 @@ lemma mmu_translate_incon_unchange':
 
 lemma write_refinement_incon_incon_only2':        
   "\<lbrakk> mmu_write_size (val,va, sz) s = ((), s');  va \<notin> iset (tlb_incon_set t);
-          invar_rel (typ_sat_tlb s) (typ_incon'2 t) ;  mmu_write_size (val,va, sz) t = ((), t')  \<rbrakk> \<Longrightarrow> 
-                                 invar_rel (typ_sat_tlb s') (typ_incon'2 t')"  
+          tlb_rel_abs (typ_sat_tlb s) (typ_incon t) ;  mmu_write_size (val,va, sz) t = ((), t')  \<rbrakk> \<Longrightarrow> 
+                                 tlb_rel_abs (typ_sat_tlb s') (typ_incon t')"  
   apply (frule_tac s = s in tlb_rel_abs2_consistent' ; clarsimp )
-  apply (frule_tac invar_relD , clarsimp)
+  apply (frule_tac tlb_rel_absD , clarsimp)
   apply (clarsimp simp:  mmu_write_size_tlb_sat_state_ext_def  mmu_write_size_tlb_incon_state_ext_def)
   apply (cases "mmu_translate va s" ,cases "mmu_translate va t" , clarsimp)
   apply (frule_tac t=t and pa'= aa and t' = ba in   mmu_translate_sat_abs2_refine)  apply clarsimp+
-  apply (clarsimp simp: invar_rel_def)
+  apply (clarsimp simp: tlb_rel_abs_def)
   apply (subgoal_tac "exception b = exception ba")
    prefer 2 apply (case_tac b , case_tac ba , clarsimp simp: state.defs)
   apply (clarsimp split: if_split_asm)
@@ -2204,7 +1156,7 @@ lemma write_refinement_incon_incon_only2':
   using mmu_sat_eq_ASID_TTBR0_MEM
    apply blast
   apply (subgoal_tac "ASID b = ASID bb \<and> TTBR0 b = TTBR0 bb")
-   apply (simp only: asid_va_incon_tlb_mem_n_def)
+   apply (simp only: incon_addrs_def)
    apply simp
    apply (rule conjI)
     apply (drule_tac b = b and ba = ba and bc = bc and bb = bb in write_asid_incon_set_rel1; clarsimp)
@@ -2336,92 +1288,10 @@ lemma mmu_read_det_sat_refine:
 
 
 
-lemma  mem_read1_consistent_tlb_rel_abs:
-  " \<lbrakk>mem_read1 (a, sz) s = (val, s');   mem_read1 (a, sz) t = (val, t'); 
-             (ASID t, va) \<notin> incon_set (tlb_incon_set' t); tlb_rel_abs' (typ_sat_tlb s) (typ_incon' t)\<rbrakk>
-              \<Longrightarrow>  (ASID t', va) \<notin> incon_set (tlb_incon_set' t') \<and>  tlb_rel_abs' (typ_sat_tlb s') (typ_incon' t')"
-  apply (rule conjI)
-   apply (subgoal_tac "ASID t = ASID t' \<and> incon_set (tlb_incon_set' t) = incon_set (tlb_incon_set' t')")
-    apply clarsimp
-   apply (drule mem1_read_exception)
-   apply (drule mem1_read_exception)
-   apply (cases t, cases t')
-   apply clarsimp
-  apply (subgoal_tac "exception s' =  exception t'")
-   apply (drule mem1_read_exception)
-   apply (drule mem1_read_exception)
-   apply (clarsimp simp: tlb_rel_abs'_def)
-   apply (rule conjI)
-    apply (clarsimp simp: state.defs)
-    apply (cases s', cases t')
-    apply clarsimp
-   apply (rule conjI)
-    apply (clarsimp simp: asid_va_incon_tlb_mem_def asid_va_incon_def asid_va_hit_incon_inter_def asid_va_hit_incon'_def asid_va_hit_incon''_def)
-    apply (cases s', cases t')
-    apply clarsimp
-   apply (rule conjI)
-    apply (clarsimp simp:  saturated_def)
-   apply (cases s', cases t')
-   apply clarsimp
-   apply (subgoal_tac "MEM s = MEM t \<and> exception s = exception t")
-    apply (thin_tac "(ASID t, va) \<notin> incon_set (tlb_incon_set' t)")    
-    apply (thin_tac " tlb_rel_abs' (typ_sat_tlb s) (typ_incon' t)")
-    apply (clarsimp simp: mem_read1_def)
-    apply (clarsimp split: if_split_asm)
-       apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-      apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-     apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-    subgoal
-    by (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-   apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
-  apply (clarsimp simp: tlb_rel_abs'_def state.defs)
-  done
-
-
-
-lemma  mem_read1_consistent_tlb_rel_abs2:
-  "\<lbrakk>mem_read1 (a, sz) s = (val, s'); mem_read1 (a, sz) t = (val, t'); 
-             va \<notin> iset (tlb_incon_set t); refine_rel (typ_incon' s) (typ_incon'2 t)\<rbrakk>
-              \<Longrightarrow>  va \<notin> iset (tlb_incon_set t') \<and>  refine_rel (typ_incon' s') (typ_incon'2 t')"
-  apply (rule conjI)
-   apply (subgoal_tac "ASID t = ASID t' \<and> iset (tlb_incon_set t) = iset (tlb_incon_set t')")
-    apply clarsimp
-   apply (drule mem1_read_exception)
-   apply (drule mem1_read_exception)
-   apply (cases t, cases t')
-   apply clarsimp
-  apply (subgoal_tac "exception s' =  exception t'")
-   apply (drule mem1_read_exception)
-   apply (drule mem1_read_exception)
-   apply (clarsimp simp: refine_rel_def)
-   apply (rule conjI)
-    apply (clarsimp simp: state.defs)
-    apply (cases s', cases t')
-    apply clarsimp
-   apply (rule conjI)
-    apply (cases s', cases t')
-    apply clarsimp
-   apply (subgoal_tac "ASID t = ASID t' \<and> iset (tlb_incon_set t) = iset (tlb_incon_set t')")
-    apply clarsimp
-   apply (cases t, cases t')
-   apply clarsimp
-  apply (subgoal_tac "MEM s = MEM t \<and> exception s = exception t")
-   apply (clarsimp simp: mem_read1_def)
-   apply (clarsimp split: if_split_asm)
-       apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-      apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-     apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-    subgoal   
-    by (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
-   apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
-  apply (clarsimp simp: refine_rel_def state.defs)
-  done
-
-
 lemma  mem_read1_consistent_invar_rel2:
   "\<lbrakk>mem_read1 (a, sz) s = (val, s'); mem_read1 (a, sz) t = (val, t'); 
-             va \<notin> iset (tlb_incon_set t); invar_rel (typ_sat_tlb  s) (typ_incon'2 t)\<rbrakk>
-              \<Longrightarrow>  va \<notin> iset (tlb_incon_set t') \<and>  invar_rel (typ_sat_tlb  s') (typ_incon'2 t')"
+             va \<notin> iset (tlb_incon_set t); tlb_rel_abs (typ_sat_tlb  s) (typ_incon t)\<rbrakk>
+              \<Longrightarrow>  va \<notin> iset (tlb_incon_set t') \<and>  tlb_rel_abs (typ_sat_tlb  s') (typ_incon t')"
   apply (rule conjI)
    apply (subgoal_tac "ASID t = ASID t' \<and> iset (tlb_incon_set t) = iset (tlb_incon_set t')")
     apply clarsimp
@@ -2432,13 +1302,13 @@ lemma  mem_read1_consistent_invar_rel2:
   apply (subgoal_tac "exception s' =  exception t'")
    apply (drule mem1_read_exception)
    apply (drule mem1_read_exception)
-   apply (clarsimp simp: invar_rel_def)
+   apply (clarsimp simp: tlb_rel_abs_def)
    apply (rule conjI)
     apply (clarsimp simp: state.defs)
     apply (cases s', cases t')
     apply clarsimp
    apply (rule conjI)
-    apply (clarsimp simp: asid_va_incon_tlb_mem_n_def asid_va_incon_n_def asid_va_hit_incon_n_def)
+    apply (clarsimp simp: incon_addrs_def incon_va_set_def ptable_tlb_va_incon_def)
     apply (cases s', cases t')
     apply clarsimp
    apply (rule conjI)
@@ -2447,7 +1317,7 @@ lemma  mem_read1_consistent_invar_rel2:
    apply clarsimp
    apply (subgoal_tac "MEM s = MEM t \<and> exception s = exception t")
     apply (thin_tac " va \<notin> iset (tlb_incon_set t)")    
-    apply (thin_tac " invar_rel (typ_sat_tlb s) (typ_incon'2 t)")
+    apply (thin_tac " tlb_rel_abs (typ_sat_tlb s) (typ_incon t)")
     apply (clarsimp simp: mem_read1_def)
     apply (clarsimp split: if_split_asm)
        apply (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
@@ -2456,7 +1326,7 @@ lemma  mem_read1_consistent_invar_rel2:
     subgoal
     by (clarsimp simp: mem1_def raise'exception_def split: option.splits if_split_asm)
    apply (clarsimp simp: raise'exception_def split: option.splits if_split_asm)
-  apply (clarsimp simp: invar_rel_def state.defs)
+  apply (clarsimp simp: tlb_rel_abs_def state.defs)
   done
 
 
