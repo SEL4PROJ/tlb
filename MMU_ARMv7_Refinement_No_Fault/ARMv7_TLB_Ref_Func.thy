@@ -305,7 +305,7 @@ lemma to_do:
 definition 
   invar_rel :: "tlb_entry set state_scheme  \<Rightarrow> tlb_incon_set state_scheme \<Rightarrow> bool"
 where                                                                
-"invar_rel s t \<equiv>  state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem_n' s \<subseteq>  iset (state.more t) \<and> 
+"invar_rel s t \<equiv>  state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem_n s \<subseteq>  iset (state.more t) \<and> 
                        saturated s 
     \<and> (\<forall>a v. a \<noteq> ASID s \<longrightarrow> snapshot_of_tlb (state.more s) a v \<le> snapshot (state.more t) a v)" 
                        (* may have to add the incon equality here, or may be not*)
@@ -532,7 +532,7 @@ lemma refine_relD:
 lemma invar_relD:
   "invar_rel s t \<Longrightarrow>
      ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s   \<and>  saturated s \<and> 
-                asid_va_incon_tlb_mem_n' s  \<subseteq> iset (state.more t) \<and> exception t = exception s"
+                asid_va_incon_tlb_mem_n s  \<subseteq> iset (state.more t) \<and> exception t = exception s"
   apply (clarsimp simp: invar_rel_def )
   by (clarsimp simp:  state.defs)
 

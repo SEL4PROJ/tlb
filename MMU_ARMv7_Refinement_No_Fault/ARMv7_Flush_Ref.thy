@@ -926,15 +926,21 @@ lemma flush_varange_sat_abs2_refine:
      apply clarsimp
      apply (rule conjI)
       prefer 2 using lookup_hit_entry_range apply blast
-     prefer 2
-     apply (erule disjE)
-      apply clarsimp
-      apply (simp add: lookup_range_pt_walk_not_incon')
-     apply (erule disjE)
+     apply (drule lookup_hit_incon_minus, erule disjE)
       prefer 2
-      apply (erule disjE, clarsimp) 
+      apply blast
+     apply (subgoal_tac "the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc) = the (pt_walk (ASID s) (MEM s) (TTBR0 s) x)")
+      apply (clarsimp simp: asid_va_hit_incon_n_def) apply blast
+     apply (frule lookup_range_fault_pt_walk)
+     apply (drule_tac x = x and A = "entry_range (the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc))" in bspec, simp add : lookup_hit_entry_range, simp)                     
+    apply (erule disjE)
+     apply clarsimp
+     apply (simp add: lookup_range_pt_walk_not_incon')
+    apply (erule disjE)
+     prefer 2
+     apply (erule disjE, clarsimp) 
   using lookup_range_pt_walk_not_incon' apply force
-      apply (rule conjI) prefer 2
+     apply (rule conjI) prefer 2
   subgoal
   proof -
     fix x :: vaddr
@@ -965,13 +971,6 @@ lemma flush_varange_sat_abs2_refine:
       using lookup_not_miss_varange by blast
   qed
   using lookup_incon_minus apply blast
-    apply (drule lookup_hit_incon_minus, erule disjE)
-     prefer 2
-     apply blast
-    apply (subgoal_tac "the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc) = the (pt_walk (ASID s) (MEM s) (TTBR0 s) x)")
-     apply (clarsimp simp: asid_va_hit_incon_n_def) apply blast
-    apply (frule lookup_range_fault_pt_walk)
-    apply (drule_tac x = x and A = "entry_range (the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc))" in bspec, simp add : lookup_hit_entry_range, simp)
    apply (clarsimp simp: asid_va_hit_incon_n_def)
    apply (erule disjE, clarsimp)
   subgoal
@@ -1063,15 +1062,155 @@ proof -
 qed
 
 
-lemma flush_varange_sat_abs2_refine:
+lemma flush_ASIDvarange_sat_abs2_refine:
   "\<lbrakk>Flush_ASIDvarange a vset (s::tlb_sat_state) = ((), s') ;  Flush_ASIDvarange a vset (t::tlb_incon_state) = ((), t'); 
              invar_rel (typ_sat_tlb s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> invar_rel (typ_sat_tlb s') (typ_incon'2 t')"
+  apply (subgoal_tac "ASID t = ASID s \<and> TTBR0 t = TTBR0 s \<and> MEM t = MEM s")
+   prefer 2
+   apply (clarsimp simp:  invar_rel_def state.defs)
   apply (clarsimp simp: Flush_ASIDvarange_tlb_sat_state_ext_def Flush_ASIDvarange_tlb_incon_state_ext_def invar_rel_def Let_def
-             split: if_split_asm)
+      split: if_split_asm)
+   apply (rule conjI)
+    apply (cases s, cases t, clarsimp simp: state.defs)
+   apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union>  the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
+    prefer 2
+    apply (drule sat_state_tlb', clarsimp simp: state.defs)
+   apply (rule conjI)
+    apply (clarsimp simp: asid_va_incon_tlb_mem_n_def)
+    apply (rule conjI)
+     apply (clarsimp simp: asid_va_incon_n_def)
+     apply (drule union_incon_cases1)
+     apply (erule disjE)
+      apply (clarsimp simp: lookup_range_pt_walk_not_incon') 
+     apply (erule disjE)
+      apply clarsimp
+      apply (rule conjI)
+       prefer 2 
+       apply (clarsimp simp: entry_range_asid_tags_def)
+       apply (frule lookup_hit_entry_range)
+       apply (drule_tac x = x in bspec, simp)
+       apply (subgoal_tac "(asid_entry xa) = ASID s") 
+        apply fastforce
+       apply (clarsimp simp: lookup_hit_asid)
+      apply (drule lookup_hit_incon_minus, erule disjE)
+       prefer 2
+       apply blast
+      apply (subgoal_tac "the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc) = the (pt_walk (ASID s) (MEM s) (TTBR0 s) x)")
+       apply (clarsimp simp: asid_va_hit_incon_n_def) apply blast
+      apply (frule lookup_range_fault_pt_walk)
+      apply (drule_tac x = x and A = "entry_range (the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc))" in bspec, simp add : lookup_hit_entry_range, simp)
+     apply (erule disjE, simp add: lookup_range_pt_walk_not_incon')
+     apply (erule disjE)
+      prefer 2
+      apply (erule disjE, clarsimp) 
+       apply (force simp: lookup_range_pt_walk_not_incon') 
+      apply (rule conjI) prefer 2 
+  subgoal
+  proof -
+    fix x :: vaddr
+    assume "a = ASID s"
+    assume "lookup (tlb_sat_set s - (\<Union>x\<in>vset. {e \<in> tlb_sat_set s. (ASID s, x) \<in> entry_range_asid_tags e})) (ASID s) x = Incon \<and> lookup (the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) x = Miss"
+    then have "\<exists>T w. lookup (T - (\<Union>a\<in>vset. {t \<in> T. (w, a) \<in> entry_range_asid_tags t})) w x \<noteq> Miss"
+      by (metis (no_types) lookup_type.simps(3))
+    then show "x \<notin> vset"
+      using lookup_not_miss_asidvarange by blast
+  qed
+      apply (metis (mono_tags, lifting) contra_subsetD lookup_incon_minus mem_Collect_eq)
+     apply clarsimp apply (rule conjI) prefer 2 
+  subgoal
+  proof -
+    fix x :: vaddr and xb :: vaddr
+    assume "a = ASID s"
+    assume "lookup (tlb_sat_set s - (\<Union>x\<in>vset. {e \<in> tlb_sat_set s. (ASID s, x) \<in> entry_range_asid_tags e})) (ASID s) x = Incon"
+    then have "\<exists>T w. lookup (T - (\<Union>a\<in>vset. {t \<in> T. (w, a) \<in> entry_range_asid_tags t})) w x \<noteq> Miss"
+      by (metis lookup_type.distinct(1))
+    then show "x \<notin> vset"
+      using lookup_not_miss_asidvarange by blast
+  qed
+  using lookup_incon_minus apply blast
+    apply (clarsimp simp: asid_va_hit_incon_n_def)
+    apply (erule disjE, clarsimp) 
+  subgoal
+  proof -
+    fix x :: vaddr and xa :: tlb_entry
+    assume a1: "a = ASID s"
+    assume a2: "\<not> is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) x)"
+    assume a3: "xa \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) x)"
+    assume "lookup (tlb_sat_set s - (\<Union>x\<in>vset. {e \<in> tlb_sat_set s. (ASID s, x) \<in> entry_range_asid_tags e}) \<union> the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) x = Hit xa"
+    then have "lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a x = Miss \<or> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a x = Hit xa"
+      using a1 lookup_hit_miss_or_hit' by presburger
+    then show "x \<in> iset (tlb_incon_set t) \<and> x \<notin> vset"
+      using a3 a2 a1 by (simp add: lookup_range_pt_walk_hit)
+  qed
+    apply (subgoal_tac "lookup (tlb_sat_set s - (\<Union>x\<in>vset. {e \<in> tlb_sat_set s. (ASID s, x) \<in> entry_range_asid_tags e})) (ASID s) x = Hit xa")
+     prefer 2
+     apply (simp add: lookup_miss_is_fault_intro lookup_miss_union_equal)
+    apply (drule lookup_hit_incon_minus, erule disjE)
+     prefer 2
+     apply (clarsimp simp: asid_va_incon_n_def)
+     apply (rule conjI) 
+      apply blast 
+  subgoal
+  proof -
+    fix x :: vaddr and xa :: tlb_entry
+    assume a1: "a = ASID s"
+    assume a2: "is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) x)"
+    assume "lookup (tlb_sat_set s - (\<Union>x\<in>vset. {e \<in> tlb_sat_set s. (ASID s, x) \<in> entry_range_asid_tags e}) \<union> the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) x = Hit xa"
+    then have f3: "lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a x = Hit xa \<or> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) a x = Hit xa"
+      using a1 lookup_not_hit_false by blast
+    have "lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a x \<noteq> Hit xa"
+      using a2 a1 lookup_miss_is_fault_intro lookup_type.distinct(3) by presburger
+    then have "\<exists>T w. lookup (T - (\<Union>a\<in>vset. {t \<in> T. (w, a) \<in> entry_range_asid_tags t})) w x \<noteq> Miss"
+      using f3 by (metis (no_types) lookup_type.distinct(3))
+    then show "x \<notin> vset"
+      using lookup_not_miss_asidvarange by blast
+  qed
+    apply (rule conjI) apply blast 
+  subgoal
+  proof -
+    fix x :: vaddr and xa :: tlb_entry
+    assume a1: "lookup (tlb_sat_set s - (\<Union>x\<in>vset. {e \<in> tlb_sat_set s. (ASID s, x) \<in> entry_range_asid_tags e}) \<union> the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) x = Hit xa"
+    assume a2: "a = ASID s"
+    assume a3: "is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) x)"
+    have "lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) a x \<noteq> Miss \<or> lookup (the ` {z \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault z}) a x \<noteq> Miss"
+      using a2 a1 lookup_miss_union_miss_miss by force
+    then show "x \<notin> vset"
+      using a3 a2 lookup_miss_is_fault_intro lookup_not_miss_asidvarange by blast
+  qed
+   apply (rule conjI)
+    apply (clarsimp simp: saturated_def)
+   apply (clarsimp simp: snapshot_of_tlb_def) 
+  subgoal
+  proof -
+    fix aa :: "8 word" and v :: vaddr
+    assume a1: "a = ASID s"
+    assume a2: "\<forall>a. a \<noteq> ASID s \<longrightarrow> (\<forall>v. lookup (tlb_sat_set s) a v \<le> snapshot (tlb_incon_set t) a v)"
+    assume a3: "aa \<noteq> ASID s"
+    have f4: "\<forall>aa w. ((snapshot (tlb_incon_set t) w aa = lookup (tlb_sat_set s) w aa \<or> lookup (tlb_sat_set s) w aa = Miss) \<or> snapshot (tlb_incon_set t) w aa = Incon) \<or> w = a"
+      using a2 a1 by (meson less_eq_lookup_type)
+    have f5: "a \<noteq> aa"
+      using a3 a1 by meson
+    have f6: "\<forall>T Ta. (Ta::tlb_entry set) - T \<subseteq> Ta"
+      by blast
+    { assume "\<exists>T. lookup (tlb_sat_set s - T) aa v \<noteq> Miss"
+      then have "lookup (tlb_sat_set s) aa v \<noteq> Miss"
+        using f6 by (metis (no_types) less_eq_lookup_type lookup_type.simps(3) tlb_mono)
+      moreover
+      { assume "lookup (tlb_sat_set s) aa v \<noteq> Miss \<and> snapshot (tlb_incon_set t) aa v \<noteq> Incon"
+        then have "((snapshot (tlb_incon_set t) aa v \<noteq> Incon \<and> lookup (tlb_sat_set s) aa v \<noteq> Miss) \<and> lookup (the ` {z \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> lookup (tlb_sat_set s) aa v"
+          using f6 f5 asid_unequal_miss'' tlb_mono by presburger
+        then have "lookup (the ` {z \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> snapshot (tlb_incon_set t) aa v"
+          using f5 f4 by force }
+      ultimately have "lookup (the ` {z \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> snapshot (tlb_incon_set t) aa v \<or> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v \<le> snapshot (tlb_incon_set t) aa v"
+        using less_eq_lookup_type by blast }
+    then have "lookup (the ` {z \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> snapshot (tlb_incon_set t) aa v \<or> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk a (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v \<le> snapshot (tlb_incon_set t) aa v"
+      using f5 asid_unequal_miss'' less_eq_lookup_type by auto
+    then show "lookup (tlb_sat_set s - (\<Union>a\<in>vset. {t \<in> tlb_sat_set s. (ASID s, a) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v \<le> snapshot (tlb_incon_set t) aa v"
+      using a1 lookup_miss_union_equal by force
+  qed
   apply (rule conjI)
    apply (cases s, cases t, clarsimp simp: state.defs)
-  apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union> 
-                              the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
+  apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union>  the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
    prefer 2
    apply (drule sat_state_tlb', clarsimp simp: state.defs)
   apply (rule conjI)
@@ -1082,35 +1221,115 @@ lemma flush_varange_sat_abs2_refine:
     apply (erule disjE)
      apply (clarsimp simp: lookup_range_pt_walk_not_incon') 
     apply (erule disjE)
-      apply clarsimp
-  prefer 2
-      apply (erule disjE)
-       apply clarsimp
-       apply (simp add: lookup_range_pt_walk_not_incon')
-apply (erule disjE)
-       apply clarsimp
-    
-      
-      apply (rule conjI)
+     apply clarsimp
+     apply (drule lookup_hit_incon_minus, erule disjE)
+      prefer 2
+      apply blast
+     apply (subgoal_tac "the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc) = the (pt_walk (ASID s) (MEM s) (TTBR0 s) x)")
+      apply (clarsimp simp: asid_va_hit_incon_n_def) apply blast
+     apply (frule lookup_range_fault_pt_walk)
+     apply (drule_tac x = x and A = "entry_range (the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc))" in bspec, simp add : lookup_hit_entry_range, simp)
+    apply (erule disjE, simp add: lookup_range_pt_walk_not_incon')
+    apply (erule disjE)
+     prefer 2
+     apply (erule disjE, clarsimp) 
+      apply (force simp: lookup_range_pt_walk_not_incon') 
   subgoal
+  proof -
+    fix x :: vaddr
+    assume a1: "{va. lookup (tlb_sat_set s) (ASID s) va = Incon} \<subseteq> iset (tlb_incon_set t)"
+    assume "lookup (tlb_sat_set s - (\<Union>v\<in>vset. {e \<in> tlb_sat_set s. (a, v) \<in> entry_range_asid_tags e})) (ASID s) x = Incon \<and> lookup (the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) x = Miss"
+    then have "lookup (tlb_sat_set s) (ASID s) x = Incon"
+      by (meson lookup_incon_minus)
+    then show "x \<in> iset (tlb_incon_set t)"
+      using a1 by blast
+  qed
+    apply clarsimp 
+  using lookup_incon_minus apply blast
+   apply (clarsimp simp: asid_va_hit_incon_n_def)
+   apply (erule disjE, clarsimp)  
+  subgoal
+  proof -
+    fix x :: vaddr and xa :: tlb_entry
+    assume a1: "\<not> is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) x)"
+    assume a2: "xa \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) x)"
+    assume "lookup (tlb_sat_set s - (\<Union>v\<in>vset. {e \<in> tlb_sat_set s. (a, v) \<in> entry_range_asid_tags e}) \<union> the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) x = Hit xa"
+    then have "lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) (ASID s) x = Miss \<or> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) (ASID s) x = Hit xa"
+      using lookup_union_hit_miss_hit by blast
+    then show "x \<in> iset (tlb_incon_set t)"
+      using a2 a1 lookup_range_pt_walk_hit by force
+  qed
+   apply (subgoal_tac "lookup (tlb_sat_set s - (\<Union>x\<in>vset. {e \<in> tlb_sat_set s. (a, x) \<in> entry_range_asid_tags e})) (ASID s) x = Hit xa")
+    prefer 2
+    apply (simp add: lookup_miss_is_fault_intro lookup_miss_union_equal)
+   apply (drule lookup_hit_incon_minus, erule disjE)
+    prefer 2
+    apply (clarsimp simp: asid_va_incon_n_def) 
+    apply blast
+   apply blast 
+  apply (rule conjI)
+   apply (clarsimp simp: saturated_def)
+  apply (clarsimp simp: snapshot_of_tlb_def) 
 proof -
-  fix x :: vaddr and xa :: tlb_entry and xc :: vaddr
-  assume a1: "lookup (tlb_sat_set s - (\<Union>x\<in>vset. {e \<in> tlb_sat_set s. (ASID t, x) \<in> entry_range_asid_tags e})) (ASID s) x = Hit xa"
-  assume "a = ASID t"
-  assume a2: "{va. lookup (tlb_sat_set s) (ASID s) va = Incon} \<subseteq> iset (tlb_incon_set t)"
-  assume a3: "tlb_sat_set s = tlb_sat_set s \<union> the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}"
-  assume a4: "xa \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc)"
-  assume a5: "lookup (the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) x = Hit (the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc))"
-  have "\<forall>a t w. (lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) w a = Hit t \<or> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) w a = Miss) \<or> lookup (tlb_sat_set s) w a \<noteq> Hit t"
-    using a3 by (*(metis lookup_hit_union_cases') (* > 1.0 s, timed out *)*) sledgehammer
-  sorry
-  then have "\<forall>t. Hit t = Hit (the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc)) \<or> lookup (tlb_sat_set s) (ASID s) x \<noteq> Hit t"
-    using a5 by force
-  then show "x \<in> iset (tlb_incon_set t)"
-    using a4 a2 a1 lookup_hit_incon_minus by blast
-qed 
+  fix aa :: "8 word" and v :: vaddr
+  assume a1: "\<forall>a. a \<noteq> ASID s \<longrightarrow> (\<forall>v. lookup (tlb_sat_set s) a v \<le> snapshot (tlb_incon_set t) a v)"
+  assume a2: "aa \<noteq> ASID s"
+  assume a3: "a \<noteq> ASID s"
+  have f4: "\<forall>a w. ((snapshot (tlb_incon_set t) w a = lookup (tlb_sat_set s) w a \<or> snapshot (tlb_incon_set t) w a = Incon) \<or> lookup (tlb_sat_set s) w a = Miss) \<or> w = ASID s"
+    using a1 by (metis less_eq_lookup_type)
+  have f5: "\<forall>T Ta. (Ta::tlb_entry set) - T \<subseteq> Ta"
+    by blast
+  { assume "\<exists>T. lookup (tlb_sat_set s - T) a v \<noteq> Miss"
+    then have "lookup (tlb_sat_set s) a v \<noteq> Miss"
+      using f5 by (metis (no_types) less_eq_lookup_type lookup_type.simps(3) tlb_mono)
+    moreover
+    { assume "snapshot (tlb_incon_set t) a v \<noteq> Incon \<and> lookup (tlb_sat_set s) a v \<noteq> Miss"
+      moreover
+      { assume "((snapshot (tlb_incon_set t) a v \<noteq> Incon \<and> lookup (tlb_sat_set s) a v \<noteq> Miss) \<and> v \<notin> vset) \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a v = Miss"
+        moreover
+        { assume "(((snapshot (tlb_incon_set t) aa v \<noteq> Incon \<and> lookup (tlb_sat_set s) aa v \<noteq> Miss) \<and> v \<notin> vset) \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<subseteq> tlb_sat_set s"
+          then have "(((snapshot (tlb_incon_set t) aa v \<noteq> Incon \<and> lookup (tlb_sat_set s) aa v \<noteq> Miss) \<and> v \<notin> vset) \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> lookup (tlb_sat_set s) aa v"
+            by (meson tlb_mono)
+          then have "(v \<notin> vset \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> snapshot (tlb_incon_set t) aa v"
+            using f4 a2 by force }
+        ultimately have "aa = a \<longrightarrow> (v \<notin> vset \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> snapshot (tlb_incon_set t) aa v"
+          by blast }
+      ultimately have "aa = a \<longrightarrow> (v \<notin> vset \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> snapshot (tlb_incon_set t) aa v \<or> v \<in> vset"
+        using a3 asid_unequal_miss'' by blast }
+    ultimately have "aa = a \<longrightarrow> (v \<notin> vset \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> snapshot (tlb_incon_set t) aa v \<or> v \<in> vset \<or> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a v = Miss \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) a v \<le> snapshot (tlb_incon_set t) a v"
+      using a3 asid_unequal_miss'' less_eq_lookup_type by auto }
+  moreover
+  { assume "v \<in> vset"
+    moreover
+    { assume "aa = a \<and> v \<in> vset"
+      then have "(lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a v = Miss \<and> aa = a) \<and> v \<in> vset"
+        using a3 asid_unequal_miss'' by blast
+      then have "(aa = a \<and> v \<in> vset \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a v = Miss) \<and> ((aa = a \<longrightarrow> v \<notin> vset) \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v \<le> snapshot (tlb_incon_set t) aa v)"
+        by (metis (mono_tags) lookup_miss_union_equal lookup_not_miss_asidvarange)}
+    ultimately have "aa = a \<longrightarrow> (aa = a \<and> v \<in> vset \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a v = Miss) \<and> ((aa = a \<longrightarrow> v \<notin> vset) \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v \<le> snapshot (tlb_incon_set t) aa v)"
+      by fastforce }
+  moreover
+  { assume "aa \<noteq> a"
+    moreover
+    { assume "\<exists>T. lookup (tlb_sat_set s - T) aa v \<noteq> Miss \<and> aa \<noteq> a"
+      then have "lookup (tlb_sat_set s) aa v \<noteq> Miss \<and> aa \<noteq> a"
+        using f5 by (metis (no_types) less_eq_lookup_type lookup_type.simps(3) tlb_mono)
+      moreover
+      { assume "(snapshot (tlb_incon_set t) aa v \<noteq> Incon \<and> lookup (tlb_sat_set s) aa v \<noteq> Miss) \<and> aa \<noteq> a"
+        then have "(((snapshot (tlb_incon_set t) aa v \<noteq> Incon \<and> lookup (tlb_sat_set s) aa v \<noteq> Miss) \<and> aa \<noteq> a) \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> lookup (tlb_sat_set s) aa v"
+          using f5 a2 asid_unequal_miss'' tlb_mono by presburger
+        then have "(aa \<noteq> a \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> snapshot (tlb_incon_set t) aa v"
+          using f4 a2 by force }
+      ultimately have "(aa = a \<and> v \<in> vset \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a v = Miss) \<and> ((aa = a \<longrightarrow> v \<notin> vset) \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v \<le> snapshot (tlb_incon_set t) aa v) \<or> (aa \<noteq> a \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> snapshot (tlb_incon_set t) aa v"
+        using less_eq_lookup_type by blast }
+    ultimately have "(aa = a \<and> v \<in> vset \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a v = Miss) \<and> ((aa = a \<longrightarrow> v \<notin> vset) \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v \<le> snapshot (tlb_incon_set t) aa v) \<or> (aa \<noteq> a \<and> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v = Miss) \<and> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t})) aa v \<le> snapshot (tlb_incon_set t) aa v"
+      using a2 asid_unequal_miss'' less_eq_lookup_type by auto
+    then have "(aa = a \<and> v \<in> vset \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a v = Miss) \<and> ((aa = a \<longrightarrow> v \<notin> vset) \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v \<le> snapshot (tlb_incon_set t) aa v)"
+      using lookup_miss_union_equal by presburger }
+  ultimately show "(aa = a \<and> v \<in> vset \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a v = Miss) \<and> ((aa = a \<longrightarrow> v \<notin> vset) \<longrightarrow> lookup (tlb_sat_set s - (\<Union>aa\<in>vset. {t \<in> tlb_sat_set s. (a, aa) \<in> entry_range_asid_tags t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) aa v \<le> snapshot (tlb_incon_set t) aa v)"
+    using a3 asid_unequal_miss'' lookup_miss_union_equal by fastforce
+qed
 
-  oops
 
 
 end

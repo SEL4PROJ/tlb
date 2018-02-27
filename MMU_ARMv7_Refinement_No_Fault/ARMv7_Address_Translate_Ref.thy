@@ -659,12 +659,10 @@ lemma mmu_translate_sat_abs_refine2:
 
 
 lemma not_member_incon2_consistent':
-  "\<lbrakk>va \<notin>  asid_va_incon_tlb_mem_n' (typ_sat_tlb s); saturated (typ_sat_tlb s) \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>va \<notin>  asid_va_incon_tlb_mem_n (typ_sat_tlb s) \<rbrakk> \<Longrightarrow> 
                                        consistent (typ_sat_tlb s) va"
-  apply (clarsimp simp: asid_va_incon_tlb_mem_n'_def asid_va_incon_n_def asid_va_hit_incon_new_def)
-  apply (clarsimp simp: consistent0_def saturated_def)
-  apply (erule disjE) 
-  apply (meson lookup_type.exhaust) apply clarsimp 
+  apply (clarsimp simp: asid_va_incon_tlb_mem_n_def asid_va_incon_n_def asid_va_hit_incon_n_def)
+  apply (clarsimp simp: consistent0_def )
   by (clarsimp simp: lookup_def consistent0_def is_fault_def split: if_split_asm)
 
 lemma tlb_rel_abs2_consistent' [simp]:
