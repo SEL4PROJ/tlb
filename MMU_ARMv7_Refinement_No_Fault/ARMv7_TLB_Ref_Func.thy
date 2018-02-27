@@ -281,11 +281,31 @@ where
   "asid_va_incon_tlb_mem_n s  \<equiv>  asid_va_incon_n s \<union> asid_va_hit_incon_n s "
 
 
+definition                              
+   asid_va_hit_incon_new :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
+where                                                         
+  "asid_va_hit_incon_new s  \<equiv>   {va. \<exists>x. lookup (state.more s) (ASID s) va = Hit x \<and>
+                                   is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) va)}"
+
+
+
+definition                              
+   asid_va_incon_tlb_mem_n' :: "tlb_entry set state_scheme \<Rightarrow>  vaddr set"
+where                                                         
+  "asid_va_incon_tlb_mem_n' s  \<equiv>  asid_va_incon_n s \<union> asid_va_hit_incon_new s"
+
+
+lemma to_do:
+  "saturated s  \<Longrightarrow> asid_va_incon_tlb_mem_n' s = asid_va_incon_tlb_mem_n s"
+  apply (clarsimp simp: saturated_def asid_va_incon_tlb_mem_n'_def asid_va_incon_tlb_mem_n_def
+    asid_va_incon_n_def asid_va_hit_incon_new_def asid_va_hit_incon_n_def)
+  apply (safe ; clarsimp)
+  sorry
 
 definition 
   invar_rel :: "tlb_entry set state_scheme  \<Rightarrow> tlb_incon_set state_scheme \<Rightarrow> bool"
 where                                                                
-"invar_rel s t \<equiv>  state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem_n s \<subseteq>  iset (state.more t) \<and> 
+"invar_rel s t \<equiv>  state.truncate s = state.truncate t \<and> asid_va_incon_tlb_mem_n' s \<subseteq>  iset (state.more t) \<and> 
                        saturated s 
     \<and> (\<forall>a v. a \<noteq> ASID s \<longrightarrow> snapshot_of_tlb (state.more s) a v \<le> snapshot (state.more t) a v)" 
                        (* may have to add the incon equality here, or may be not*)
@@ -512,8 +532,8 @@ lemma refine_relD:
 lemma invar_relD:
   "invar_rel s t \<Longrightarrow>
      ASID t = ASID s \<and> MEM t = MEM s \<and> TTBR0 t = TTBR0 s   \<and>  saturated s \<and> 
-                asid_va_incon_tlb_mem_n s  \<subseteq> iset (state.more t) \<and> exception t = exception s"
-  apply (clarsimp simp: invar_rel_def)
+                asid_va_incon_tlb_mem_n' s  \<subseteq> iset (state.more t) \<and> exception t = exception s"
+  apply (clarsimp simp: invar_rel_def )
   by (clarsimp simp:  state.defs)
 
 end

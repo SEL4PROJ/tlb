@@ -1061,11 +1061,56 @@ proof -
   then show "lookup (tlb_sat_set s - (\<Union>a\<in>vset. {t \<in> tlb_sat_set s. a \<in> entry_range t}) \<union> the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) a v \<le> snapshot (tlb_incon_set t) a v"
     using a3 a2 a1 by (metis (no_types) less_eq_lookup_type lookup_type.simps(3))
 qed
-  
-
-   
 
 
+lemma flush_varange_sat_abs2_refine:
+  "\<lbrakk>Flush_ASIDvarange a vset (s::tlb_sat_state) = ((), s') ;  Flush_ASIDvarange a vset (t::tlb_incon_state) = ((), t'); 
+             invar_rel (typ_sat_tlb s) (typ_incon'2 t) \<rbrakk> \<Longrightarrow> invar_rel (typ_sat_tlb s') (typ_incon'2 t')"
+  apply (clarsimp simp: Flush_ASIDvarange_tlb_sat_state_ext_def Flush_ASIDvarange_tlb_incon_state_ext_def invar_rel_def Let_def
+             split: if_split_asm)
+  apply (rule conjI)
+   apply (cases s, cases t, clarsimp simp: state.defs)
+  apply (subgoal_tac "tlb_sat_set s = tlb_sat_set s \<union> 
+                              the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}")
+   prefer 2
+   apply (drule sat_state_tlb', clarsimp simp: state.defs)
+  apply (rule conjI)
+   apply (clarsimp simp: asid_va_incon_tlb_mem_n_def)
+   apply (rule conjI)
+    apply (clarsimp simp: asid_va_incon_n_def)
+    apply (drule union_incon_cases1)
+    apply (erule disjE)
+     apply (clarsimp simp: lookup_range_pt_walk_not_incon') 
+    apply (erule disjE)
+      apply clarsimp
+  prefer 2
+      apply (erule disjE)
+       apply clarsimp
+       apply (simp add: lookup_range_pt_walk_not_incon')
+apply (erule disjE)
+       apply clarsimp
+    
+      
+      apply (rule conjI)
+  subgoal
+proof -
+  fix x :: vaddr and xa :: tlb_entry and xc :: vaddr
+  assume a1: "lookup (tlb_sat_set s - (\<Union>x\<in>vset. {e \<in> tlb_sat_set s. (ASID t, x) \<in> entry_range_asid_tags e})) (ASID s) x = Hit xa"
+  assume "a = ASID t"
+  assume a2: "{va. lookup (tlb_sat_set s) (ASID s) va = Incon} \<subseteq> iset (tlb_incon_set t)"
+  assume a3: "tlb_sat_set s = tlb_sat_set s \<union> the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}"
+  assume a4: "xa \<noteq> the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc)"
+  assume a5: "lookup (the ` {e \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault e}) (ASID s) x = Hit (the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc))"
+  have "\<forall>a t w. (lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) w a = Hit t \<or> lookup (the ` {z \<in> range (pt_walk (ASID s) (MEM s) (TTBR0 s)). \<not> is_fault z}) w a = Miss) \<or> lookup (tlb_sat_set s) w a \<noteq> Hit t"
+    using a3 by (*(metis lookup_hit_union_cases') (* > 1.0 s, timed out *)*) sledgehammer
+  sorry
+  then have "\<forall>t. Hit t = Hit (the (pt_walk (ASID s) (MEM s) (TTBR0 s) xc)) \<or> lookup (tlb_sat_set s) (ASID s) x \<noteq> Hit t"
+    using a5 by force
+  then show "x \<in> iset (tlb_incon_set t)"
+    using a4 a2 a1 lookup_hit_incon_minus by blast
+qed 
+
+  oops
 
 
 end
