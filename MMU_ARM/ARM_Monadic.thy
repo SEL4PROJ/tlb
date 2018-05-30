@@ -4864,10 +4864,6 @@ where
 
 
 
-
-
-
-
 definition
   MemA_with_priv :: "vaddr \<times> nat \<times> bool \<Rightarrow> 'b::mem_op state_scheme \<Rightarrow> 'a::len word \<times> 'b::mem_op state_scheme"
 where
@@ -6458,6 +6454,7 @@ val () = def
 end
 \<close>
 
+thm LSR_def
 ML \<open>
 local 
 open L3 
@@ -48891,6 +48888,8 @@ val () = def
 end
 \<close>
 
+
+
 ML \<open>
 local 
 open L3 
@@ -48925,6 +48924,9 @@ val () = def
          @{context})))
 end
 \<close>
+ 
+
+thm DecodeARM_def
 
 ML \<open>
 local 
@@ -48948,4 +48950,6 @@ val () = def
                call("ITAdvance",@{typ "'b::mem_op state_scheme \<Rightarrow> (unit \<times> 'b state_scheme)"},lu,@{theory}))))))
 end
 \<close>
+
+thm Next_def
 end
