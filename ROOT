@@ -22,9 +22,10 @@ session PTABLE = Word_Lib +
 
 
 (* Collection of base theories that change rarely *)
-session L3_LIB = PTABLE +
+session L3_LIB = Word_Lib +
   theories
     "L3_Lib/L3_Lib"
+    "Page_Tables/PageTable_seL4"
 
 (* MMU_ARM *)
 session MMU_ARM = L3_LIB +
@@ -35,11 +36,22 @@ session MMU_ARM = L3_LIB +
 (* Refinement *)
 session ARM_REF = MMU_ARM +
   theories
+    "MMU_ARMv7_Refinement/MMU_ARMv7_Ref"
+    "MMU_ARMv7_Refinement_No_Fault/ARMv7_Update_ASID_Ref"
     "MMU_ARMv7_Refinement_No_Fault/ARMv7_Flush_Ref"
+    "MMU_ARMv7A_Refinement/MMU_ARMv7A_Ref"
         
 
 
-session LOGIC =  ARM_REF +
+(* Case studies/examples on top of the model *)
+session MMU_CASE = ARM_REF +
+  theories
+    "Ins_Cycle/Ins_Cycle"
+    "Ins_Cycle/Ins_Cycle1"
+    "Invalidation_Operations/Invalid_Ops"
+
+
+session LOGIC =  PTABLE +
    theories
    "Logic/Safe_Set" 
 
