@@ -30,7 +30,7 @@ text \<open>
      address space sizes
 \<close>
 class mem_type = 
-  -- "size of value in bytes"
+  (* "size of value in bytes" *)
   fixes size_of :: "'a itself \<Rightarrow> nat"
   assumes some_size: "0 < size_of (TYPE('a))"
   assumes max_size: "size_of (TYPE('a)) < min memory_size addr_space_size"
@@ -42,11 +42,11 @@ class mem_type =
   assumes restorable: "length bs = size_of TYPE('a)
                        \<Longrightarrow> to_bytes (from_bytes bs) = bs"
 
-  -- "required alignment of value in bytes"
+  (* "required alignment of value in bytes" *)
   fixes align_of :: "'a itself \<Rightarrow> nat"
   assumes sane_alignment: "align_of (TYPE('a)) dvd memory_size \<and>
                            align_of (TYPE('a)) dvd addr_space_size"
-  -- "a unique type tag for this type of value"
+  (* "a unique type tag for this type of value" *)
   fixes type_tag :: "'a itself \<Rightarrow> type_tag"
   (*XXX: redundant since tags removed, but could be useful otherwise *)
 

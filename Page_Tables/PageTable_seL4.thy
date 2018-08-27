@@ -108,9 +108,9 @@ section \<open>Page Directory Entry (PDE) Decoding\<close>
 datatype pde =
    InvalidPDE
  | ReservedPDE
- -- "the paddr is address of a page table"
+ (* "the paddr is address of a page table" *)
  | PageTablePDE paddr
- -- "the paddr is base address of section"
+ (*- "the paddr is base address of section" *)
  | SectionPDE paddr arm_perm_bits
 
 
@@ -161,7 +161,7 @@ section \<open>Page Table Entry (PTE) Decoding\<close>
 
 datatype pte =
    InvalidPTE
-   -- "the paddr is the page base address"
+   (* "the paddr is the page base address" *)
  | SmallPagePTE paddr arm_perm_bits
 
 definition

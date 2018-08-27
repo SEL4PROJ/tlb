@@ -9,7 +9,7 @@
 theory TLB
 imports
   "HOL-Word.Word"
-  PTABLE.PageTable_seL4
+  L3_LIB.PageTable_seL4
   L3_LIB.L3_Lib
 begin
 
@@ -22,11 +22,12 @@ type_synonym pSe = "12 word"
 type_synonym asid  = "8 word"
 type_synonym fl     = "8 word"
 
+type_synonym va    = "32 word"
 
 
 datatype tlb_entry =
-    EntrySmall   asid vSm pSm fl
-  | EntrySection asid vSe pSe fl
+    EntrySmall   asid vSm "pSm option" fl
+  | EntrySection asid vSe "pSe option" fl
 
 type_synonym tlb = "tlb_entry set"
 
@@ -35,11 +36,11 @@ datatype lookup_type  =  Miss  | Incon  |  Hit "tlb_entry"
 
 (* Address Range of an Entry *)
 definition
-  entry_range :: "tlb_entry \<Rightarrow> vaddr set"
+  entry_range :: "tlb_entry \<Rightarrow> va set"
 where
-  "entry_range E \<equiv> case E of EntrySmall   a va pa f   \<Rightarrow> Addr ` {(ucast va::32 word) << 12 ..
+  "entry_range E \<equiv> case E of EntrySmall   a va pa f   \<Rightarrow> {(ucast va::32 word) << 12 ..
                                                             ((ucast va::32 word) << 12) + (2^12 - 1)} |
-                             EntrySection a va pa f    \<Rightarrow> Addr ` {(ucast va::32 word) << 20 ..
+                             EntrySection a va pa f    \<Rightarrow> {(ucast va::32 word) << 20 ..
                                                             ((ucast va::32 word) << 20) + (2^20 - 1)}"
 
 (* ASID tag of an Entry *)
@@ -52,21 +53,21 @@ where
 
 (* Address Range of an entry with ASID tag *)
 definition
-  entry_range_asid_tags :: "tlb_entry \<Rightarrow> (asid \<times> vaddr) set"
+  entry_range_asid_tags :: "tlb_entry \<Rightarrow> (asid \<times> va) set"
 where
   "entry_range_asid_tags E \<equiv> image (\<lambda>v. (asid_entry E , v)) (entry_range E)"
 
 
 (* Set of all the entries covering a virtual address and an ASID *)
 definition
-  entry_set :: "tlb \<Rightarrow> asid \<Rightarrow> vaddr \<Rightarrow> (tlb_entry set)"
+  entry_set :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> (tlb_entry set)"
 where
   "entry_set t a v \<equiv> {E\<in>t. (a,v) : entry_range_asid_tags E } "
 
 
 (* Lookup for a virtual address along with an ASID *)
 definition
-  lookup :: "tlb \<Rightarrow> asid \<Rightarrow> vaddr \<Rightarrow> lookup_type"
+  lookup :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> lookup_type"
 where
   "lookup t a va \<equiv> if entry_set t a va = {} then Miss
                    else if \<exists>x. entry_set t a va = {x} then Hit (the_elem (entry_set t a va))
@@ -75,44 +76,22 @@ where
 
 (* set of all the virtual addresses with ASID tags covered by TLB *)
 definition
-  a_va_set :: "tlb \<Rightarrow> (asid \<times> vaddr) set"
+  a_va_set :: "tlb \<Rightarrow> (asid \<times> va) set"
 where
   "a_va_set t \<equiv> \<Union> (entry_range_asid_tags ` t)"
 
 
 (* Is a virtual address and an ASID covered by TLB *)
 definition
-  is_a_va_present :: "tlb \<Rightarrow> asid \<Rightarrow> vaddr \<Rightarrow> bool"
+  is_a_va_present :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> bool"
 where
   "is_a_va_present t a v \<equiv> (a,v) : a_va_set t"
 
 
+(* Selective invalidation of a virtual address for an ASID *)
 
 definition
-  Flush_TLB :: "tlb \<Rightarrow> tlb"
-where
-  "Flush_TLB t  \<equiv> {}"
-
-
-definition
-  Flush_ASID :: "tlb \<Rightarrow> asid  \<Rightarrow> tlb"
-where
-  "Flush_ASID t a \<equiv> t - {e\<in>t. asid_entry e = a}"
-
-definition
-  Flush_varange :: "tlb \<Rightarrow> vaddr set  \<Rightarrow> tlb"
-where
-  "Flush_varange t V \<equiv>   t - (\<Union>v\<in>V. {e \<in> t. v \<in> entry_range e})"
-
-
-definition
-  Flush_ASIDvarange :: "tlb \<Rightarrow> asid \<Rightarrow> vaddr set  \<Rightarrow> tlb"
-where
-  "Flush_ASIDvarange t a V \<equiv>  t - (\<Union>v\<in>V. {e \<in> t. (a, v) \<in> entry_range_asid_tags e})"
-
-
-definition
-  a_va_sel_invalidate :: "tlb \<Rightarrow> asid \<Rightarrow> vaddr \<Rightarrow> tlb"
+  a_va_sel_invalidate :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> tlb"
 where
   "a_va_sel_invalidate t a v \<equiv> case lookup t a v of Hit x \<Rightarrow> t - {x}
                                                           | Miss  \<Rightarrow> t
@@ -128,13 +107,13 @@ theorem is_present_selective:
 (* Block invalidation of a set of virtual addresses for an ASID *)
 
 definition
-  a_va_block_invalidation :: "tlb \<Rightarrow> asid \<Rightarrow> vaddr set \<Rightarrow> tlb"
+  a_va_block_invalidation :: "tlb \<Rightarrow> asid \<Rightarrow> va set \<Rightarrow> tlb"
 where
   "a_va_block_invalidation t a V \<equiv> \<Inter>x\<in>V. a_va_sel_invalidate t a x"
 
 
 definition
-  is_a_vset_present :: "tlb \<Rightarrow> asid \<Rightarrow> vaddr set \<Rightarrow> bool"
+  is_a_vset_present :: "tlb \<Rightarrow> asid \<Rightarrow> va set \<Rightarrow> bool"
 where
   "is_a_vset_present t a V \<equiv> \<exists>v\<in>V. is_a_va_present t a v"
 
@@ -229,21 +208,24 @@ theorem  invalidating_corrupt_entries:
 datatype bpa = Bpsm "20 word" | Bpse "12 word"
 
 fun
-  bpa_entry :: "tlb_entry \<Rightarrow> bpa"
+  bpa_entry :: "tlb_entry \<Rightarrow> bpa option"
 where
-  "bpa_entry (EntrySmall _ _ p _)   =  Bpsm p"
-| "bpa_entry (EntrySection _ _ p _) =  Bpse p"
-
-fun
-  bpa_to_pa :: "vaddr \<Rightarrow> bpa \<Rightarrow> paddr"
-where
-  "bpa_to_pa va (Bpsm bpa) = Addr ((ucast bpa << 12) OR (addr_val va AND mask 12))"
-| "bpa_to_pa va (Bpse bpa) = Addr ((ucast bpa << 20) OR (addr_val va AND mask 20))"
+  "bpa_entry (EntrySmall _ _ p _)   = map_option Bpsm p"
+| "bpa_entry (EntrySection _ _ p _) = map_option Bpse p"
 
 definition
-  va_to_pa :: "vaddr \<Rightarrow> tlb_entry \<Rightarrow> paddr"
+  "is_fault e = (bpa_entry e = None)"
+
+fun
+  bpa_to_pa :: "va \<Rightarrow> bpa \<Rightarrow> 32 word"
 where
-  "va_to_pa v t \<equiv> bpa_to_pa v (bpa_entry t)"
+  "bpa_to_pa va (Bpsm bpa) = (ucast bpa << 12) OR (va AND mask 12)"
+| "bpa_to_pa va (Bpse bpa) = (ucast bpa << 20) OR (va AND mask 20)"
+
+definition
+  va_to_pa :: "va \<Rightarrow> tlb_entry \<Rightarrow> 32 word"
+where
+  "va_to_pa v t \<equiv> bpa_to_pa v (the (bpa_entry t))"
 
 (* Uniqueness *)
 
@@ -559,21 +541,21 @@ theorem
 
 (* set of entries having v in their range *)
 definition
-  va_entry_set :: "tlb  \<Rightarrow> vaddr \<Rightarrow> (tlb_entry set)"
+  va_entry_set :: "tlb  \<Rightarrow> va \<Rightarrow> (tlb_entry set)"
 where
   "va_entry_set t v \<equiv> {E\<in>t. v : entry_range E} "
 
 
 (* set of all the virtual addresses covered by TLB *)
 definition
-  va_set :: "tlb \<Rightarrow> (vaddr set)"
+  va_set :: "tlb \<Rightarrow> (va set)"
 where
   "va_set t \<equiv> \<Union> (entry_range ` t)"
 
 
 (* is Virtual Address covered by TLB *)
 definition
-  is_va_present :: "tlb  \<Rightarrow> vaddr \<Rightarrow> bool"
+  is_va_present :: "tlb  \<Rightarrow> va \<Rightarrow> bool"
 where
   "is_va_present t v \<equiv> v : va_set t"
 
@@ -581,7 +563,7 @@ where
 (*  -------- selective invalidation -------- *)
 
 definition
-  va_sel_invalidation :: "tlb \<Rightarrow> vaddr \<Rightarrow> tlb"
+  va_sel_invalidation :: "tlb \<Rightarrow> va \<Rightarrow> tlb"
 where
   "va_sel_invalidation t v \<equiv> t - va_entry_set t v"
 
@@ -691,24 +673,32 @@ where
 
 
 definition
- pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry option"
+ pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
 where
   "pt_walk asid heap ttbr0 v \<equiv>
       case get_pde heap ttbr0 v
-       of None                 \<Rightarrow> None
-       | Some InvalidPDE       \<Rightarrow> None
-       | Some ReservedPDE      \<Rightarrow> None
-       | Some (SectionPDE p a) \<Rightarrow> Some (EntrySection asid (ucast (addr_val v >> 20) :: 12 word)
-                                       ((word_extract 31 20 (addr_val p)):: 12 word)  (0::8 word))
+       of None                 \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some InvalidPDE       \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some ReservedPDE      \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some (SectionPDE p a) \<Rightarrow>
+          EntrySection asid (ucast (addr_val v >> 20) :: 12 word)
+                            (Some  ((word_extract 31 20 (addr_val p)):: 12 word))  (0::8 word)
        | Some (PageTablePDE p) \<Rightarrow>
                (case get_pte heap p v
-                 of None                     \<Rightarrow> None
-                 |  Some InvalidPTE          \<Rightarrow> None
-                 |  Some (SmallPagePTE p1 a) \<Rightarrow> Some(EntrySmall asid (ucast (addr_val v >> 12) :: 20 word)
-                                                    ((word_extract 31 12 (addr_val p1):: 20 word)) 0))"
+                 of None                     \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
+                 |  Some InvalidPTE          \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) None 0
+                 |  Some (SmallPagePTE p1 a) \<Rightarrow> EntrySmall asid (ucast (addr_val v >> 12) :: 20 word)
+                                            (Some  ((word_extract 31 12 (addr_val p1)):: 20 word)) 0)"
 
 definition
-  "is_fault (e::tlb_entry option) \<equiv> (e = None)"
+  pt_walk1 :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> vaddr \<Rightarrow> tlb_entry"
+where
+  "pt_walk1 asid heap ttbr0 v \<equiv>
+      case lookup_pde heap ttbr0 v
+       of None            \<Rightarrow> EntrySection asid (ucast (addr_val v >> 20) :: 12 word) None 0
+       | Some (p, pt, a)  \<Rightarrow> if pt = ArmSection
+                              then EntrySection asid (ucast (addr_val v >> 20) :: 12 word) (Some (ucast (addr_val p >> 20) :: 12 word)) 0
+                                else EntrySmall asid (ucast (addr_val v >> 12) :: 20 word) (Some (ucast (addr_val p >> 12) :: 20 word)) 0"
 
 
 

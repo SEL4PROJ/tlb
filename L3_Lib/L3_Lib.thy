@@ -8,7 +8,6 @@ L3 operations.
 theory L3_Lib
 imports "HOL-Word.Word"
         "HOL-Library.Code_Target_Numeral"
-        "HOL-Library.Code_Char"
         "HOL-Library.Monad_Syntax"
 begin
 
@@ -23,9 +22,7 @@ no_syntax
 
 
 (* basic state Monad *)
-
 definition "return = Pair"
-(*declare return_def [simp add]*)
 
 definition bind :: "('state \<Rightarrow> ('a \<times> 'state)) \<Rightarrow>
                     ('a \<Rightarrow> 'state \<Rightarrow> ('b \<times> 'state)) \<Rightarrow>
@@ -34,7 +31,7 @@ definition bind :: "('state \<Rightarrow> ('a \<times> 'state)) \<Rightarrow>
 
 (* use do syntax for this state monad *)
 adhoc_overloading
-  Monad_Syntax.bind bind
+  Monad_Syntax.bind L3_Lib.bind
 
 definition read_state :: "('state \<Rightarrow> 'a) \<Rightarrow> 'state \<Rightarrow> 'a \<times> 'state" where
   "read_state f = (\<lambda>s. (f s, s))"
@@ -292,7 +289,7 @@ lemma log2_bounds:
   shows   "2 ^ (log2 n) \<le> n"
     and   "n < 2 ^ (Suc (log2 n))"
 proof -
-  -- "The induction works better if we prove one goal instead of two goals"
+  (* "The induction works better if we prove one goal instead of two goals" *)
   have "2 ^ (log2 n) \<le> n \<and> n < 2 ^ (Suc (log2 n))"
     using assms
     proof (induct "log2 n" arbitrary: n)
@@ -476,9 +473,9 @@ definition bitwise :: "(bool \<Rightarrow> bool \<Rightarrow> bool) \<Rightarrow
   "bitwise f v1 v2 =
    (let m = max (length v1) (length v2) in map (case_prod f) (zip (fixwidth m v1) (fixwidth m v2)))"
 
-definition "bor  = bitwise (op \<or>)"
-definition "band = bitwise (op \<and>)"
-definition "bxor = bitwise (op \<noteq>)"
+definition "bor  = bitwise (\<or>)"
+definition "band = bitwise (\<and>)"
+definition "bxor = bitwise (\<noteq>)"
 
 definition bitstring_shiftl :: "bool list \<Rightarrow> nat \<Rightarrow> bool list" where
   "bitstring_shiftl v m = pad_right False (length v + m) v"
