@@ -90,9 +90,9 @@ define Branch > TableBranchByte
    =
    when NullCheckIfThumbEE(n) do
    {  halfwords = if is_tbh then
-                     MemU (R(n) + LSL (R(m), 1), 2)::half
+                     MemU (R(n) + LSL (R(m), 1), 2, true )::half
                   else
-                     MemU (R(n) + R(m), 1);
+                     MemU (R(n) + R(m), 1, true );
       BranchWritePC (PC + 2 * [halfwords])
    }
 
@@ -1498,7 +1498,7 @@ define Load > LoadWord
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if index then offset_addr else Rn;
-      data = MemU(address, 4);
+      data = MemU(address, 4, true );
       when wback do R(n) <- offset_addr;
       if t == 15 then
          if Aligned (address, 4) then
@@ -1531,7 +1531,7 @@ define Load > LoadLiteral
    when NullCheckIfThumbEE(15) do
    {  base = Align (PC, 4);
       address = if add then base + imm32 else base - imm32;
-      data = MemU(address, 4);
+      data = MemU(address, 4, true );
       if t == 15 then
          if Aligned (address, 4) then
             LoadWritePC (data)
@@ -1571,7 +1571,7 @@ define Load > LoadUnprivileged
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if postindex then Rn else offset_addr;
-      data = MemU_unpriv(address, 4);
+      data = MemU_unpriv(address, 4, true );
       when postindex do R(n) <- offset_addr;
       R(t) <- if UnalignedSupport() or Aligned (address, 4) then
                  data
@@ -1627,7 +1627,7 @@ define Load > LoadByte
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if index then offset_addr else Rn;
-      R(t) <- Extend (unsigned, MemU(address, 1)::byte);
+      R(t) <- Extend (unsigned, MemU(address, 1, true )::byte);
       when wback do R(n) <- offset_addr;
       IncPC()
    }
@@ -1645,7 +1645,7 @@ define Load > LoadByteLiteral
    when NullCheckIfThumbEE(15) do
    {  base = Align (PC, 4);
       address = if add then base + imm32 else base - imm32;
-      R(t) <- Extend (unsigned, MemU(address, 1)::byte);
+      R(t) <- Extend (unsigned, MemU(address, 1, true )::byte);
       IncPC()
    }
 
@@ -1671,7 +1671,7 @@ define Load > LoadByteUnprivileged
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if postindex then Rn else offset_addr;
-      R(t) <- ZeroExtend (MemU_unpriv(address, 1)::byte);
+      R(t) <- ZeroExtend (MemU_unpriv(address, 1, true )::byte);
       when postindex do R(n) <- offset_addr;
       IncPC()
    }
@@ -1702,7 +1702,7 @@ define Load > LoadSignedByteUnprivileged
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if postindex then Rn else offset_addr;
-      R(t) <- SignExtend (MemU_unpriv(address, 1)::byte);
+      R(t) <- SignExtend (MemU_unpriv(address, 1, true )::byte);
       when postindex do R(n) <- offset_addr;
       IncPC()
    }
@@ -1738,7 +1738,7 @@ define Load > LoadHalf
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if index then offset_addr else Rn;
-      data = MemU(address, 2)::half;
+      data = MemU(address, 2, true )::half;
       when wback do R(n) <- offset_addr;
       R(t) <- if UnalignedSupport() or Aligned (address, 2) then
                  Extend (unsigned, data)
@@ -1760,7 +1760,7 @@ define Load > LoadHalfLiteral
    when NullCheckIfThumbEE(15) do
    {  base = Align (PC, 4);
       address = if add then base + imm32 else base - imm32;
-      data = MemU(address, 2)::half;
+      data = MemU(address, 2, true )::half;
       R(t) <- if UnalignedSupport() or Aligned (address, 2) then
                  Extend (unsigned, data)
               else -- Can only apply before ARMv7
@@ -1790,7 +1790,7 @@ define Load > LoadHalfUnprivileged
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if postindex then Rn else offset_addr;
-      data = MemU_unpriv(address, 2)::half;
+      data = MemU_unpriv(address, 2, true )::half;
       when postindex do R(n) <- offset_addr;
       R(t) <- if UnalignedSupport() or Aligned (address, 2) then
                  Extend (unsigned, data)
@@ -1825,11 +1825,11 @@ define Load > LoadMultiple
       when index == increment do address <- address + 4;
       for i in 0 .. 14 do
          when registers<i> do
-         {  R([i]) <- MemA(address, 4);
+         {  R([i]) <- MemA(address, 4, true );
             address <- address + 4
          };
       if registers<15> then
-         LoadWritePC (MemA(address, 4))
+         LoadWritePC (MemA(address, 4, true ))
       else
          IncPC();
       when wback do -- must be false when system and not registers<15>
@@ -1859,10 +1859,10 @@ define Load > LoadMultipleExceptionReturn
    when wordhigher do address <- address + 4;
    for i in 0 .. 14 do
       when registers<i> do
-      {  R([i]) <- MemA(address, 4);
+      {  R([i]) <- MemA(address, 4, true );
          address <- address + 4
       };
-   new_pc_value = MemA(address, 4);
+   new_pc_value = MemA(address, 4, true );
    when wback do
       if registers<[n]> then
          R(n) <- UNKNOWN
@@ -1892,7 +1892,7 @@ define Load > LoadMultipleUserRegisters
    for i in 0 .. 14 do
       when registers<i> do
       {  -- Load User mode (‘10000’) register
-         Rmode([i], 0b10000) <- MemA(address, 4);
+         Rmode([i], 0b10000) <- MemA(address, 4, true );
          address <- address + 4
       };
    IncPC()
@@ -1926,8 +1926,8 @@ define Load > LoadDual
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if index then offset_addr else Rn;
-      R(t) <- MemA(address, 4);
-      R(t2) <- MemA(address + 4, 4);
+      R(t) <- MemA(address, 4, true );
+      R(t2) <- MemA(address + 4, 4, true );
       when wback do R(n) <- offset_addr;
       IncPC()
    }
@@ -1944,8 +1944,8 @@ define Load > LoadDualLiteral
    =
    when NullCheckIfThumbEE(15) do
    {  address = if add then Align (PC, 4) + imm32 else Align (PC, 4) - imm32;
-      R(t) <- MemA(address, 4);
-      R(t2) <- MemA(address + 4, 4);
+      R(t) <- MemA(address, 4, true );
+      R(t2) <- MemA(address + 4, 4, true );
       IncPC()
    }
 
@@ -1962,7 +1962,7 @@ define Load > LoadExclusive
    when NullCheckIfThumbEE(n) do
    {  address = R(n) + imm32;
       SetExclusiveMonitors (address, 4);
-      R(t) <- MemA(address,4);
+      R(t) <- MemA(address,4, true );
       IncPC()
    }
 
@@ -1977,7 +1977,7 @@ define Load > LoadExclusiveByte
    when NullCheckIfThumbEE(n) do
    {  address = R(n);
       SetExclusiveMonitors (address, 1);
-      R(t) <- ZeroExtend (MemA(address,1)::byte);
+      R(t) <- ZeroExtend (MemA(address,1, true )::byte);
       IncPC()
    }
 
@@ -1992,7 +1992,7 @@ define Load > LoadExclusiveHalf
    when NullCheckIfThumbEE(n) do
    {  address = R(n);
       SetExclusiveMonitors (address, 2);
-      R(t) <- ZeroExtend (MemA(address,2)::half);
+      R(t) <- ZeroExtend (MemA(address,2, true )::half);
       IncPC()
    }
 
@@ -2008,7 +2008,7 @@ define Load > LoadExclusiveDoubleword
    when NullCheckIfThumbEE(n) do
    {  address = R(n);
       SetExclusiveMonitors (address, 8);
-      value = MemA(address,8)`64;
+      value = MemA(address,8, true )`64;
       -- Extract words from 64-bit loaded value such that R[t] is loaded from
       -- address and R[t2] from address+4.
       R(t) <- if BigEndian() then value<63:32> else value<31:0>;
@@ -2055,9 +2055,9 @@ define Store > StoreWord
                 R(t);
       if UnalignedSupport() or Aligned (address, 4) or
          CurrentInstrSet() == InstrSet_ARM then
-         MemU(address,4) <- data
+         MemU(address,4, true ) <- data
       else -- Can only occur before ARMv7
-         MemU(address,4) <- UNKNOWN::word;
+         MemU(address,4, true ) <- UNKNOWN::word;
       when wback do R(n) <- offset_addr;
       IncPC()
    }
@@ -2090,9 +2090,9 @@ define Store > StoreUnprivileged
                 R(t);
       if UnalignedSupport() or Aligned (address, 4) or
          CurrentInstrSet() == InstrSet_ARM then
-         MemU_unpriv(address,4) <- data
+         MemU_unpriv(address,4, true ) <- data
       else -- Can only occur before ARMv7
-         MemU_unpriv(address,4) <- UNKNOWN::word;
+         MemU_unpriv(address,4, true ) <- UNKNOWN::word;
       when postindex do R(n) <- offset_addr;
       IncPC()
    }
@@ -2129,7 +2129,7 @@ define Store > StoreByte
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if index then offset_addr else Rn;
-      MemU(address,1) <- R(t)<7:0>;
+      MemU(address,1, true ) <- R(t)<7:0>;
       when wback do R(n) <- offset_addr;
       IncPC()
    }
@@ -2156,7 +2156,7 @@ define Store > StoreByteUnprivileged
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if postindex then Rn else offset_addr;
-      MemU_unpriv(address,1) <- R(t)<7:0>;
+      MemU_unpriv(address,1, true ) <- R(t)<7:0>;
       when postindex do R(n) <- offset_addr;
       IncPC()
    }
@@ -2192,9 +2192,9 @@ define Store > StoreHalf
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if index then offset_addr else Rn;
       if UnalignedSupport() or Aligned (address, 2) then
-         MemU(address,2) <- R(t)<15:0>
+         MemU(address,2, true ) <- R(t)<15:0>
       else -- Can only occur before ARMv7
-         MemU(address,2) <- UNKNOWN::half;
+         MemU(address,2, true)  <- UNKNOWN::half;
       when wback do R(n) <- offset_addr;
       IncPC()
    }
@@ -2221,9 +2221,9 @@ define Store > StoreHalfUnprivileged
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if postindex then Rn else offset_addr;
       if UnalignedSupport() or Aligned (address, 2) then
-         MemU_unpriv(address,2) <- R(t)<15:0>
+         MemU_unpriv(address,2, true ) <- R(t)<15:0>
       else -- Can only occur before ARMv7
-         MemU_unpriv(address,2) <- UNKNOWN::half;
+         MemU_unpriv(address,2, true ) <- UNKNOWN::half;
       when postindex do R(n) <- offset_addr;
       IncPC()
    }
@@ -2255,13 +2255,13 @@ define Store > StoreMultiple
       for i in 0 .. 14 do
          when registers<i> do
          {  if [i] == n and wback and i != lowest then
-               MemA(address,4) <- UNKNOWN::word
+               MemA(address,4, true ) <- UNKNOWN::word
             else
-               MemA(address,4) <- R([i]);
+               MemA(address,4, true ) <- R([i]);
             address <- address + 4
          };
       when registers<15> do
-         MemA(address,4) <- PCStoreValue();
+         MemA(address,4, true ) <- PCStoreValue();
       when wback do
          R(n) <- if increment then Rn + length else Rn - length;
       IncPC()
@@ -2286,11 +2286,11 @@ define Store > StoreMultipleUserRegisters
    when wordhigher do address <- address + 4;
    for i in 0 .. 14 do
       when registers<i> do -- Store User mode (‘10000’) register
-      {  MemA(address,4) <- Rmode([i], 0b10000);
+      {  MemA(address,4, true ) <- Rmode([i], 0b10000);
          address <- address + 4
       };
    when registers<15> do
-      MemA(address,4) <- PCStoreValue();
+      MemA(address,4, true ) <- PCStoreValue();
    IncPC()
 }
 
@@ -2322,8 +2322,8 @@ define Store > StoreDual
                };
       offset_addr = if add then Rn + offset else Rn - offset;
       address = if index then offset_addr else Rn;
-      MemA(address, 4) <- R(t);
-      MemA(address + 4, 4) <- R(t2);
+      MemA(address, 4, true ) <- R(t);
+      MemA(address + 4, 4, true ) <- R(t2);
       when wback do R(n) <- offset_addr;
       IncPC()
    }
@@ -2342,7 +2342,7 @@ define Store > StoreExclusive
    when NullCheckIfThumbEE(n) do
    {  address = R(n) + imm32;
       if ExclusiveMonitorsPass (address, 4) then
-      {  MemA(address, 4) <- R(t);
+      {  MemA(address, 4, true ) <- R(t);
          R(d) <- 0
       }
       else
@@ -2362,7 +2362,7 @@ define Store > StoreExclusiveByte
    when NullCheckIfThumbEE(n) do
    {  address = R(n);
       if ExclusiveMonitorsPass (address, 1) then
-      {  MemA(address, 1) <- R(t)<7:0>;
+      {  MemA(address, 1, true ) <- R(t)<7:0>;
          R(d) <- 0
       }
       else
@@ -2382,7 +2382,7 @@ define Store > StoreExclusiveHalf
    when NullCheckIfThumbEE(n) do
    {  address = R(n);
       if ExclusiveMonitorsPass (address, 2) then
-      {  MemA(address, 2) <- R(t)<15:0>;
+      {  MemA(address, 2, true ) <- R(t)<15:0>;
          R(d) <- 0
       }
       else
@@ -2404,7 +2404,7 @@ define Store > StoreExclusiveDoubleword
    {  address = R(n);
       value = if BigEndian() then R(t) : R(t2) else R(t2) : R(t);
       if ExclusiveMonitorsPass (address, 8) then
-      {  MemA(address, 8) <- value;
+      {  MemA(address, 8, true ) <- value;
          R(d) <- 0
       }
       else
@@ -2437,13 +2437,13 @@ define Swap
    -- same location can occur between them.
    Rn = R(n);
    if b then -- SWPB
-   {  data = MemA(Rn, 1)::byte;
-      MemA(Rn, 1) <- R(t2)<7:0>;
+   {  data = MemA(Rn, 1, true )::byte;
+      MemA(Rn, 1, true ) <- R(t2)<7:0>;
       R(t) <- ZeroExtend(data)
    }
    else      -- SWP
-   {  data = MemA(Rn, 4);
-      MemA(Rn, 4) <-R(t2);
+   {  data = MemA(Rn, 4, true );
+      MemA(Rn, 4, true ) <-R(t2);
       -- Rotation in the following will always be by zero in ARMv7, due to
       -- alignment checks, but can be nonzero in legacy configurations.
       R(t) <- ROR (data, 0n8 * [Rn<1:0>])
@@ -2744,8 +2744,8 @@ define System > ReturnFromException
       address = if increment then Rn else Rn - 8;
       address = if wordhigher then address + 4 else address;
       when wback do R(n) <- if increment then Rn + 8 else Rn - 8;
-      new_pc_value = MemA(address, 4);
-      CPSRWriteByInstr (MemA(address + 4, 4), 0b1111, true);
+      new_pc_value = MemA(address, 4, true );
+      CPSRWriteByInstr (MemA(address + 4, 4, true ), 0b1111, true);
       if CPSR.M == 0b11010 and CPSR.J and CPSR.T then
          #UNPREDICTABLE("ReturnFromException")
       else
@@ -2815,8 +2815,8 @@ define System > StoreReturnState
       base = Rmode(13,mode);
       address = if increment then base else base - 8;
       address = if wordhigher then address + 4 else address;
-      MemA(address,4) <- LR;
-      MemA(address+4,4) <- &SPSR;
+      MemA(address,4, true ) <- LR;
+      MemA(address+4,4, true ) <- &SPSR;
       when wback do
          Rmode(13,mode) <- if increment then base + 8 else base - 8;
       IncPC()

@@ -107,9 +107,13 @@ record arm_perm_bits =
     arm_p_TEX :: "3 word"
     arm_p_S   :: "1 word"
     arm_p_XN  :: "1 word"
+    arm_p_PXN  :: "1 word"  (* added *)
     arm_p_C   :: "1 word"
     arm_p_B   :: "1 word"
     arm_p_nG  :: "1 word"
+    arm_p_domain  :: "4 word" 
+    arm_p_level :: int
+    \<comment> \<open>arm_p_blocksize ::  nat\<close>
 
 
 
@@ -133,9 +137,31 @@ definition
        arm_p_TEX = ucast ((w >> 12) AND 0x7),
        arm_p_S   = ucast ((w >> 16) AND 0x1),
        arm_p_XN  = ucast ((w >> 4) AND 0x1),
+       arm_p_PXN  = ucast (w  AND 0x1),
        arm_p_C   = ucast ((w >> 3) AND 0x1),
        arm_p_B   = ucast ((w >> 2) AND 0x1),
-       arm_p_nG  = ucast ((w >> 17) AND 0x1) \<rparr>"
+       arm_p_nG  = ucast ((w >> 17) AND 0x1),
+       arm_p_domain = ucast ((w >> 5) AND 0xF),
+       arm_p_level = 1
+       \<comment> \<open>arm_p_blocksize = 1024\<close> \<rparr>"
+
+
+definition
+  perm_bits_pde_supsections :: "machine_word \<Rightarrow> arm_perm_bits" where
+  "perm_bits_pde_supsections w \<equiv> 
+     \<lparr> arm_p_APX = ucast ((w >> 15) AND 0x1),
+       arm_p_AP  = ucast ((w >> 10) AND 0x3),
+       arm_p_TEX = ucast ((w >> 12) AND 0x7),
+       arm_p_S   = ucast ((w >> 16) AND 0x1),
+       arm_p_XN  = ucast ((w >> 4) AND 0x1),
+       arm_p_PXN  = ucast (w  AND 0x1),
+       arm_p_C   = ucast ((w >> 3) AND 0x1),
+       arm_p_B   = ucast ((w >> 2) AND 0x1),
+       arm_p_nG  = ucast ((w >> 17) AND 0x1),
+       arm_p_domain = 0,
+       arm_p_level = 1
+       \<comment> \<open>arm_p_blocksize = 16384\<close> \<rparr>"
+
 
 definition
   "decode_pde_section w \<equiv> SectionPDE (Addr (addr_base ArmSection w))
@@ -143,7 +169,7 @@ definition
 
 definition
   "decode_pde_ssection w \<equiv> SuperSectionPDE (Addr (addr_base ArmSuperSection w))
-                                           (perm_bits_pde_sections w)"
+                                           (perm_bits_pde_supsections w)"
 
 definition
   pt_base_mask :: machine_word where
@@ -190,9 +216,13 @@ definition
        arm_p_TEX = ucast ((w >> 6) AND 0x7),
        arm_p_S   = ucast ((w >> 10) AND 0x1),
        arm_p_XN  = ucast (w AND 0x1),
+       arm_p_PXN  = ucast ((w >> 2) AND 0x1),
        arm_p_C   = ucast ((w >> 3) AND 0x1),
        arm_p_B   = ucast ((w >> 2) AND 0x1),
-       arm_p_nG  = ucast ((w >> 11) AND 0x1) \<rparr>"
+       arm_p_nG  = ucast ((w >> 11) AND 0x1),
+       arm_p_domain = ucast ((w >> 5) AND 0xF),
+       arm_p_level = 2
+       \<comment> \<open>arm_p_blocksize = 4\<close> \<rparr>"
 
 definition
   "decode_pte_small w \<equiv> SmallPagePTE (Addr (addr_base ArmSmallPage w))
@@ -206,9 +236,13 @@ definition
        arm_p_TEX = ucast ((w >> 12) AND 0x7),
        arm_p_S   = ucast ((w >> 10) AND 0x1),
        arm_p_XN  = ucast ((w >> 15) AND 0x1),
+       arm_p_PXN  = ucast ((w >> 2) AND 0x1),
        arm_p_C   = ucast ((w >> 3) AND 0x1),
        arm_p_B   = ucast ((w >> 2) AND 0x1),
-       arm_p_nG  = ucast ((w >> 11) AND 0x1) \<rparr>"
+       arm_p_nG  = ucast ((w >> 11) AND 0x1),
+       arm_p_domain = ucast ((w >> 5) AND 0xF),
+       arm_p_level = 2
+       \<comment> \<open>arm_p_blocksize = 64\<close> \<rparr>"
 
 definition
   large_base_mask :: "32 word" where
@@ -255,9 +289,6 @@ definition
   vaddr_pt_index :: "machine_word \<Rightarrow> machine_word" where
   "vaddr_pt_index w \<equiv> (w >> 12) AND mask 8"
 
-value "(mask 18:: 32 word) << 14"
-
-value "(mask (32-14):: 32 word)"
 
 subsection \<open>Get Frame\<close>
 

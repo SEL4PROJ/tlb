@@ -1,7 +1,7 @@
 -- Remaining from arm-base.spec --
 
 component MemA_with_priv
-            (address::word, size::nat, privileged::bool) :: bits(N)
+            (address::word, size::nat, privileged::bool, data_ins :: bool) :: bits(N)
             with N in 8,16,32,64
 {  value =
    {  
@@ -16,7 +16,7 @@ component MemA_with_priv
 
 
 	    -- MMU or MPU
-	    memaddrdesc = Data_TranslateAddress(VA, privileged, false, size);
+	    memaddrdesc = TranslateAddress(VA, privileged, false, size, data_ins);
 
       -- Memory array access, and sort out endianness
       var value = mem(memaddrdesc, size);
@@ -39,7 +39,7 @@ component MemA_with_priv
                 VA <- Align (address, size);
 
 	    -- MMU or MPU
-	    memaddrdesc = Data_TranslateAddress(VA, privileged, true, size);
+	    memaddrdesc = TranslateAddress(VA, privileged, true, size, data_ins);
 	  
 
     -- excluding for the time-being
@@ -57,19 +57,19 @@ component MemA_with_priv
 
 
 
-component MemA_unpriv (address::word, size::nat) :: bits(N) with N in 8,16,32,64
-{  value = MemA_with_priv (address, size, false)
-   assign value = MemA_with_priv (address, size, false) <- value
+component MemA_unpriv (address::word, size::nat, data_ins :: bool) :: bits(N) with N in 8,16,32,64
+{  value = MemA_with_priv (address, size, false, data_ins)
+   assign value = MemA_with_priv (address, size, false, data_ins) <- value
 }
 
-component MemA (address::word, size::nat) :: bits(N) with N in 8,16,32,64
-{  value = MemA_with_priv (address, size, CurrentModeIsNotUser())
+component MemA (address::word, size::nat, data_ins :: bool) :: bits(N) with N in 8,16,32,64
+{  value = MemA_with_priv (address, size, CurrentModeIsNotUser(), data_ins)
    assign value =
-     MemA_with_priv (address, size, CurrentModeIsNotUser()) <- value
+     MemA_with_priv (address, size, CurrentModeIsNotUser(), data_ins) <- value
 }
 
 component MemU_with_priv
-             (address::word, size::nat, privileged::bool) :: bits(N)
+             (address::word, size::nat, privileged::bool, data_ins :: bool) :: bits(N)
              with N in 8,16,32,64
 {  value =
    {  -- when 8 * size <> N do
@@ -85,12 +85,12 @@ component MemU_with_priv
 
       -- Do aligned acess, take alignment failt, or do sequence of bytes
       if Aligned (VA, size) then
-         value <- [MemA_with_priv (VA, size, privileged)::bits(N)]
+         value <- [MemA_with_priv (VA, size, privileged, data_ins)::bits(N)]
       else if CP15.SCTLR.A then
          AlignmentFault(address, false)
       else { -- if unaligned access, not SCTLR.A, and SCTLR.U
          for i in 0 .. size - 1 do
-            value<8*i+7:8*i> <- [MemA_with_priv (VA+[i], 1, privileged)::byte];
+            value<8*i+7:8*i> <- [MemA_with_priv (VA+[i], 1, privileged, data_ins)::byte];
          when CPSR.E do
             value <- BigEndianReverse (value, size)
       };
@@ -109,26 +109,26 @@ component MemU_with_priv
 
       -- Do aligned acess, take alignment failt, or do sequence of bytes
       if Aligned (VA, size) then
-         MemA_with_priv (VA, size, privileged) <- value
+         MemA_with_priv (VA, size, privileged, data_ins) <- value
       else if CP15.SCTLR.A then
          AlignmentFault(address, true)
       else { -- if unaligned access, not SCTLR.A, and SCTLR.U
          v = if CPSR.E then BigEndianReverse ([value], size) else [value];
          for i in 0 .. size - 1 do
-            MemA_with_priv (VA + [i], 1, privileged) <- [v<8*i+7:8*i>]::byte
+            MemA_with_priv (VA + [i], 1, privileged, data_ins) <- [v<8*i+7:8*i>]::byte
       }
    }
 }
 
-component MemU_unpriv (address::word, size::nat) :: bits(N) with N in 8,16,32,64
-{  value = MemU_with_priv (address, size, false)
-   assign value = MemU_with_priv (address, size, false) <- value
+component MemU_unpriv (address::word, size::nat, data_ins :: bool) :: bits(N) with N in 8,16,32,64
+{  value = MemU_with_priv (address, size, false, data_ins)
+   assign value = MemU_with_priv (address, size, false, data_ins) <- value
 }
 
-component MemU (address::word, size::nat) :: bits(N) with N in 8,16,32,64
-{  value = MemU_with_priv (address, size, CurrentModeIsNotUser())
+component MemU (address::word, size::nat, data_ins :: bool) :: bits(N) with N in 8,16,32,64
+{  value = MemU_with_priv (address, size, CurrentModeIsNotUser(), data_ins)
    assign value =
-     MemU_with_priv (address, size, CurrentModeIsNotUser()) <- value
+     MemU_with_priv (address, size, CurrentModeIsNotUser(), data_ins) <- value
 }
 
 bool NullCheckIfThumbEE (n::reg) =

@@ -1,0 +1,31 @@
+
+to compile with L3:
+Runtime.LoadF "arm-base.spec, arm-tlb.spec, arm-base-1.spec, arm-iset.spec, arm-vfp.spec, arm-run.spec";
+
+
+to export Isabelle script in monadic format: 
+IsabelleExport.export "arm-base.spec, arm-base monadic arm-tlb.spec, arm-tlb monadic, arm-base-1.spec, rm-base-1 monadic, arm-iset.spec, arm-iset monadic, arm-vfp.spec, arm-vfp monadic, arm-run.spec, arm-run monadic";
+
+
+to export Isabelle script in normal format: 
+IsabelleExport.export "arm-base.spec, arm-tlb.spec, arm-base-1.spec, arm-iset.spec, arm-vfp.spec, arm-run.spec";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

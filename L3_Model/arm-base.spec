@@ -2212,7 +2212,7 @@ record TLBRecord
 	perms            :: Permissions 
 	nG               :: bits(1)       -- '0' = Global, '1' = not Global
 	domain 			     :: bits(4)
-	contiguoushint   :: bool  
+	-- contiguoushint   :: bool  
   level 			     :: int           -- generalises Section/Page to Table level
 	blocksize 		   :: nat           -- describes size of memory translated in KBytes
 	addrdesc 		     :: AddressDescriptor  -- mematrbts are inside
@@ -3529,7 +3529,7 @@ TLBRecord TranslateAddressVS1Off (va :: bits(32)) =
   result.perms.xn <- '0';
   result.perms.pxn <- '0';
   result.nG <- UNKNOWN;
-  result.contiguoushint <- UNKNOWN;
+  -- result.contiguoushint <- UNKNOWN;
   result.domain <- UNKNOWN;
   result.level <- UNKNOWN;
   result.blocksize <-  UNKNOWN; 

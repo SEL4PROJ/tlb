@@ -17,7 +17,7 @@ record EntrySuper_t
   perms            :: Permissions 
 	nG               :: bits(1)       -- '0' = Global, '1' = not Global
 	domain 			     :: bits(4)
-	contiguoushint   :: bool
+  -- contiguoushint   :: bool
   -- NSTID            :: bits(1)  
   level            :: int
 }
@@ -32,7 +32,7 @@ record EntrySection_t
   perms            :: Permissions 
 	nG               :: bits(1)       -- '0' = Global, '1' = not Global
 	domain 			     :: bits(4)
-	contiguoushint   :: bool 
+  -- contiguoushint   :: bool 
   -- NSTID            :: bits(1) 
   level            :: int
 }
@@ -47,7 +47,7 @@ record EntryLarge_t
   perms            :: Permissions 
 	nG               :: bits(1)       -- '0' = Global, '1' = not Global
 	domain 			     :: bits(4)
-	contiguoushint   :: bool
+  -- contiguoushint   :: bool 
   -- NSTID            :: bits(1) 
   level            :: int
 }
@@ -62,7 +62,7 @@ record EntrySmall_t
   perms            :: Permissions 
 	nG               :: bits(1)       -- '0' = Global, '1' = not Global
 	domain 			     :: bits(4)
-	contiguoushint   :: bool 
+  -- contiguoushint   :: bool 
   -- NSTID            :: bits(1) 
   level            :: int
 }
@@ -96,7 +96,7 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
        e1.perms          <- e.perms;
        e1.nG             <- e.nG;
        e1.domain         <- e.domain;
-       e1.contiguoushint <- e.contiguoushint;
+       -- e1.contiguoushint <- e.contiguoushint;
        -- e1.NSTID          <- e.addrdesc.paddress.NS;
        e1.level          <- e.level;
       return EntrySmall(e1)
@@ -112,7 +112,7 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
        e1.perms          <- e.perms;
        e1.nG             <- e.nG;
        e1.domain         <- e.domain;
-       e1.contiguoushint <- e.contiguoushint;
+       -- e1.contiguoushint <- e.contiguoushint;
        -- e1.NSTID          <- e.addrdesc.paddress.NS;
        e1.level          <- e.level;
       return EntryLarge(e1)
@@ -128,7 +128,7 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
        e1.perms           <- e.perms;
        e1.nG              <- e.nG;
        e1.domain          <- e.domain;
-       e1.contiguoushint  <- e.contiguoushint;
+       -- e1.contiguoushint  <- e.contiguoushint;
        -- e1.NSTID           <- e.addrdesc.paddress.NS;
        e1.level           <- e.level;
       return EntrySection(e1)
@@ -144,7 +144,7 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
        e1.perms           <- e.perms;
        e1.nG              <- e.nG;
        e1.domain          <- e.domain;
-       e1.contiguoushint  <- e.contiguoushint;
+       -- e1.contiguoushint  <- e.contiguoushint;
        -- e1.NSTID           <- e.addrdesc.paddress.NS;
        e1.level          <- e.level;
       return EntrySuper(e1)
@@ -379,7 +379,10 @@ bits(8) asid_entry (e:: TLBEntry) =
    case EntrySuper   (e1) => e1.asid  
    }
 
-AddressDescriptor Ftech_TranslateAddress (address :: bits(32), privileged :: bool, iswrite :: bool,  size :: nat) =
+
+
+
+AddressDescriptor TranslateAddress (address :: bits(32), privileged :: bool, iswrite :: bool,  size :: nat, data_ins :: bool) =
 {
   microInstrTLB_evict();
   microDataTLB_evict();
@@ -387,6 +390,38 @@ AddressDescriptor Ftech_TranslateAddress (address :: bits(32), privileged :: boo
   -- the current asid
   var asid = CP15.CONTEXTIDR.ASID;
 
+  if data_ins == true then 
+   match lookupTLB_Data_micro (asid, address)
+   {
+	  case Miss => 
+         match lookupTLB_main (asid, address)
+			    {
+				   case Miss => 
+				    {
+					   (memaddrdesc,tlb_entry)  = TranslateAddressV(address, privileged, iswrite, size);
+						 -- replacement
+             var tlb_entry1 = TLBTypeCast (tlb_entry, asid, address);
+             DataTLB(0`5) <- Some (tlb_entry1);
+             unified_mainTLB(0`8) <-  Some (tlb_entry1);
+             return memaddrdesc
+					   }  
+				   case Hit (e) => 
+              { -- here: CheckPermission and CheckDomain, from the tlb entry (0 --ishyp, 0 --usesLD)
+                when CheckDomain(domain_entry(e), address, level_entry(e), iswrite) do
+                CheckPermission(perms_entry(e), address, level_entry(e), domain_entry(e), iswrite, privileged, false, false);
+               return va_to_pa (address, e)
+               }
+				   case Incon => #IMPLEMENTATION_DEFINED("set on fire")
+			      }
+		case Hit (e) =>  { -- here: CheckPermission and CheckDomain, from the tlb entry (0 --ishyp, 0 --usesLD)
+                when CheckDomain(domain_entry(e), address, level_entry(e), iswrite) do
+                CheckPermission(perms_entry(e), address, level_entry(e), domain_entry(e), iswrite, privileged, false, false);
+                 -- point 3 of page 6.6 of cortex a9
+                return va_to_pa (address, e)
+               }
+		case Incon => #IMPLEMENTATION_DEFINED("set on fire")
+	  }
+  else
   match lookupTLB_Instr_micro (asid, address)
    {
 	  case Miss => 
@@ -418,110 +453,8 @@ AddressDescriptor Ftech_TranslateAddress (address :: bits(32), privileged :: boo
                }
 		case Incon => #IMPLEMENTATION_DEFINED("set on fire")
 	  }
-  }
-
-
-component Fetch_MemA_with_priv
-            (address::word, size::nat, privileged::bool) :: bits(N)
-            with N in 8,16,32,64
-{  value =
-   {  -- when 8 * size <> N do
-      --   #ASSERT("MemA_with_priv: 8 * " : [size] : "<>" : [N]);
-      var VA;
-      -- Sort out aligment
-      if Aligned (address, size) then
-         VA <- address
-      else if CP15.SCTLR.A or CP15.SCTLR.U then
-         AlignmentFault(address, false)
-      else -- if legacy non alignment-checking configuration
-         VA <- Align (address, size);
-
-
-	    -- MMU or MPU
-	    memaddrdesc = Ftech_TranslateAddress(VA, privileged, false, size);
-
-      -- Memory array access, and sort out endianness
-      var value = mem(memaddrdesc, size);
-      when CPSR.E do
-         value <- BigEndianReverse (value, size);
-
-      [value]
-   }
-
-   assign value =
-   {
-      var VA;
-
-      -- Sort out aligment
-      if Aligned (address, size) then
-         VA <- address
-      else if CP15.SCTLR.A or CP15.SCTLR.U then
-         AlignmentFault(address, false)
-           else -- if legacy non alignment-checking configuration
-                VA <- Align (address, size);
-
-	    -- MMU or MPU
-	    memaddrdesc = Ftech_TranslateAddress(VA, privileged, true, size);
-	  
-
-    -- EXCLUDING FOR THE TIME BEING
-	  -- Effect on exclusives
-	  --when memaddrdesc.memattrs.shareable do
-	  -- ClearExclusiveByAddress(memaddrdesc.physicaladdress, ProcessorID(), size);
-	  
-      -- Sort out endianness, then memory array access
-      end_value = if CPSR.E then BigEndianReverse ([value], size) else [value];
-
-      mem(memaddrdesc, size) <- end_value
-   }
-}
-
-component Fetch_MemA (address::word, size::nat) :: bits(N) with N in 8,16,32,64
-{  value = Fetch_MemA_with_priv (address, size, CurrentModeIsNotUser())
-   assign value =
-     Fetch_MemA_with_priv (address, size, CurrentModeIsNotUser()) <- value
-}
-			   
-
-
-AddressDescriptor Data_TranslateAddress (address :: bits(32), privileged :: bool, iswrite :: bool,  size :: nat) =
-{
-	microInstrTLB_evict();
-	microDataTLB_evict();
-  mainTLB_evict();
-  -- the current asid
-  var asid = CP15.CONTEXTIDR.ASID;
-
-  match lookupTLB_Data_micro (asid, address)
-   {
-	  case Miss => 
-         match lookupTLB_main (asid, address)
-			    {
-				   case Miss => 
-				    {
-					   (memaddrdesc,tlb_entry)  = TranslateAddressV(address, privileged, iswrite, size);
-						 -- replacement
-             var tlb_entry1 = TLBTypeCast (tlb_entry, asid, address);
-             DataTLB(0`5) <- Some (tlb_entry1);
-             unified_mainTLB(0`8) <-  Some (tlb_entry1);
-             return memaddrdesc
-					   }  
-				   case Hit (e) => 
-              { -- here: CheckPermission and CheckDomain, from the tlb entry (0 --ishyp, 0 --usesLD)
-                when CheckDomain(domain_entry(e), address, level_entry(e), iswrite) do
-                CheckPermission(perms_entry(e), address, level_entry(e), domain_entry(e), iswrite, privileged, false, false);
-               return va_to_pa (address, e)
-               }
-				   case Incon => #IMPLEMENTATION_DEFINED("set on fire")
-			      }
-		case Hit (e) =>  { -- here: CheckPermission and CheckDomain, from the tlb entry (0 --ishyp, 0 --usesLD)
-                when CheckDomain(domain_entry(e), address, level_entry(e), iswrite) do
-                CheckPermission(perms_entry(e), address, level_entry(e), domain_entry(e), iswrite, privileged, false, false);
-                 -- point 3 of page 6.6 of cortex a9
-                return va_to_pa (address, e)
-               }
-		case Incon => #IMPLEMENTATION_DEFINED("set on fire")
-	  }
+  
+  
   }
 
 

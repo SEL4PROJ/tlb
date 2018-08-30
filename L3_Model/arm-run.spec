@@ -22,18 +22,18 @@ MachineCode Fetch =
    if iset == InstrSet_ARM or Architecture == ARMv4 then
    {  Encoding <- Encoding_ARM;
 	   -- address translation is being done in MemA
-      ARM (Fetch_MemA (REG(RName_PC), 4))
+      ARM (MemA (REG(RName_PC), 4, false ))
    }
    else if iset == InstrSet_Jazelle then
       BadCode ("Fetch")
    else
    {  fpc = REG(RName_PC);
 	  -- address translation is being done in MemA
-      ireg = Fetch_MemA (fpc, 2);
+      ireg = MemA (fpc, 2, false );
       if ireg<15:13> == 0b111 and ireg<12:11> != 0b00 then
       {  Encoding <- Encoding_Thumb2;
 		 -- address translation is being done in MemA
-         Thumb2 (ireg, Fetch_MemA (fpc+2, 2))
+         Thumb2 (ireg, MemA (fpc+2, 2, false ))
       }
       else
       {  Encoding <- Encoding_Thumb;

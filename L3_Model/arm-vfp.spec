@@ -575,11 +575,11 @@ define VFP > vldr (single_reg::bool, add::bool, d::dreg, n::reg, imm32::word) =
    base = if n == 15 then Align(PC, 4) else R(n);
    address = if add then base + imm32 else base - imm32;
    if single_reg then
-      S(d) <- MemA (address, 4)
+      S(d) <- MemA (address, 4, true)
    else
    {
-      word1 = MemA (address, 4) :: word;
-      word2 = MemA (address + 4, 4) :: word;
+      word1 = MemA (address, 4, true) :: word;
+      word2 = MemA (address + 4, 4, true) :: word;
       D(d) <- if BigEndian() then word1:word2 else word2:word1
    };
    IncPC()
@@ -593,12 +593,12 @@ define VFP > vstr (single_reg::bool, add::bool, d::dreg, n::reg, imm32::word) =
 {
    address = if add then R(n) + imm32 else R(n) - imm32;
    if single_reg then
-      MemA (address, 4) <- S(d)
+      MemA (address, 4, true) <- S(d)
    else
    {
       word = D(d);
-      MemA (address, 4) <- if BigEndian() then word<63:32> else word<31:0>;
-      MemA (address + 4, 4) <- if BigEndian() then word<31:0> else word<63:32>
+      MemA (address, 4, true) <- if BigEndian() then word<63:32> else word<31:0>;
+      MemA (address + 4, 4, true) <- if BigEndian() then word<31:0> else word<63:32>
    };
    IncPC()
 }
@@ -616,13 +616,13 @@ define VFP > vldm
    for r in 0 .. regs - 1 do
       if single_regs then
       {
-         S(d + [r]) <- MemA(address, 4);
+         S(d + [r]) <- MemA(address, 4, true);
          address <- address + 4
       }
       else
       {
-         word1 = MemA(address, 4) :: word;
-         word2 = MemA(address + 4, 4) :: word;
+         word1 = MemA(address, 4, true) :: word;
+         word2 = MemA(address + 4, 4, true) :: word;
          address <- address + 8;
          D(d + [r]) <- if BigEndian() then word1 : word2 else word2 : word1
       };
@@ -643,14 +643,14 @@ define VFP > vstm
    for r in 0 .. regs - 1 do
       if single_regs then
       {
-         MemA(address, 4) <- S(d + [r]);
+         MemA(address, 4, true) <- S(d + [r]);
          address <- address + 4
       }
       else
       {
          d = D(d + [r]);
-         MemA(address, 4) <- if BigEndian() then d<63:32> else d<31:0>;
-         MemA(address + 4, 4) <- if BigEndian() then d<31:0> else d<63:32>;
+         MemA(address, 4, true) <- if BigEndian() then d<63:32> else d<31:0>;
+         MemA(address + 4, 4, true) <- if BigEndian() then d<31:0> else d<63:32>;
          address <- address + 8
       };
    when wback do R(n) <- if add then R(n) + imm32 else R(n) - imm32;

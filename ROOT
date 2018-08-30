@@ -15,24 +15,29 @@ session Word_Lib (AFP) in "Word_Lib" = "HOL-Word" +
 
 chapter TLB
 
-(* Page tables for logic  *)
-session PTABLE = Word_Lib +
-  theories
-    "Page_Tables/PageTable_seL4"
 
-
-(* Collection of base theories that change rarely *)
 session L3_LIB = Word_Lib +
   theories
     "L3_Lib/L3_Lib"
+    "L3_Lib/L3_Hoare_Logic"
+	"Page_Tables/PageTable_seL4"
+	
+	
+	
+session PTABLE = Word_Lib +
+  theories
     "Page_Tables/PageTable_seL4"
-
+	
+	
 (* MMU_ARM *)
 session MMU_ARM = L3_LIB +
   theories
     "MMU_ARM/ARM_Monadic"
-     
+    
 
+
+     
+(*
 (* Refinement *)
 session ARM_REF = MMU_ARM +
   theories
@@ -49,7 +54,7 @@ session MMU_CASE = ARM_REF +
     "Ins_Cycle/Ins_Cycle"
     "Ins_Cycle/Ins_Cycle1"
     "Invalidation_Operations/Invalid_Ops"
-
+*)
 
 session LOGIC =  PTABLE +
    theories
