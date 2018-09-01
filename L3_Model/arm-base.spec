@@ -2621,55 +2621,56 @@ unit CheckPermission (perms :: Permissions, mva :: bits(32), level :: int, domai
                       ispriv :: bool, taketohypmode :: bool, LDFSRformat :: bool) =
  {
   -- variable for the DataAbort function with fixed values
-  var secondstageabort = false; 
-  var ipavalid = false; 
-  var s2fs1walk = false;
-  var ipa :: bits(40);
-  ipa <- UNKNOWN;
-  var abort :: bool;
+--  var secondstageabort = false; 
+--  var ipavalid = false; 
+--  var s2fs1walk = false;
+--  var ipa :: bits(40);
+--  ipa <- UNKNOWN;
+--  var abort :: bool;
   var ap_perms = perms.ap;
   when CP15.VSCTLR.AFE do ap_perms<0> <- true;
   match ap_perms
   {
-   case '000' => abort <- true
-   case '001' => abort <- !ispriv
-   case '010' => abort <- !ispriv and iswrite
-   case '011' => abort <- false
+   case '000' => #MMU_Exception ("permission fault")
+   case '001' => if !ispriv then #MMU_Exception ("permission fault") else nothing
+   case '010' => if (!ispriv and iswrite) then #MMU_Exception ("permission fault") else nothing
+   case '011' => nothing
    case '100' => #UNPREDICTABLE("access fault")
-   case '101' => abort <- !ispriv or iswrite
-   case '110' => abort <- iswrite
-   case '111' => abort <- iswrite
-  };
-  when abort do DataAbort(mva, ipa, domain, level, iswrite, DAbort_Permission, taketohypmode,
-              secondstageabort, ipavalid, LDFSRformat, s2fs1walk)
+   case '101' => if (!ispriv or iswrite) then #MMU_Exception ("permission fault") else nothing
+   case '110' => if iswrite then #MMU_Exception ("permission fault") else nothing
+   case '111' => if iswrite then #MMU_Exception ("permission fault") else nothing
+  }
+ -- when abort do #MMU_Exception ("permission fault")
  }
 
 
 
 -- CheckDomain()
 bool CheckDomain(domain :: bits(4), mva :: bits(32),  level :: int,  iswrite :: bool) =
-{
--- variables used for dataabort function 
-  var ipaddress :: bits (40);
-  ipaddress <-  UNKNOWN; 
-  var taketohypmode = false;
-  var secondstageabort = false; 
-  var ipavalid = false;
-  var LDFSRformat = false; 
-  var s2fs1walk = false;
-  var permissioncheck :: bool;
 
-  var bitpos = 2 * ([domain] :: nat);
-  match CP15.&DACR<bitpos+1:bitpos>  
+-- variables used for dataabort function 
+--  var ipaddress :: bits (40);
+--  ipaddress <-  UNKNOWN; 
+--  var taketohypmode = false;
+--  var secondstageabort = false; 
+--  var ipavalid = false;
+--  var LDFSRformat = false; 
+--  var s2fs1walk = false;
+--  var permissioncheck :: bool;
+
+--  var bitpos = 2 * ([domain] :: nat);
+  match CP15.&DACR<(2 * ([domain] :: nat))+1:(2 * ([domain] :: nat))>  
    {
-    case '00' => DataAbort(mva, ipaddress, domain, level, iswrite, DAbort_Domain, 
-                           taketohypmode, secondstageabort, ipavalid, LDFSRformat, s2fs1walk)
-    case '01' => permissioncheck <- true 
-    case '10' => #UNPREDICTABLE ("DACR fail")
-    case '11' => permissioncheck <- false
-  };
-  return permissioncheck
-}
+    --case '00' => DataAbort(mva, ipaddress, domain, level, iswrite, DAbort_Domain, 
+    --                       taketohypmode, secondstageabort, ipavalid, LDFSRformat, s2fs1walk)
+	
+	case '00' => #MMU_Exception "DACR fail"
+    case '01' => return (true) 
+    case '10' => #UNPREDICTABLE "DACR fail"
+    case '11' => return (false)
+  }
+
+
 
 
 -- should not be used
@@ -3108,101 +3109,101 @@ int UInt (w::bits(N)) = [[w]::nat]
 
 -- original function
 -- RemappedTEXDecode()
--- MemoryAttributes RemappedTEXDecode (texcb :: bits(5), S :: bits(1) ) = 
---  {
---   var memattrs :: MemoryAttributes;
---   var hintsattrs :: bits(4);
---   var region = [(texcb<2:0>)] :: nat; -- texcb<4:3> are ignored in this mapping scheme 
---   if region == 6 then
---      memattrs <- UNKNOWN  --IMPLEMENTATION_DEFINED setting of memattrs; 
---   else
---    {
---      match CP15.&PRRR<(2*region+1):2*region> 
---       {
---        case  '00' =>
---         {
---           memattrs.MemType    <- MemType_StronglyOrdered; 
---           memattrs.innerattrs <- UNKNOWN;
---           memattrs.outerattrs <- UNKNOWN; 
---           memattrs.innerhints <- UNKNOWN; 
---           memattrs.outerhints <- UNKNOWN; 
---           memattrs.shareable  <- true; 
---           memattrs.outershareable <- true
---           }
---        case '01' =>
---         {
---           memattrs.MemType    <- MemType_Device; 
---           memattrs.innerattrs <- UNKNOWN;
---           memattrs.outerattrs <- UNKNOWN;
---           memattrs.innerhints <- UNKNOWN; 
---           memattrs.outerhints <- UNKNOWN; 
---           memattrs.shareable  <- true; 
---           memattrs.outershareable <- true
---            }
---        case  '10' =>
---         {
---           memattrs.MemType <- MemType_Normal;
---           var hintattrs = ConvertAttrsHints(CP15.&NMRR<(2*region+1):2*region>); 
---           memattrs.innerattrs <- hintsattrs<1:0>;
---           memattrs.innerhints <- hintsattrs<3:2>;
---           hintattrs <- ConvertAttrsHints(CP15.&NMRR<(2*region+17):(2*region+16)>); 
---           memattrs.outerattrs <- hintsattrs<1:0>;
---           memattrs.outerhints <- hintsattrs<3:2>;
---           var s_bit = if ([S]:: bool) then CP15.PRRR.NS0 else CP15.PRRR.NS1;
---           memattrs.shareable <- s_bit;
---           memattrs.outershareable <- s_bit and !(CP15.&PRRR<region+24>)
---           }
---        case '11' =>  -- reserved
---        {
---          memattrs.MemType        <- UNKNOWN; 
---          memattrs.innerattrs     <- UNKNOWN; 
---          memattrs.outerattrs     <- UNKNOWN; 
---          memattrs.innerhints     <- UNKNOWN; 
---          memattrs.outerhints     <- UNKNOWN; 
---          memattrs.shareable      <- UNKNOWN;
---          memattrs.outershareable <- UNKNOWN
---           }
---        }
---     };
---   return memattrs
--- }
+ MemoryAttributes RemappedTEXDecode (texcb :: bits(5), S :: bits(1) ) = 
+  {
+   var memattrs :: MemoryAttributes;
+   var hintsattrs :: bits(4);
+   var region = [(texcb<2:0>)] :: nat; -- texcb<4:3> are ignored in this mapping scheme 
+   if region == 6 then
+      memattrs <- UNKNOWN  --IMPLEMENTATION_DEFINED setting of memattrs; 
+   else
+    {
+      match CP15.&PRRR<(2*region+1):2*region> 
+       {
+        case  '00' =>
+         {
+           memattrs.MemType    <- MemType_StronglyOrdered; 
+           memattrs.innerattrs <- UNKNOWN;
+           memattrs.outerattrs <- UNKNOWN; 
+           memattrs.innerhints <- UNKNOWN; 
+           memattrs.outerhints <- UNKNOWN; 
+           memattrs.shareable  <- true; 
+           memattrs.outershareable <- true
+           }
+        case '01' =>
+         {
+           memattrs.MemType    <- MemType_Device; 
+           memattrs.innerattrs <- UNKNOWN;
+           memattrs.outerattrs <- UNKNOWN;
+           memattrs.innerhints <- UNKNOWN; 
+           memattrs.outerhints <- UNKNOWN; 
+           memattrs.shareable  <- true; 
+           memattrs.outershareable <- true
+            }
+        case  '10' =>
+         {
+           memattrs.MemType <- MemType_Normal;
+           var hintattrs = ConvertAttrsHints(CP15.&NMRR<(2*region+1):2*region>); 
+           memattrs.innerattrs <- hintsattrs<1:0>;
+           memattrs.innerhints <- hintsattrs<3:2>;
+           hintattrs <- ConvertAttrsHints(CP15.&NMRR<(2*region+17):(2*region+16)>); 
+           memattrs.outerattrs <- hintsattrs<1:0>;
+           memattrs.outerhints <- hintsattrs<3:2>;
+           var s_bit = if ([S]:: bool) then CP15.PRRR.NS0 else CP15.PRRR.NS1;
+           memattrs.shareable <- s_bit;
+           memattrs.outershareable <- s_bit and !(CP15.&PRRR<region+24>)
+           }
+        case '11' =>  -- reserved
+        {
+          memattrs.MemType        <- UNKNOWN; 
+          memattrs.innerattrs     <- UNKNOWN; 
+          memattrs.outerattrs     <- UNKNOWN; 
+          memattrs.innerhints     <- UNKNOWN; 
+          memattrs.outerhints     <- UNKNOWN; 
+          memattrs.shareable      <- UNKNOWN;
+          memattrs.outershareable <- UNKNOWN
+           }
+        }
+     };
+   return memattrs
+ }
 
 -- our version
 
-MemoryAttributes RemappedTEXDecode (texcb :: bits(5), S :: bits(1) ) = 
- {
-  var memattrs :: MemoryAttributes;
-  var hintsattrs :: bits(4);
-  var region = [(texcb<2:0>)] :: nat; -- texcb<4:3> are ignored in this mapping scheme 
-  if region == 6 then
-        #MMU_Exception "Implementation_defined settings not supported" -- memattrs <- UNKNOWN  IMPLEMENTATION_DEFINED setting of memattrs; 
-  else
-   {
-     match CP15.&PRRR<(2*region+1):2*region> 
-      {
-       case  '00' =>  #MMU_Exception "MemType_StronglyOrdered settings not supported"
+--MemoryAttributes RemappedTEXDecode (texcb :: bits(5), S :: bits(1) ) = 
+-- {
+--  var memattrs :: MemoryAttributes;
+--  var hintsattrs :: bits(4);
+--  var region = [(texcb<2:0>)] :: nat; -- texcb<4:3> are ignored in this mapping scheme 
+--  if region == 6 then
+--        #MMU_Exception "Implementation_defined settings not supported" -- memattrs <- UNKNOWN  IMPLEMENTATION_DEFINED --setting of memattrs; 
+--  else
+--   {
+--     match CP15.&PRRR<(2*region+1):2*region> 
+--      {
+--       case  '00' =>  #MMU_Exception "MemType_StronglyOrdered settings not supported"
         
-       case '01' => #MMU_Exception "MemType_Device settings not supported"
+--       case '01' => #MMU_Exception "MemType_Device settings not supported"
         
-       case  '10' =>
-        {
-          memattrs.MemType <- MemType_Normal;
-          var hintattrs = ConvertAttrsHints(CP15.&NMRR<(2*region+1):2*region>); 
-          memattrs.innerattrs <- hintsattrs<1:0>;
-          memattrs.innerhints <- hintsattrs<3:2>;
-          hintattrs <- ConvertAttrsHints(CP15.&NMRR<(2*region+17):(2*region+16)>); 
-          memattrs.outerattrs <- hintsattrs<1:0>;
-          memattrs.outerhints <- hintsattrs<3:2>;
-          var s_bit = if ([S]:: bool) then CP15.PRRR.NS0 else CP15.PRRR.NS1;
-          memattrs.shareable <- s_bit;
-          memattrs.outershareable <- s_bit and !(CP15.&PRRR<region+24>)
-          }
-       case '11' =>  #MMU_Exception "reserved settings not supported" -- reserved
+--       case  '10' =>
+--        {
+--          memattrs.MemType <- MemType_Normal;
+--          var hintattrs = ConvertAttrsHints(CP15.&NMRR<(2*region+1):2*region>); 
+--          memattrs.innerattrs <- hintsattrs<1:0>;
+--          memattrs.innerhints <- hintsattrs<3:2>;
+--          hintattrs <- ConvertAttrsHints(CP15.&NMRR<(2*region+17):(2*region+16)>); 
+--          memattrs.outerattrs <- hintsattrs<1:0>;
+--          memattrs.outerhints <- hintsattrs<3:2>;
+--          var s_bit = if ([S]:: bool) then CP15.PRRR.NS0 else CP15.PRRR.NS1;
+--          memattrs.shareable <- s_bit;
+--          memattrs.outershareable <- s_bit and !(CP15.&PRRR<region+24>)
+--          }
+--       case '11' =>  #MMU_Exception "reserved settings not supported" -- reserved
 
-       }
-    };
-  return memattrs
-}
+--       }
+--    };
+--  return memattrs
+--}
 
 
 
@@ -3681,7 +3682,7 @@ AddressDescriptor * TLBRecord
 
 -- we are only supporting TranslateAddressV
 -- TranslateAddress()
---AddressDescriptor TranslateAddress(VA :: bits(32) , ispriv :: bool, iswrite :: bool, size :: nat) =
+--AddressDescriptor (VA :: bits(32) , ispriv :: bool, iswrite :: bool, size :: nat) =
 --   match MemorySystemArchitecture()
 --    {
 --      case MemArch_VMSA => return  Fst(TranslateAddressV(VA, ispriv, iswrite, size))

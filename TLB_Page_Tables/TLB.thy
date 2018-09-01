@@ -10,7 +10,6 @@ theory TLB
 imports
   (*"HOL-Word.Word"*)
   PTABLE.PageTable_seL4
-  L3_LIB.L3_Lib
 
 begin
 
@@ -52,20 +51,22 @@ record Permissions =
    pxn  :: "1 word"
 
 
-record flags = 
+record flags =                 
    MemoryAttributes :: MemoryAttributes
    Permissions :: Permissions
-   nG    :: "1 word"
+   \<comment> \<open>nG    :: bool\<close>
    domain  ::  "4 word"
    level :: int
 
+(* fix the data type here *)
+datatype tag = Asid "8 word" 
+             | Global
 
 datatype tlb_entry =
-    EntrySmall   asid vSm pSm flags
-  | EntryLarge   asid vLr pLr flags
-  | EntrySection asid vSe pSe flags
-  | EntrySuper   asid vSp pSp flags
-
+    EntrySmall   tag vSm pSm flags
+  | EntryLarge   tag vLr pLr flags
+  | EntrySection tag vSe pSe flags
+  | EntrySuper   tag vSp pSp flags
 
 
 type_synonym tlb = "tlb_entry set"
@@ -89,28 +90,66 @@ where
                       |      EntrySuper   a va pa f    \<Rightarrow> {(ucast va::32 word) << 24 ..
                                                             ((ucast va::32 word) << 24) + (2^24 - 1)}"
 
-(* ASID tag of an Entry *)
 fun
-  asid_entry :: "tlb_entry \<Rightarrow> asid"
+  flags_entry :: "tlb_entry \<Rightarrow> flags"
 where
-  "asid_entry (EntrySmall   a x y z) = a"
-| "asid_entry (EntryLarge   a x y z) = a"
-| "asid_entry (EntrySection a x y z) = a"
-| "asid_entry (EntrySuper   a x y z) = a"
+  "flags_entry (EntrySmall   a x y fl) = fl"
+| "flags_entry (EntryLarge   a x y fl) = fl"
+| "flags_entry (EntrySection a x y fl) = fl"
+| "flags_entry (EntrySuper   a x y fl) = fl"
 
 
-(* Address Range of an entry with ASID tag *)
+fun
+  tag_entry :: "tlb_entry \<Rightarrow> tag"
+where
+  "tag_entry (EntrySmall   t x y z) = t"
+| "tag_entry (EntryLarge   t x y z) = t"
+| "tag_entry (EntrySection t x y z) = t"
+| "tag_entry (EntrySuper   t x y z) = t"
+
+
 definition
-  entry_range_asid_tags :: "tlb_entry \<Rightarrow> (asid \<times> va) set"
+  entry_range_tags :: "tlb_entry \<Rightarrow> (tag \<times> va) set"
 where
-  "entry_range_asid_tags E \<equiv> image (\<lambda>v. (asid_entry E , v)) (entry_range E)"
+  "entry_range_tags E \<equiv> image (\<lambda>v. (tag_entry E , v)) (entry_range E)"
+
+definition 
+  tlb_asid :: "tlb_entry set \<Rightarrow> tlb_entry set"
+where
+  "tlb_asid t = {E\<in>t. tag_entry E \<noteq> Global}"
+
+lemma tlb_asid_check:
+  "\<forall>tag\<in>(tag_entry ` tlb_asid t). \<exists>a. tag = Asid a"
+  apply (clarsimp simp: tlb_asid_def)
+  using tag.exhaust by auto
+
+definition 
+  tlb_global :: "tlb_entry set \<Rightarrow> tlb_entry set"
+where
+  "tlb_global t = {E\<in>t. tag_entry E = Global}"
 
 
-(* Set of all the entries covering a virtual address and an ASID *)
+lemma tlb_asid_global_check:
+  "t = tlb_global t  \<union> tlb_asid t"
+  apply (clarsimp simp: tlb_asid_def tlb_global_def)
+  by blast
+  
+
+
 definition
   entry_set :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> (tlb_entry set)"
 where
-  "entry_set t a v \<equiv> {E\<in>t. (a,v) : entry_range_asid_tags E } "
+  "entry_set t a v \<equiv> {E\<in>tlb_asid t. (Asid a,v) : entry_range_tags E } \<union>
+                      {E\<in>tlb_global t. (Global,v) : entry_range_tags E } "
+
+(* another version *)
+
+definition
+  entry_set' :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> (tlb_entry set)"
+where
+  "entry_set' t a v \<equiv> {E\<in>tlb_asid t. (Asid a,v) : entry_range_tags E } \<union>
+                      {E\<in>tlb_global t. v : entry_range E } "
+
 
 
 (* Lookup for a virtual address along with an ASID *)
@@ -124,16 +163,22 @@ where
 
 (* set of all the virtual addresses with ASID tags covered by TLB *)
 definition
-  a_va_set :: "tlb \<Rightarrow> (asid \<times> va) set"
+  tag_va_set :: "tlb \<Rightarrow> (tag \<times> va) set"
 where
-  "a_va_set t \<equiv> \<Union> (entry_range_asid_tags ` t)"
+  "tag_va_set t \<equiv> \<Union> (entry_range_tags ` t)"
 
 
 (* Is a virtual address and an ASID covered by TLB *)
 definition
   is_a_va_present :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> bool"
 where
-  "is_a_va_present t a v \<equiv> (a,v) : a_va_set t"
+  "is_a_va_present t a v \<equiv> (Asid a, v) : tag_va_set (tlb_asid t)"
+
+
+definition
+  is_global_va_present :: "tlb \<Rightarrow> va \<Rightarrow> bool"
+where
+  "is_global_va_present t v \<equiv> (Global, v) : tag_va_set (tlb_global t)"
 
 
 (* Selective invalidation of a virtual address for an ASID *)
@@ -141,14 +186,18 @@ where
 definition
   a_va_sel_invalidate :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> tlb"
 where
-  "a_va_sel_invalidate t a v \<equiv> case lookup t a v of Hit x \<Rightarrow> t - {x}
-                                                          | Miss  \<Rightarrow> t
-                                                          | Incon \<Rightarrow> t - entry_set t a v"
+  "a_va_sel_invalidate t a v \<equiv> t -{E\<in>tlb_asid t. (Asid a,v) : entry_range_tags E } "
+
+definition
+  global_va_sel_invalidate :: "tlb \<Rightarrow> va \<Rightarrow> tlb"
+where
+  "global_va_sel_invalidate t v \<equiv> t - {E\<in>tlb_global t. (Global,v) : entry_range_tags E }"
+
 
 theorem is_present_selective:
   "\<not>(is_a_va_present (a_va_sel_invalidate t a v) a v)"
   unfolding a_va_sel_invalidate_def
-            lookup_def is_a_va_present_def entry_set_def a_va_set_def
+            lookup_def is_a_va_present_def entry_set_def tag_va_set_def tlb_asid_def
   by (fastforce split: if_split_asm)
 
 
@@ -167,50 +216,32 @@ where
 
 theorem lookup_miss_case:
   "lookup t a v = Miss \<Longrightarrow> \<not>is_a_va_present t a v"
-  unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
+  unfolding is_a_va_present_def lookup_def entry_set_def tag_va_set_def tlb_asid_def
   by (simp split: if_split_asm)
 
 
 (* Theorems for Block Invalidation *)
 theorem  lookup_incon_case:
   "lookup t a v = Incon \<Longrightarrow> \<not>is_a_va_present (t - entry_set t a v) a v"
-  unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
-  by (simp split: if_split_asm)
+  unfolding is_a_va_present_def lookup_def entry_set_def tag_va_set_def tlb_asid_def tlb_global_def
+  by (simp split: if_split_asm, blast)
 
 
 theorem lookup_hit_case:
   "lookup t a v = Hit x \<Longrightarrow> \<not>is_a_va_present (t - {x}) a v"
-  unfolding lookup_def is_a_va_present_def entry_set_def a_va_set_def
-  by (force split: if_split_asm)
+  unfolding is_a_va_present_def lookup_def entry_set_def tag_va_set_def tlb_asid_def tlb_global_def
+  by (simp split: if_split_asm, blast)
 
 theorem member_selective_invalidation:
-  "x \<in> a_va_sel_invalidate t a v \<Longrightarrow> (a,v) \<notin>  entry_range_asid_tags x"
-  unfolding a_va_sel_invalidate_def
-  apply (simp split: lookup_type.splits)
-  apply (drule lookup_miss_case)
-  unfolding is_a_va_present_def a_va_set_def
-  apply (simp)
-  apply (drule lookup_incon_case)
-  unfolding is_a_va_present_def a_va_set_def
-  apply (simp)
-  apply (drule lookup_hit_case)
-  unfolding is_a_va_present_def a_va_set_def
-  by (simp)
-
-
+  "x \<in> a_va_sel_invalidate t a v \<Longrightarrow> (Asid a,v) \<notin>  entry_range_tags x"
+  by (clarsimp simp: a_va_sel_invalidate_def tlb_asid_def entry_range_tags_def)
+ 
 
 theorem is_present_block:
   "\<not>(is_a_vset_present (a_va_block_invalidation t a V) a V)"
-  unfolding is_a_vset_present_def
-  apply (safe)
-  unfolding is_a_va_present_def
-  apply (subgoal_tac "entry_set (a_va_block_invalidation t a V) a v \<noteq> {}")
-  unfolding entry_set_def a_va_block_invalidation_def
-  apply clarsimp
-  apply (drule_tac x="v" in bspec, assumption , simp add: member_selective_invalidation)
-  unfolding a_va_set_def entry_set_def
-  by force
-
+  apply (clarsimp simp: is_a_vset_present_def a_va_block_invalidation_def is_a_va_present_def 
+                        a_va_sel_invalidate_def tag_va_set_def tlb_asid_def entry_range_tags_def)
+  by blast
 
 (* is_TLB_okay *)
 
@@ -218,7 +249,7 @@ definition
   overlapping_entries :: "tlb \<Rightarrow> tlb"
 where
   "overlapping_entries t \<equiv>
-     {x\<in>t. (entry_range_asid_tags x \<inter> a_va_set (t - {x}) ) \<noteq> {} }"
+     {x\<in>t. (entry_range_tags x \<inter> tag_va_set (t - {x}) ) \<noteq> {} }"
 
 
 definition
@@ -227,43 +258,27 @@ where
   "is_okay t \<equiv> (overlapping_entries t = {})"
 
 theorem member_va_set:
-  "(a,v) \<in> a_va_set t \<Longrightarrow> entry_set t a v \<noteq> {}"
-  unfolding a_va_set_def entry_set_def
+  "(Asid a,v) \<in> tag_va_set t \<Longrightarrow> entry_set t a v \<noteq> {}"
+  unfolding tag_va_set_def entry_set_def tlb_asid_def
   apply clarsimp
-  unfolding  entry_range_asid_tags_def
+  unfolding  entry_range_tags_def
   by force
 
 theorem  inter_entry_va_set:
-  "entry_range_asid_tags x \<inter> a_va_set (t - {x}) = {} \<Longrightarrow>
-     \<forall>y\<in>t. \<forall>av\<in>entry_range_asid_tags x. y \<noteq> x \<longrightarrow> av \<notin> entry_range_asid_tags y"
-  unfolding a_va_set_def
+  "entry_range_tags x \<inter> tag_va_set (t - {x}) = {} \<Longrightarrow>
+     \<forall>y\<in>t. \<forall>av\<in>entry_range_tags x. y \<noteq> x \<longrightarrow> av \<notin> entry_range_tags y"
+  unfolding tag_va_set_def
   by force
 
 theorem  invalidating_corrupt_entries:
   "is_okay (t - overlapping_entries t)"
-  unfolding is_okay_def overlapping_entries_def
-  apply safe
-  apply (drule member_va_set)
-  unfolding entry_set_def
-  apply clarsimp
-  apply (drule inter_entry_va_set , drule_tac x="xa" in bspec , assumption ,
-               drule_tac x="(a,b)" in bspec , assumption )
-   by simp
+  apply (clarsimp simp: is_okay_def overlapping_entries_def tag_va_set_def)
+  by blast
 
 
 (* Physical Address Retrieval *)
 
 datatype bpa = Bpsm "20 word" | Bplr "16 word" | Bpse "12 word" | Bpsp "8 word"
-
-(*
-fun
-  bpa_entry :: "tlb_entry \<Rightarrow> bpa option"
-where
-  "bpa_entry (EntrySmall _ _ p _)   = map_option Bpsm p"
-| "bpa_entry (EntryLarge _ _ p _)   = map_option Bplr p"
-| "bpa_entry (EntrySection _ _ p _) = map_option Bpse p"
-| "bpa_entry (EntrySuper _ _ p _)   = map_option Bpsp p"
-*)
 
 
 fun
@@ -274,10 +289,6 @@ where
 | "bpa_entry (EntrySection _ _ p _) =  Bpse p"
 | "bpa_entry (EntrySuper _ _ p _)   =  Bpsp p"
 
-(*
-definition
-  "is_fault e = (bpa_entry e = None)"
-*)
 
 fun
   bpa_to_pa :: "va \<Rightarrow> bpa \<Rightarrow> 32 word"
@@ -287,12 +298,6 @@ where
 | "bpa_to_pa va (Bpse bpa) = (ucast bpa << 20) OR (va AND mask 20)"
 | "bpa_to_pa va (Bpsp bpa) = (ucast bpa << 24) OR (va AND mask 24)"
 
-(*
-definition
-  va_to_pa :: "va \<Rightarrow> tlb_entry \<Rightarrow> 32 word"
-where
-  "va_to_pa v t \<equiv> bpa_to_pa v (the (bpa_entry t))"
-*)
 
 definition
   va_to_pa :: "va \<Rightarrow> tlb_entry \<Rightarrow> 32 word"
@@ -303,69 +308,82 @@ where
 
 theorem lookup_miss_not_present_implies:
   "lookup t a v = Miss \<Longrightarrow> \<not>is_a_va_present t a v"
-  unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
-  by (simp split: if_split_asm)
+  by (simp add: lookup_miss_case)
 
 theorem not_present_lookup_miss_implies:
   "\<not>is_a_va_present t a v \<Longrightarrow> lookup t a v = Miss"
-  unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
-  by (simp split: if_split_asm)
+  (* not true anymore *)
+  oops
 
+(* not true anymore *)
 theorem lookup_miss_not_present:
   "(lookup t a v = Miss) = (\<not>is_a_va_present t a v)"
-  apply (rule iffI)
-  unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
-  by (simp split: if_split_asm)+
+  (*apply (rule iffI)
+  unfolding is_a_va_present_def lookup_def entry_set_def  tag_va_set_def tlb_asid_def tlb_global_def
+  apply (simp split: if_split_asm)+ *)
+  oops
+
 
 (* ---------------------------------------------------------------------*)
 
 theorem is_present_look_up_not_miss_implies:
   "is_a_va_present t a v \<Longrightarrow> lookup t a v \<noteq> Miss "
-  unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
+  unfolding is_a_va_present_def lookup_def entry_set_def tag_va_set_def
   apply (safe)
   by (simp split: if_split_asm)
 
+(* not true anymore *)
 theorem look_up_not_miss_is_present_imples:
   "lookup t a v \<noteq> Miss \<Longrightarrow> is_a_va_present t a v"
-  unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
+  (*unfolding is_a_va_present_def lookup_def entry_set_def tag_va_set_def
   apply (simp split: if_split_asm)
-  by force+
+  by force+ *)
+  oops
 
+(* have to see *)
 theorem is_present_look_up_not_miss:
   "(is_a_va_present t a v) = (lookup t a v \<noteq> Miss)"
-  apply (rule iffI)
-  unfolding is_a_va_present_def lookup_def entry_set_def a_va_set_def
+  (*apply (rule iffI)
+  unfolding is_a_va_present_def lookup_def entry_set_def tag_va_set_def
   apply (safe)
   by (simp split: if_split_asm ; force)+
+*)
+oops
 
 (* ---------------------------------------------------------------------*)
-
+ (* have to see *)
 theorem is_okay_not_empty_exist:
   "\<lbrakk>is_okay t ; entry_set t a v \<noteq> {} \<rbrakk> \<Longrightarrow> \<exists>x. entry_set t a v = {x}"
+ (* apply (clarsimp simp: is_okay_def overlapping_entries_def entry_set_def tag_va_set_def entry_range_tags_def tlb_asid_def tlb_global_def)
+
   unfolding entry_set_def
   unfolding is_okay_def overlapping_entries_def
-  unfolding a_va_set_def
+  unfolding tag_va_set_def
   apply clarsimp
   apply (drule_tac x="x" in spec)
   apply clarsimp
   apply (rule_tac x="x" in exI)
   by auto
+*)
 
+oops
 
 theorem is_okay_not_miss_exist:
   "\<lbrakk>is_okay t ; lookup t a v \<noteq> Miss  \<rbrakk> \<Longrightarrow>
                \<exists>x\<in>t. lookup t a v = Hit x"
-  unfolding lookup_def
+(*  unfolding lookup_def
   apply (simp split: if_split_asm)
   apply (unfold entry_set_def) [1]
   apply force
   apply (drule(1) is_okay_not_empty_exist)
-  by simp
+  by simp *)
+oops
+
 (* ---------------------------------------------------------------------*)
 
 theorem is_okay_is_present_not_incon:
   "\<lbrakk>is_okay t ; is_a_va_present t a v \<rbrakk> \<Longrightarrow> lookup t a v \<noteq> Incon"
-  apply safe
+(*  apply safe
   apply (drule is_present_look_up_not_miss_implies)
   unfolding lookup_def
   apply (simp split: if_split_asm)
@@ -375,11 +393,12 @@ theorem is_okay_is_present_not_incon:
   apply simp
   apply (drule_tac x="x" in spec)
   by force
-
+*)
+oops
 
 theorem is_okay_not_incon:
   "is_okay t \<Longrightarrow>  \<forall>v a. lookup t a v \<noteq> Incon"
-  apply safe
+(*  apply safe
   unfolding lookup_def
   apply (simp split: if_split_asm)
   unfolding is_okay_def overlapping_entries_def a_va_set_def entry_set_def
@@ -388,13 +407,15 @@ theorem is_okay_not_incon:
   apply simp
   apply (drule_tac x="x" in spec)
   by force
+*)
+oops
 
 
+(*
 theorem  entry_set_empty:
-  "entry_set t a v  = {} \<Longrightarrow> (a, v) \<notin> a_va_set t"
-  unfolding entry_set_def a_va_set_def
-  by simp
-
+  "entry_set t a v  = {} \<Longrightarrow> (Asid a, v) \<notin> tag_va_set t"
+   unfolding entry_set_def tag_va_set_def tlb_global_def tlb_asid_def entry_range_tags_def
+ oops
 
 theorem is_okay_intro1:
   "\<forall>x \<in> t. entry_range_asid_tags x \<inter> a_va_set (t - {x}) = {} \<Longrightarrow> is_okay t"
@@ -409,7 +430,7 @@ theorem  is_okay_intro2:
 
 theorem bounded_forall_v_a:
   "\<forall>v a. lookup t a v \<noteq> Incon \<Longrightarrow>
-      \<forall>x\<in>t. \<forall>v a. (a, v) \<in> a_va_set t \<longrightarrow> lookup t a v \<noteq> Incon"
+      \<forall>x\<in>t. \<forall>v a. (a, v) \<in> tag_va_set t \<longrightarrow> lookup t a v \<noteq> Incon"
   by clarsimp
 
 
@@ -497,26 +518,28 @@ theorem not_okay_lookup_incon:
   apply metis
   by simp
 
+*)
 (* ---------------------------------------------------------------------*)
 
 
 (*          ASID INVALIDATION CASE       *)
 
 (* set of all the entries for a particular ASID *)
+(*
 definition
-  asid_entry_set :: "tlb \<Rightarrow> asid \<Rightarrow> (tlb_entry set)"
+  asid_entry_set :: "tlb \<Rightarrow> Asid \<Rightarrow> (tlb_entry set)"
 where
   "asid_entry_set t a \<equiv> {E\<in>t. asid_entry E = a} "
 
 definition
-  asid_set :: "tlb \<Rightarrow> asid set"
+  asid_set :: "tlb \<Rightarrow> Asid set"
 where
   "asid_set t \<equiv> asid_entry ` t"
 
 (* is ASID entries present in TLB *)
 
 definition
-  is_asid_present :: "tlb \<Rightarrow> asid \<Rightarrow> bool"
+  is_asid_present :: "tlb \<Rightarrow> Asid \<Rightarrow> bool"
 where
   "is_asid_present t a \<equiv>  a : asid_set t"
 
@@ -525,7 +548,7 @@ where
 (* ASID Invalidation *)
 
 definition
-  asid_invalidation :: "tlb \<Rightarrow> asid \<Rightarrow> tlb"
+  asid_invalidation :: "tlb \<Rightarrow> Asid \<Rightarrow> tlb"
 where
   "asid_invalidation t a \<equiv> t - asid_entry_set t a "
 
@@ -679,7 +702,7 @@ theorem lookup_va_invalid:
 lemma entry_set_def2:
   "entry_set t a v = {e\<in>t. v \<in> entry_range e \<and> a = asid_entry e}"
   by (auto simp: entry_set_def entry_range_asid_tags_def)
-
+*)
 
 (*---------------------------------------------------*)
 
@@ -714,7 +737,7 @@ lemma Hits_le [simp]:
 
 lemma tlb_mono_entry_set:
   "t \<subseteq> t' \<Longrightarrow> entry_set t a v \<subseteq> entry_set t' a v"
-  by (simp add: entry_set_def) blast
+  by (simp add: entry_set_def tlb_asid_def tlb_global_def) blast
 
 lemma tlb_mono:
   "t \<subseteq> t' \<Longrightarrow> lookup t a v \<le> lookup t' a v"
@@ -737,87 +760,10 @@ where
       case mem pa of
             None   \<Rightarrow> None
           | Some _ \<Rightarrow>
-            Some (((ucast (the (mem pa))       ::32 word) << 24)  OR
+            Some  (((ucast (the (mem pa))       ::32 word) << 24)  OR
                   ((ucast (the (mem (pa + 1))) ::32 word) << 16)  OR
                   ((ucast (the (mem (pa + 2))) ::32 word) << 8)   OR
-     
-	 
-	              (ucast  (the (mem (pa + 3))) ::32 word)) "
-
-
-
-consts
-  MemAtt :: "5 word \<Rightarrow> 1 word \<Rightarrow> 32 word \<Rightarrow> 32 word \<Rightarrow> MemoryAttributes"
-(* RemappedTEXDecode*)
-
-definition
-  perms_to_tlb_fl :: "arm_perm_bits \<Rightarrow> 32 word \<Rightarrow> 32 word \<Rightarrow> flags"
-where
-  "perms_to_tlb_fl pb prrr nmrr \<equiv> \<lparr> 
-   MemoryAttributes = MemAtt (((ucast (arm_p_TEX pb) :: 5 word) << 2) && ((ucast (arm_p_C pb) :: 5 word) << 1) && (ucast (arm_p_B pb) :: 5 word))  (arm_p_S pb) prrr nmrr, 
-   Permissions = \<lparr>ap  = ((ucast (arm_p_APX pb) :: 3 word) << 2)  && ucast(arm_p_AP pb), 
-                         xn = arm_p_XN pb , pxn = arm_p_PXN pb \<rparr>,
-   nG    = arm_p_nG pb,
-   domain  =  arm_p_domain pb,
-   level = arm_p_level pb \<rparr>"
-
-
-type_synonym prrr = "32 word"
-type_synonym nmrr = "32 word"
-
-(* taking from L3 for the time being 
-
-
-definition word_bits :: "nat \<Rightarrow> nat \<Rightarrow> 'a::len word \<Rightarrow> 'a::len word" where
-  "word_bits h l w = (w >> l) AND mask (Suc h - l)"
-
-definition word_extract :: "nat \<Rightarrow> nat \<Rightarrow> 'a::len word \<Rightarrow> 'b::len word" where
-  "word_extract h l w = ucast (word_bits h l w)"
-
-*)
-
-
-definition
- pt_walk :: "asid \<Rightarrow> heap \<Rightarrow> ttbr0 \<Rightarrow> prrr \<Rightarrow> nmrr \<Rightarrow> vaddr \<Rightarrow> tlb_entry option"
-where
-  "pt_walk asid heap ttbr0 prrr nmrr v \<equiv>
-      case get_pde heap ttbr0 v
-       of None                 \<Rightarrow> None
-       | Some InvalidPDE       \<Rightarrow> None
-       | Some ReservedPDE      \<Rightarrow> None
-       | Some (SectionPDE p a) \<Rightarrow>
-          Some (EntrySection asid (ucast (addr_val v >> 20) :: 12 word)
-                              ((word_extract 31 20 (addr_val p)):: 12 word)  (perms_to_tlb_fl a prrr nmrr))
-       | Some (SuperSectionPDE p a) \<Rightarrow>
-         Some (EntrySuper asid   (ucast (addr_val v >> 24) :: 8 word)
-                            ((word_extract 31 24 (addr_val p)):: 8 word)  (perms_to_tlb_fl a prrr nmrr))
-       | Some (PageTablePDE p) \<Rightarrow>
-               (case get_pte heap p v
-                 of None                     \<Rightarrow> None
-                 |  Some InvalidPTE          \<Rightarrow> None
-                 |  Some (SmallPagePTE p a) \<Rightarrow> 
-                         Some (EntrySmall asid (ucast (addr_val v >> 12) :: 20 word)
-                                              ((word_extract 31 12 (addr_val p)):: 20 word) (perms_to_tlb_fl a prrr nmrr))
-                 |  Some (LargePagePTE p a) \<Rightarrow> 
-                         Some (EntryLarge asid (ucast (addr_val v >> 8) :: 16 word)
-                                              ((word_extract 31 16 (addr_val p)):: 16 word) (perms_to_tlb_fl a prrr nmrr)))"
-
-record AdrDes = phy_ad :: paddr
-                memattrs :: MemoryAttributes 
-
-
-
-definition
-  ptable_lift_adrdesc :: "heap \<Rightarrow> paddr  \<Rightarrow> prrr \<Rightarrow> prrr \<Rightarrow> vaddr \<rightharpoonup> AdrDes" where
-  "ptable_lift_adrdesc h pt_root prrr nmrr vp \<equiv>
-     let
-       vp_val = addr_val vp
-     in
-       map_option 
-         (\<lambda>(base, pg_size, perms). 
-            \<lparr>phy_ad = base r+ (vaddr_offset pg_size vp_val),
-             memattrs = MemAtt (((ucast (arm_p_TEX perms) :: 5 word) << 2) && ((ucast (arm_p_C perms) :: 5 word) << 1) && (ucast (arm_p_B perms) :: 5 word))  (arm_p_S perms) prrr nmrr \<rparr>)
-         (lookup_pde h pt_root vp)"
+	                (ucast  (the (mem (pa + 3))) ::32 word)) "
 
 
 end

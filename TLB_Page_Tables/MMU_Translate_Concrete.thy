@@ -4,7 +4,10 @@ imports  L3_LIB.L3_Hoare_Logic
          MMU_ARM.ARM_Monadic
 begin
 
+
+
 declare return_def [simp add]
+
 
 definition 
   MMU_config_assert_isa :: "'a state_scheme \<Rightarrow> bool"
@@ -19,8 +22,94 @@ where
                               \<not>TTBCR.PD0 (TTBCR(CP15 s))  \<and> 
                               \<not>reg'TTBR0 (TTBR0 (CP15 s)) !! 0 \<and>
                               \<not>VSCTLR.EE (VSCTLR(CP15 s)) \<and>
-                              VSCTLR.AFE (VSCTLR(CP15 s)) \<and>
+                              \<not>VSCTLR.AFE (VSCTLR(CP15 s)) \<and>  \<comment> \<open>hardware access flag is disabled\<close>
                               VSCTLR.TRE (VSCTLR(CP15 s))"
+
+
+
+fun
+  mem_typcast :: "TLB.MemType_t \<Rightarrow> ARM_Monadic.MemType_t"
+where
+  "mem_typcast TLB.MemType_Normal = ARM_Monadic.MemType_Normal"
+| "mem_typcast TLB.MemType_Device = ARM_Monadic.MemType_Device"
+| "mem_typcast TLB.MemType_StronglyOrdered = ARM_Monadic.MemType_StronglyOrdered"
+
+
+definition
+  mematr_typcast :: "TLB.MemoryAttributes \<Rightarrow> ARM_Monadic.MemoryAttributes"
+where
+  "mematr_typcast mematr = \<lparr> 
+     MemType         = mem_typcast (TLB.MemoryAttributes.MemType mematr),
+     innerattrs      = TLB.MemoryAttributes.innerattrs mematr,
+     innerhints      = TLB.MemoryAttributes.innerhints mematr,
+     innertransient  = TLB.MemoryAttributes.innertransient mematr,
+     outerattrs      = TLB.MemoryAttributes.outerattrs mematr,
+     outerhints      = TLB.MemoryAttributes.outerhints mematr,
+     outershareable  = TLB.MemoryAttributes.outershareable mematr,
+     outertransient  = TLB.MemoryAttributes.outertransient mematr,
+     shareable       = TLB.MemoryAttributes.shareable mematr\<rparr>"
+
+
+fun
+  excp_typcast :: "ARM_Monadic.exception \<Rightarrow> MMU_Translate_Refine.Exception"
+where
+  "excp_typcast (ARM_Monadic.ASSERT string)                  = MMU_Translate_Refine.ASSERT string"
+| "excp_typcast (ARM_Monadic.IMPLEMENTATION_DEFINED string)  = MMU_Translate_Refine.IMPLEMENTATION_DEFINED string"
+| "excp_typcast (ARM_Monadic.MMU_Exception string)           = MMU_Translate_Refine.MMU_Exception string"
+| "excp_typcast  ARM_Monadic.NoException                      = MMU_Translate_Refine.NoException "
+| "excp_typcast (ARM_Monadic.UNPREDICTABLE string)           = MMU_Translate_Refine.UNPREDICTABLE string"
+| "excp_typcast (ARM_Monadic.VFP_EXCEPTION string)           = MMU_Translate_Refine.VFP_EXCEPTION string"
+
+
+
+definition
+  state_comp :: "state \<Rightarrow> tlbs_set cstate_scheme \<Rightarrow> bool"
+where
+  "state_comp s t \<equiv>  
+      (\<lambda>p. (MEM s) (addr_val p)) = heap t \<and>
+      (Addr (reg'TTBR0 (TTBR0 (CP15 s) ) ) ) = ttbr0 t \<and> 
+      ASID (CONTEXTIDR (CP15 s) )   = cstate.asid t \<and>
+      excp_typcast(exception  s) = cstate.Exception t \<and>      
+      (reg'PRRR (PRRR (CP15 s) ) )  = prrr t \<and>
+      (reg'NMRR (NMRR (CP15 s) ) )  = nmrr t \<and>
+      (reg'DACR (DACR (CP15 s) ) )  = dacr t"
+
+consts tlbtypcastt :: "TLBEntry \<Rightarrow> tlb_entry"
+
+definition
+  tlb_rel :: "state \<Rightarrow> tlbs_set cstate_scheme \<Rightarrow> bool"
+where
+  "tlb_rel s t \<equiv>  state_comp s t \<and>
+                  tlbtypcastt ` {entry. \<forall>ad. (micro_DataTLB s) ad = Some entry} \<subseteq> dtlb_set (cstate.more t) \<and> 
+                  tlbtypcastt ` {entry. \<forall>ad. (micro_InstrTLB s) ad = Some entry} \<subseteq> itlb_set (cstate.more t) \<and> 
+                  tlbtypcastt ` {entry. \<forall>ad. (main_TLB s) ad = Some entry} \<subseteq> unitlb_set (cstate.more t) "
+
+
+ (*
+consistent and exception
+
+ *)
+
+(*
+
+definition
+  "consistent0 m asid ttbr0 tlb va \<equiv>
+     lookup tlb asid (addr_val va) = Hit (pt_walk asid m ttbr0 va) \<or>
+     lookup tlb asid (addr_val va) = Miss"
+
+
+abbreviation
+  "consistent (s::tlb_entry set state_scheme) \<equiv>
+               consistent0 (MEM s) (ASID s) (TTBR0 s) (state.more s)"
+
+*)
+
+
+definition 
+  typ_tlb :: "'a tlb_state_scheme \<Rightarrow> tlbs_set cstate_scheme"
+where
+  "typ_tlb s =  cstate.extend (cstate.truncate s) (tlbs_set s)"
+
 
 
 definition 
@@ -28,16 +117,41 @@ definition
 where 
   "map_mem m = (\<lambda>x. m (addr_val x))"
 
-term Ftech_TranslateAddress
+lemma  
+  "\<lbrakk>MMU_config_assert_isa s;  tlb_rel s (typ_tlb t); 
+     TranslateAddress (va , ispriv, iswrite, siz, data_exe) s = (adrdesc, s') ; 
+     mmu_translate  (Addr va) siz ispriv iswrite data_exe (t :: 'a tlb_state_scheme) = ((pa' , mematr), t')\<rbrakk> \<Longrightarrow>
+         Addr (paddress (adrdesc)) = pa' \<and> 
+         AddressDescriptor.memattrs (adrdesc) = mematr_typcast mematr \<and>  tlb_rel s' (typ_tlb t')"
 
-(*from Gerwin:
-    TLB relation (de we have to do eviction in the isabelle version)
-     privileged, iswrite, siz of mmu_translate*)
+(* exception function *)
+
+(* have to change lookup, then consistent, and then exception *)
+
+
+
+oops
+
+lemma  
+  "\<lbrakk>TranslateAddress (va , privileged, iswrite, siz, data_exe) s = (adrdesc, s'); 
+     consistent (typ_det_tlb t) va;  
+     tlb_rel (typ_det_tlb s) (typ_det_tlb t)\<rbrakk> \<Longrightarrow>
+     let (adrdesc', t') = mmu_translate  (va , privileged, iswrite, siz, data_exe) (t :: 'a tlb_state_scheme)
+         in pa' = pa \<and> consistent (typ_det_tlb t') va \<and> tlb_rel (typ_det_tlb s') (typ_det_tlb t')"
+
+definition
+  tlb_rel :: "tlb_entry set state_scheme \<Rightarrow> tlb_entry set state_scheme \<Rightarrow> bool"
+where
+  "tlb_rel s t \<equiv> state.truncate s = state.truncate t \<and> state.more s \<subseteq> state.more t  \<and> no_faults (state.more t)"
+
+
+
+
 
 
 lemma
   "\<lbrakk> MMU_config_assert_isa s ; exception s = NoException;
-      (Ftech_TranslateAddress (va , privileged, iswrite, siz)) s = (adrdesc, s');
+      (TranslateAddress (va , privileged, iswrite, siz)) s = (adrdesc, s');
      mmu_translate v (t :: 'a tlb_state_scheme) = (adrdesc', t') \<rbrakk> \<Longrightarrow> True"
 
 oops
@@ -46,7 +160,7 @@ lemma
   "l3_valid (\<lambda>s. MMU_config_assert_isa s \<and>  exception s = NoException )
             (TranslationTableWalkSD (va , iswrite, siz)) 
               (\<lambda>r s'. if exception s' \<noteq> NoException 
-                      then ptable_lift (map_mem (MEM s)) (Addr (reg'TTBR0 (TTBR0 (CP15 s)))) (Addr va) = None 
+                      then ptable_lift (map_mem (MEM s)) (Addr (reg'TTBR0 (TTBR0 (CP15 s) ) ) ) (Addr va) = None 
                       else  ptable_lift (map_mem (MEM s)) (Addr (reg'TTBR0 (TTBR0 (CP15 s)))) (Addr va) = Some (Addr  (paddress (addrdesc tlben))))"
   
 oops

@@ -4,9 +4,6 @@ imports L3_Lib
 begin
 
 
-declare return_def [simp add]
-
-
 
 definition l3_valid where 
   "l3_valid P f P' \<equiv> \<forall>s s' r. f s = (r, s') \<longrightarrow> P s \<longrightarrow> P' r s'"
@@ -22,7 +19,7 @@ named_theorems wp
 
 lemma l3_valid_return[wp]:
   "l3_valid (\<lambda>s.  P () s) (return ()) P"
-  by (clarsimp simp: l3_valid_def)
+  by (clarsimp simp: l3_valid_def return_def)
 
 lemma l3_valid_return'[wp]:
   "l3_valid (\<lambda>s. P f s) (Pair f) P"
