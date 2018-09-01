@@ -7,15 +7,21 @@ nat N_sec   = 20
 nat N_large = 16
 nat N_small = 12
 
+
+construct tag_t {
+	 Asid :: bits (8)
+     Global }
+	 
+	 
 record EntrySuper_t
 {
-  asid    :: bits(8)
+  tag    :: tag_t
   vadSup  :: bits(8)
   padSup  :: bits(8)
   -- NS      :: bits(1) 
   memattrs  :: MemoryAttributes
   perms            :: Permissions 
-	nG               :: bits(1)       -- '0' = Global, '1' = not Global
+	-- nG               :: bits(1)       -- '0' = Global, '1' = not Global
 	domain 			     :: bits(4)
   -- contiguoushint   :: bool
   -- NSTID            :: bits(1)  
@@ -24,13 +30,13 @@ record EntrySuper_t
 
 record EntrySection_t
 {
-  asid    :: bits(8)
+  tag    :: tag_t
   vadSec  :: bits(12)
   padSec  :: bits(12)
   -- NS      :: bits(1) 
   memattrs  :: MemoryAttributes
   perms            :: Permissions 
-	nG               :: bits(1)       -- '0' = Global, '1' = not Global
+	-- nG               :: bits(1)       -- '0' = Global, '1' = not Global
 	domain 			     :: bits(4)
   -- contiguoushint   :: bool 
   -- NSTID            :: bits(1) 
@@ -39,13 +45,13 @@ record EntrySection_t
 
 record EntryLarge_t
 {
-  asid   :: bits(8)
+  tag    :: tag_t
   vadLr  :: bits(16)
   padLr  :: bits(16)
   -- NS      :: bits(1) 
   memattrs  :: MemoryAttributes
   perms            :: Permissions 
-	nG               :: bits(1)       -- '0' = Global, '1' = not Global
+	--nG               :: bits(1)       -- '0' = Global, '1' = not Global
 	domain 			     :: bits(4)
   -- contiguoushint   :: bool 
   -- NSTID            :: bits(1) 
@@ -54,13 +60,13 @@ record EntryLarge_t
 
 record EntrySmall_t
 {
-  asid   :: bits(8)
+  tag    :: tag_t
   vadSm  :: bits(20)
   padSm  :: bits(20)
   -- NS      :: bits(1) 
   memattrs  :: MemoryAttributes
   perms            :: Permissions 
-	nG               :: bits(1)       -- '0' = Global, '1' = not Global
+	--nG               :: bits(1)       -- '0' = Global, '1' = not Global
 	domain 			     :: bits(4)
   -- contiguoushint   :: bool 
   -- NSTID            :: bits(1) 
@@ -88,13 +94,15 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
      case 4    =>  --small page
       {
        var e1 :: EntrySmall_t;
-       e1.asid           <- a;
+       if e.nG == '0' 
+	     then e1.tag  <- Global 
+	     else e1.tag   <- Asid (a);
        e1.vadSm          <- va<31:12>;
        e1.padSm          <- e.addrdesc.paddress<31:12>;
        -- e1.NS             <- e.addrdesc.paddress.NS;
        e1.memattrs       <- e.addrdesc.memattrs;
        e1.perms          <- e.perms;
-       e1.nG             <- e.nG;
+      -- e1.nG             <- e.nG;
        e1.domain         <- e.domain;
        -- e1.contiguoushint <- e.contiguoushint;
        -- e1.NSTID          <- e.addrdesc.paddress.NS;
@@ -104,13 +112,15 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
      case 64   =>  --large page
       {
        var e1:: EntryLarge_t;
-       e1.asid           <- a;
+       if e.nG == '0' 
+	     then e1.tag  <- Global 
+	     else e1.tag   <- Asid (a);
        e1.vadLr          <- va<31:16>;
        e1.padLr          <- e.addrdesc.paddress<31:16>;
        -- e1.NS             <- e.addrdesc.paddress.NS;
        e1.memattrs       <- e.addrdesc.memattrs;
        e1.perms          <- e.perms;
-       e1.nG             <- e.nG;
+       --e1.nG             <- e.nG;
        e1.domain         <- e.domain;
        -- e1.contiguoushint <- e.contiguoushint;
        -- e1.NSTID          <- e.addrdesc.paddress.NS;
@@ -120,13 +130,15 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
      case 1024 =>  -- section
       {
        var e1:: EntrySection_t;
-       e1.asid            <- a;
+       if e.nG == '0' 
+	     then e1.tag  <- Global 
+	     else e1.tag   <- Asid (a);
        e1.vadSec          <- va<31:20>;
        e1.padSec          <- e.addrdesc.paddress<31:20>;
        -- e1.NS              <- e.addrdesc.paddress.NS;
        e1.memattrs        <- e.addrdesc.memattrs;
        e1.perms           <- e.perms;
-       e1.nG              <- e.nG;
+       --e1.nG              <- e.nG;
        e1.domain          <- e.domain;
        -- e1.contiguoushint  <- e.contiguoushint;
        -- e1.NSTID           <- e.addrdesc.paddress.NS;
@@ -136,13 +148,15 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
      case _    =>  -- supersection
       {
        var e1:: EntrySuper_t;
-       e1.asid            <- a;
+       if e.nG == '0' 
+	     then e1.tag  <- Global 
+	     else e1.tag   <- Asid (a);
        e1.vadSup          <- va<31:24>;
        e1.padSup          <- e.addrdesc.paddress<31:24>;
        -- e1.NS             <- e.addrdesc.paddress.NS;
        e1.memattrs        <- e.addrdesc.memattrs;
        e1.perms           <- e.perms;
-       e1.nG              <- e.nG;
+       --e1.nG              <- e.nG;
        e1.domain          <- e.domain;
        -- e1.contiguoushint  <- e.contiguoushint;
        -- e1.NSTID           <- e.addrdesc.paddress.NS;
@@ -198,11 +212,25 @@ component unified_mainTLB (i::bits(8)) :: TLBEntry option
 bool MatchingEntry (a:: bits(8), vad::bits(32), e::TLBEntry) =
   match e 
    {
-    case EntrySmall   (e1)  => (e1.asid == a or ![e1.nG] :: bool) and e1.vadSm  == vad<31:12> -- and (CP15.SCR.NS == [e1.NSTID] :: bool) 
-    case EntryLarge   (e1)  => (e1.asid == a or ![e1.nG] :: bool) and e1.vadLr  == vad<31:16> -- and (CP15.SCR.NS == [e1.NSTID] :: bool)
-    case EntrySection (e1)  => (e1.asid == a or ![e1.nG] :: bool) and e1.vadSec == vad<31:20> -- and (CP15.SCR.NS == [e1.NSTID] :: bool)
-    case EntrySuper   (e1)  => (e1.asid == a or ![e1.nG] :: bool) and e1.vadSup == vad<31:24> -- and (CP15.SCR.NS == [e1.NSTID] :: bool)
-   }
+    case EntrySmall   (e1)  => if e1.tag == Global then e1.vadSm  == vad<31:12> 
+								else (e1.tag == Asid (a) and e1.vadSm  == vad<31:12>) 
+    case EntryLarge   (e1)  => if e1.tag == Global then e1.vadLr  == vad<31:16> 
+	                            else (e1.tag == Asid (a) and e1.vadLr  == vad<31:16>) 
+    case EntrySection (e1)  => if e1.tag == Global then e1.vadSec == vad<31:20> 
+	                            else (e1.tag == Asid (a) and e1.vadSec == vad<31:20>) 
+    case EntrySuper   (e1)  => if e1.tag == Global then e1.vadSup == vad<31:24> 
+	                            else (e1.tag == Asid (a) and e1.vadSup == vad<31:24>) 
+   } 
+   
+--   -- this is same as fully associative lookup
+--   bool MatchingEntry (a:: bits(8), vad::bits(32), e::TLBEntry) =
+--     match e 
+--      {
+ --      case EntrySmall   (e1)  => (e1.asid == a or ![e1.nG] :: bool) and e1.vadSm  == vad<31:12> -- and (CP15.SCR.NS == [e1.NSTID] :: bool) 
+ --      case EntryLarge   (e1)  => (e1.asid == a or ![e1.nG] :: bool) and e1.vadLr  == vad<31:16> -- and (CP15.SCR.NS == [e1.NSTID] :: bool)
+  --     case EntrySection (e1)  => (e1.asid == a or ![e1.nG] :: bool) and e1.vadSec == vad<31:20> -- and (CP15.SCR.NS == [e1.NSTID] :: bool)
+ --      case EntrySuper   (e1)  => (e1.asid == a or ![e1.nG] :: bool) and e1.vadSup == vad<31:24> -- and (CP15.SCR.NS == [e1.NSTID] :: bool)
+--      }
 
 
 TLBEntry list entry_list_instr_micro (a :: bits(8), vad :: bits(32) ) =
@@ -370,16 +398,14 @@ Permissions perms_entry (e:: TLBEntry) =
    case EntrySuper   (e1) => e1.perms  
    }
 
-bits(8) asid_entry (e:: TLBEntry) =
+tag_t tag_entry (e:: TLBEntry) =
   match e
   {
-   case EntrySmall   (e1) => e1.asid 
-   case EntryLarge   (e1) => e1.asid 
-   case EntrySection (e1) => e1.asid 
-   case EntrySuper   (e1) => e1.asid  
+   case EntrySmall   (e1) => e1.tag 
+   case EntryLarge   (e1) => e1.tag 
+   case EntrySection (e1) => e1.tag 
+   case EntrySuper   (e1) => e1.tag  
    }
-
-
 
 
 AddressDescriptor TranslateAddress (address :: bits(32), privileged :: bool, iswrite :: bool,  size :: nat, data_ins :: bool) =

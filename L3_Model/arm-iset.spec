@@ -2893,7 +2893,7 @@ define TLBMaintain > ITLBIASID
     match InstrTLB([i]:: bits(6))
     {
      case None => nothing
-     case Some (e) =>  when asid_entry (e) == asid do
+     case Some (e) =>  when tag_entry (e) == Asid (asid) do
            InstrTLB([i]:: bits(6)) <- None  
        };
     IncPC()
@@ -2929,7 +2929,7 @@ define TLBMaintain > DTLBIASID
     match DataTLB([i]:: bits(5))
     {
      case None => nothing
-     case Some (e) =>  when asid_entry (e) == asid do
+     case Some (e) =>  when tag_entry (e) == Asid (asid) do
            DataTLB([i]:: bits(5)) <- None  
        };
     IncPC()
@@ -2975,7 +2975,7 @@ define TLBMaintain > TLBIASID
     match InstrTLB([i]:: bits(6))
     {
      case None => nothing
-     case Some (e) =>  when asid_entry (e) == asid do
+     case Some (e) =>  when tag_entry (e) == Asid (asid) do
            InstrTLB([i]:: bits(6)) <- None  
        };
 
@@ -2983,7 +2983,7 @@ define TLBMaintain > TLBIASID
     match DataTLB([i]:: bits(5))
     {
      case None => nothing
-     case Some (e) =>  when asid_entry (e) == asid do
+     case Some (e) =>  when tag_entry (e) == Asid (asid) do
            DataTLB([i]:: bits(5)) <- None  
        };
 
@@ -2991,7 +2991,7 @@ define TLBMaintain > TLBIASID
     match unified_mainTLB([i]:: bits(8))
     {
      case None => nothing
-     case Some (e) =>  when asid_entry (e) == asid do
+     case Some (e) =>  when tag_entry (e) == Asid (asid) do
            unified_mainTLB([i]:: bits(8)) <- None  
        };
     IncPC()
