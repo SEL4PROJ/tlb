@@ -8,7 +8,6 @@
 
 theory TLB
 imports
-  (*"HOL-Word.Word"*)
   PTABLE.PageTable_seL4
 
 begin
@@ -30,11 +29,11 @@ type_synonym asid  = "8 word"
 type_synonym va    = "32 word"
 
 
-datatype MemType_t = MemType_Normal |  MemType_Device |  MemType_StronglyOrdered
+datatype memtyp_t = MemNormal |  MemDevice |  MemStronglyOrdered
 
 
-record MemoryAttributes = 
-   MemType          :: MemType_t
+record memattribs_t = 
+   memtyp           :: memtyp_t
    innerattrs		    :: "2 word"
    outerattrs		    :: "2 word"
    innerhints		    :: "2 word"
@@ -45,29 +44,26 @@ record MemoryAttributes =
    outershareable   :: bool
 
 
-record Permissions =
-   ap   :: "3 word"
-   xn	  :: "1 word"
-   pxn  :: "1 word"
+record permissions_t =
+   accessperm   :: "3 word"
+   executenever	  :: "1 word"
+   pexecutenever  :: "1 word"
 
 
-record flags =                 
-   MemoryAttributes :: MemoryAttributes
-   Permissions :: Permissions
-   \<comment> \<open>nG    :: bool\<close>
+record flags_t =                 
+   memattribs  :: memattribs_t
+   permissions :: permissions_t
    domain  ::  "4 word"
-   level :: int
+   level   :: int
 
-(* fix the data type here *)
-datatype tag = Asid "8 word" 
-             | Global
+
+(*  can also make a datatype for base addresses *)
 
 datatype tlb_entry =
-    EntrySmall   tag vSm pSm flags
-  | EntryLarge   tag vLr pLr flags
-  | EntrySection tag vSe pSe flags
-  | EntrySuper   tag vSp pSp flags
-
+    Entrysmall   (tag : "asid option") vSm pSm (flags : flags_t)
+  | Entrylarge   (tag : "asid option") vLr pLr (flags : flags_t)
+  | Entrysection (tag : "asid option") vSe pSe (flags : flags_t)
+  | Entrysuper   (tag : "asid option") vSp pSp (flags : flags_t)
 
 type_synonym tlb = "tlb_entry set"
 
@@ -78,41 +74,25 @@ datatype lookup_type  =  Miss  | Incon  |  Hit "tlb_entry"
 definition
   entry_range :: "tlb_entry \<Rightarrow> va set"
 where
-  "entry_range E \<equiv> case E of EntrySmall   a va pa f   \<Rightarrow> {(ucast va::32 word) << 12 ..
+  "entry_range E \<equiv> case E of Entrysmall   a va pa f   \<Rightarrow> {(ucast va::32 word) << 12 ..
                                                             ((ucast va::32 word) << 12) + (2^12 - 1)}
 
-                      |      EntryLarge   a va pa f    \<Rightarrow> {(ucast va::32 word) << 16 ..
+                      |      Entrylarge   a va pa f    \<Rightarrow> {(ucast va::32 word) << 16 ..
                                                             ((ucast va::32 word) << 16) + (2^16 - 1)}
 
-                      |      EntrySection a va pa f    \<Rightarrow> {(ucast va::32 word) << 20 ..
+                      |      Entrysection a va pa f    \<Rightarrow> {(ucast va::32 word) << 20 ..
                                                             ((ucast va::32 word) << 20) + (2^20 - 1)}
 
-                      |      EntrySuper   a va pa f    \<Rightarrow> {(ucast va::32 word) << 24 ..
+                      |      Entrysuper   a va pa f    \<Rightarrow> {(ucast va::32 word) << 24 ..
                                                             ((ucast va::32 word) << 24) + (2^24 - 1)}"
-
-fun
-  flags_entry :: "tlb_entry \<Rightarrow> flags"
-where
-  "flags_entry (EntrySmall   a x y fl) = fl"
-| "flags_entry (EntryLarge   a x y fl) = fl"
-| "flags_entry (EntrySection a x y fl) = fl"
-| "flags_entry (EntrySuper   a x y fl) = fl"
-
-
-fun
-  tag_entry :: "tlb_entry \<Rightarrow> tag"
-where
-  "tag_entry (EntrySmall   t x y z) = t"
-| "tag_entry (EntryLarge   t x y z) = t"
-| "tag_entry (EntrySection t x y z) = t"
-| "tag_entry (EntrySuper   t x y z) = t"
 
 
 definition
-  entry_range_tags :: "tlb_entry \<Rightarrow> (tag \<times> va) set"
+  entry_range_tags :: "tlb_entry \<Rightarrow> (asid option \<times> va) set"
 where
-  "entry_range_tags E \<equiv> image (\<lambda>v. (tag_entry E , v)) (entry_range E)"
+  "entry_range_tags E \<equiv> image (\<lambda>v. (tag E , v)) (entry_range E)"
 
+(*
 definition 
   tlb_asid :: "tlb_entry set \<Rightarrow> tlb_entry set"
 where
@@ -133,7 +113,7 @@ lemma tlb_asid_global_check:
   "t = tlb_global t  \<union> tlb_asid t"
   apply (clarsimp simp: tlb_asid_def tlb_global_def)
   by blast
-  
+
 
 
 definition
@@ -141,15 +121,28 @@ definition
 where
   "entry_set t a v \<equiv> {E\<in>tlb_asid t. (Asid a,v) : entry_range_tags E } \<union>
                       {E\<in>tlb_global t. (Global,v) : entry_range_tags E } "
+*)
+
+definition
+  entry_set :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> (tlb_entry set)"
+where
+  "entry_set t a v \<equiv> {E\<in> t. \<exists>a'. (a',v) : entry_range_tags E \<and> (a' = None \<or> a' = Some a)}"
 
 (* another version *)
 
 definition
   entry_set' :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> (tlb_entry set)"
 where
+  "entry_set' t a v \<equiv> {E\<in> t. v : entry_range E \<and> (tag E = None \<or> tag E = Some a)}"
+
+
+(*
+definition
+  entry_set' :: "tlb \<Rightarrow> asid \<Rightarrow> va \<Rightarrow> (tlb_entry set)"
+where
   "entry_set' t a v \<equiv> {E\<in>tlb_asid t. (Asid a,v) : entry_range_tags E } \<union>
                       {E\<in>tlb_global t. v : entry_range E } "
-
+*)
 
 
 (* Lookup for a virtual address along with an ASID *)
@@ -160,7 +153,8 @@ where
                    else if \<exists>x. entry_set t a va = {x} then Hit (the_elem (entry_set t a va))
                         else Incon"
 
-
+(* commenting out for the time being *)
+(*
 (* set of all the virtual addresses with ASID tags covered by TLB *)
 definition
   tag_va_set :: "tlb \<Rightarrow> (tag \<times> va) set"
@@ -275,6 +269,7 @@ theorem  invalidating_corrupt_entries:
   apply (clarsimp simp: is_okay_def overlapping_entries_def tag_va_set_def)
   by blast
 
+*)
 
 (* Physical Address Retrieval *)
 
@@ -284,10 +279,10 @@ datatype bpa = Bpsm "20 word" | Bplr "16 word" | Bpse "12 word" | Bpsp "8 word"
 fun
   bpa_entry :: "tlb_entry \<Rightarrow> bpa "
 where
-  "bpa_entry (EntrySmall _ _ p _)   =  Bpsm p"
-| "bpa_entry (EntryLarge _ _ p _)   =  Bplr p"
-| "bpa_entry (EntrySection _ _ p _) =  Bpse p"
-| "bpa_entry (EntrySuper _ _ p _)   =  Bpsp p"
+  "bpa_entry (Entrysmall _ _ p _)   =  Bpsm p"
+| "bpa_entry (Entrylarge _ _ p _)   =  Bplr p"
+| "bpa_entry (Entrysection _ _ p _) =  Bpse p"
+| "bpa_entry (Entrysuper _ _ p _)   =  Bpsp p"
 
 
 fun
@@ -304,6 +299,8 @@ definition
 where
   "va_to_pa v t \<equiv> bpa_to_pa v ( bpa_entry t)"
 
+
+(*
 (* Uniqueness *)
 
 theorem lookup_miss_not_present_implies:
@@ -704,6 +701,8 @@ lemma entry_set_def2:
   by (auto simp: entry_set_def entry_range_asid_tags_def)
 *)
 
+*)
+
 (*---------------------------------------------------*)
 
 instantiation lookup_type :: order
@@ -737,7 +736,7 @@ lemma Hits_le [simp]:
 
 lemma tlb_mono_entry_set:
   "t \<subseteq> t' \<Longrightarrow> entry_set t a v \<subseteq> entry_set t' a v"
-  by (simp add: entry_set_def tlb_asid_def tlb_global_def) blast
+  by (simp add: entry_set_def ) blast
 
 lemma tlb_mono:
   "t \<subseteq> t' \<Longrightarrow> lookup t a v \<le> lookup t' a v"
@@ -747,9 +746,6 @@ lemma tlb_mono:
 (*   Page Tables   *)
 
 type_synonym mem_type = "32 word \<Rightarrow> 8 word option"
-
-type_synonym ttbr0 = paddr
-
 
 (* works well only for descriptors *)
 

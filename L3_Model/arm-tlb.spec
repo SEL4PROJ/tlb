@@ -295,45 +295,59 @@ lookup_type lookupTLB_main (a::bits(8), vad::bits(32)) =
 		}
 
 
-unit microInstrTLB_evict1 (indx_lst :: bits(6) list) = 
-   for i in 0 .. Length (indx_lst) - 1 do InstrTLB(Element (i,indx_lst)) <- None
+--unit microInstrTLB_evict1 (indx_lst :: bits(6) list) = 
+--   for i in 0 .. Length (indx_lst) - 1 do InstrTLB(Element (i,indx_lst)) <- None
 
  -- FIFO, for fix five locations
 unit microInstrTLB_evict () = 
  {  
-  for i in 0 .. microInstrTLBEntries - 6 do 
-           InstrTLB([i + 5]:: bits(6)) <- InstrTLB([i]:: bits(6));
+  InstrTLB([microInstrTLBEntries - 1]:: bits(6)) <- None;
   
-  for i in 0 .. 5 do 
-           InstrTLB([i]:: bits(6)) <- None
+  for i in (microInstrTLBEntries - 1) .. 0 do 
+           InstrTLB([i + 1]:: bits(6)) <- InstrTLB([i]:: bits(6));
+  
+  InstrTLB([0::nat]:: bits(6)) <- None
  }
+ 
+  
+--unit microInstrTLB_evict () = 
+-- {  
+--  for i in 0 .. microInstrTLBEntries - 6 do 
+--           InstrTLB([i + 5]:: bits(6)) <- InstrTLB([i]:: bits(6));
+  
+--  for i in 0 .. 5 do 
+--           InstrTLB([i]:: bits(6)) <- None
+-- }
 
 
-unit microDataTLB_evict1 (indx_lst :: bits(5) list) = 
-   for i in 0 .. Length (indx_lst) - 1 do DataTLB(Element (i,indx_lst)) <- None
+--unit microDataTLB_evict1 (indx_lst :: bits(5) list) = 
+--   for i in 0 .. Length (indx_lst) - 1 do DataTLB(Element (i,indx_lst)) <- None
 
 
  -- FIFO, for fix five locations
 unit microDataTLB_evict () = 
  {  
-  for i in 0 .. microDataTLBEntries - 6 do 
-           DataTLB([i + 5]:: bits(5)) <- DataTLB([i]:: bits(5));
+     DataTLB([microDataTLBEntries - 1]:: bits(5)) <- None;
   
-  for i in 0 .. 5 do 
-           DataTLB([i]:: bits(5)) <- None
+     for i in (microDataTLBEntries - 1) .. 0 do 
+              DataTLB([i + 1]:: bits(5)) <- DataTLB([i]:: bits(5));
+  
+     DataTLB([0::nat]:: bits(5)) <- None
  }
 
-unit mainTLB_evict1(indx_lst :: bits(8) list) = 
-   for i in 0 .. Length (indx_lst) - 1 do unified_mainTLB(Element (i,indx_lst)) <- None
+--unit mainTLB_evict1(indx_lst :: bits(8) list) = 
+--   for i in 0 .. Length (indx_lst) - 1 do unified_mainTLB(Element (i,indx_lst)) <- None
 
  -- FIFO, for fix five locations
 unit mainTLB_evict ()= 
- {  
-  for i in 0 .. microInstrTLBEntries - 6 do 
-           unified_mainTLB([i + 5]:: bits(8)) <- unified_mainTLB([i]:: bits(8));
+ {   
+     unified_mainTLB([mainTLBEntries - 1]:: bits(8)) <- None;
   
-  for i in 0 .. 5 do 
-           unified_mainTLB([i]:: bits(8)) <- None
+     for i in (mainTLBEntries - 1) .. 0 do 
+              unified_mainTLB([i + 1]:: bits(8)) <- unified_mainTLB([i]:: bits(8));
+  
+     unified_mainTLB([0::nat]:: bits(8)) <- None
+	 
  }
 
 AddressDescriptor va_to_pa  (v :: bits(32), e :: TLBEntry) = 

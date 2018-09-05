@@ -2688,8 +2688,9 @@ unit CheckPermissionS2 (perms :: Permissions, mva ::  bits(32), ipa :: bits(40),
     var secondstageabort = true;
     var ipavalid = s2fs1walk;
     var LDFSRformat = true;
-    DataAbort(mva, ipa, domain, level, iswrite, DAbort_Permission,
-              taketohypmode, secondstageabort, ipavalid, LDFSRformat, s2fs1walk)
+	 #MMU_Exception "DAbort exception"
+    --DataAbort(mva, ipa, domain, level, iswrite, DAbort_Permission,
+    --          taketohypmode, secondstageabort, ipavalid, LDFSRformat, s2fs1walk)
     }
 }
 
@@ -2840,8 +2841,9 @@ AddressDescriptor SecondStageTranslate (s1outaddrdesc :: AddressDescriptor, mva 
          LDFSRformat <- true;
          s2fs1walk <- true;
          -- s2ia is inconsistent with the manual for the time being
-         DataAbort (mva, 0`8:s2ia, domain, tlbrecordS2.level, is_write, DAbort_Permission, taketohypmode,
-                     secondstageabort, ipavalid, LDFSRformat, s2fs1walk)
+		 #MMU_Exception "DAbort exception"
+         --DataAbort (mva, 0`8:s2ia, domain, tlbrecordS2.level, is_write, DAbort_Permission, taketohypmode,
+          --           secondstageabort, ipavalid, LDFSRformat, s2fs1walk)
           }
         }; 
     result <- CombineS1S2Desc(s1outaddrdesc, tlbrecordS2.addrdesc)

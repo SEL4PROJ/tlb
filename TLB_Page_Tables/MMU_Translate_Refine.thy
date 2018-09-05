@@ -6,23 +6,26 @@ begin
 
 (* page table walk function *)
 
+type_synonym prrr = "32 word"
+type_synonym nmrr = "32 word"
+type_synonym ttbr0 = paddr
 
 
 definition 
-ConvertAttrsHints'  :: "2 word \<Rightarrow> 4 word"
+cnvrtattrshints  :: "2 word \<Rightarrow> 4 word"
 where 
-  "ConvertAttrsHints' RGN \<equiv> if RGN = 0x0 then 0x0
+  "cnvrtattrshints RGN \<equiv> if RGN = 0x0 then 0x0
                            else if RGN !! 0 then 
                                    (if RGN !! 1 then 0xB else 0xF)
                                 else 0xA"
 
 
 definition
-  MemAtt :: "5 word \<Rightarrow> 1 word \<Rightarrow> 32 word \<Rightarrow> 32 word \<Rightarrow> MemoryAttributes"
+  MemAtt :: "5 word \<Rightarrow> 1 word \<Rightarrow> 32 word \<Rightarrow> 32 word \<Rightarrow> memattribs_t"
 where
   "MemAtt texcb S prrr nmrr \<equiv> if uint ((ucast texcb) :: 3 word) = 6 
                              then \<lparr>
-                                     MemType         = HOL.undefined  ,
+                                     memtyp         = HOL.undefined  ,
                                      innerattrs		   = HOL.undefined,
                                      outerattrs		   = HOL.undefined,
                                      innerhints		   = HOL.undefined,
@@ -33,7 +36,7 @@ where
                                      outershareable  = HOL.undefined \<rparr> 
                              else (if word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 1) (2 * (unat ((ucast texcb) :: 3 word))) prrr = (0x0 :: 2 word) then 
                                    \<lparr>
-                                     MemType         = MemType_StronglyOrdered ,
+                                     memtyp         = MemStronglyOrdered ,
                                      innerattrs		   = HOL.undefined,
                                      outerattrs		   = HOL.undefined,
                                      innerhints		   = HOL.undefined,
@@ -44,7 +47,7 @@ where
                                      outershareable  = True \<rparr>  
                                   else if word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 1) (2 * (unat ((ucast texcb) :: 3 word))) prrr = (0x1 :: 2 word) then 
                                    \<lparr>
-                                     MemType         = MemType_Device  ,
+                                     memtyp         = MemDevice  ,
                                      innerattrs		   = HOL.undefined,
                                      outerattrs		   = HOL.undefined,
                                      innerhints		   = HOL.undefined,
@@ -55,19 +58,19 @@ where
                                      outershareable  = True \<rparr>  
                                   else if word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 1) (2 * (unat ((ucast texcb) :: 3 word))) prrr = (0x2 :: 2 word) then  \<comment> \<open>update this case with the vlaues \<close>
                                    \<lparr>
-                                     MemType         = MemType_Normal,
+                                     memtyp         = MemNormal,
 
-                                     innerattrs		   = word_extract 1 0 (ConvertAttrsHints' (word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 1) (2 * (unat ((ucast texcb) :: 3 word))) nmrr)),
-                                     outerattrs		   = word_extract 1 0 (ConvertAttrsHints' (word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 17) (2 * (unat ((ucast texcb) :: 3 word)) +16) nmrr)),
+                                     innerattrs		   = word_extract 1 0 (cnvrtattrshints (word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 1) (2 * (unat ((ucast texcb) :: 3 word))) nmrr)),
+                                     outerattrs		   = word_extract 1 0 (cnvrtattrshints (word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 17) (2 * (unat ((ucast texcb) :: 3 word)) +16) nmrr)),
 
-                                     innerhints		   =  word_extract 3 2 (ConvertAttrsHints' (word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 1) (2 * (unat ((ucast texcb) :: 3 word))) nmrr)),
-                                     outerhints		   = word_extract 3 2 (ConvertAttrsHints' (word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 17) (2 * (unat ((ucast texcb) :: 3 word)) +16) nmrr)),
+                                     innerhints		   =  word_extract 3 2 (cnvrtattrshints (word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 1) (2 * (unat ((ucast texcb) :: 3 word))) nmrr)),
+                                     outerhints		   = word_extract 3 2 (cnvrtattrshints (word_extract (2 * (unat ((ucast texcb) :: 3 word)) + 17) (2 * (unat ((ucast texcb) :: 3 word)) +16) nmrr)),
                                      innertransient  = False,
                                      outertransient  = False,
                                      shareable       = if S = 0x0 then prrr!! 18 else prrr !! 19,
                                      outershareable  = if S = 0x0 then (prrr!! 18) & (\<not>prrr!! ((unat ((ucast texcb) :: 3 word)) + 24)) else (prrr !! 19) & (\<not>prrr!! ((unat ((ucast texcb) :: 3 word)) + 24)) \<rparr>   
                                     else \<lparr>
-                                     MemType         = HOL.undefined,
+                                     memtyp         = HOL.undefined,
                                      innerattrs		   = HOL.undefined,
                                      outerattrs		   = HOL.undefined,
                                      innerhints		   = HOL.undefined,
@@ -81,20 +84,20 @@ where
 
 
 definition
-  perms_to_tlb_fl :: "arm_perm_bits \<Rightarrow> 32 word \<Rightarrow> 32 word \<Rightarrow> flags"
+  perms_to_tlb_fl :: "arm_perm_bits \<Rightarrow> 32 word \<Rightarrow> 32 word \<Rightarrow> flags_t"
 where
   "perms_to_tlb_fl pb prrr nmrr \<equiv> \<lparr> 
-   MemoryAttributes = MemAtt (((ucast (arm_p_TEX pb) :: 5 word) << 2) && ((ucast (arm_p_C pb) :: 5 word) << 1) && (ucast (arm_p_B pb) :: 5 word))  (arm_p_S pb) prrr nmrr, 
-   Permissions = \<lparr>ap  = ((ucast (arm_p_APX pb) :: 3 word) << 2)  && ucast(arm_p_AP pb), 
-                         xn = arm_p_XN pb , pxn = arm_p_PXN pb \<rparr>,
-   nG    = arm_p_nG pb,
+   memattribs = MemAtt (((ucast (arm_p_TEX pb) :: 5 word) << 2) && ((ucast (arm_p_C pb) :: 5 word) << 1) && (ucast (arm_p_B pb) :: 5 word))  (arm_p_S pb) prrr nmrr, 
+   permissions = \<lparr>accessperm  = ((ucast (arm_p_APX pb) :: 3 word) << 2)  && ucast(arm_p_AP pb), 
+                         executenever = arm_p_XN pb , pexecutenever = arm_p_PXN pb \<rparr>,
    domain  =  arm_p_domain pb,
    level = arm_p_level pb \<rparr>"
 
 
-type_synonym prrr = "32 word"
-type_synonym nmrr = "32 word"
-
+definition
+  perms_to_tlb_tag :: "arm_perm_bits \<Rightarrow> asid \<Rightarrow> asid option"
+where
+  "perms_to_tlb_tag pb a \<equiv> if arm_p_nG pb = 0x1 then Some a else None"
 
 
 definition
@@ -105,26 +108,26 @@ where
        of None                 \<Rightarrow> None
        | Some InvalidPDE       \<Rightarrow> None
        | Some ReservedPDE      \<Rightarrow> None
-       | Some (SectionPDE p a) \<Rightarrow>
-          Some (EntrySection asid (ucast (addr_val v >> 20) :: 12 word)
-                              (ucast ((addr_val p >> 20) && mask 12) :: 12 word)  (perms_to_tlb_fl a prrr nmrr))
-       | Some (SuperSectionPDE p a) \<Rightarrow>
-         Some (EntrySuper asid   (ucast (addr_val v >> 24) :: 8 word)
-                            (ucast ((addr_val p >> 24) && mask 8) :: 8 word)  (perms_to_tlb_fl a prrr nmrr))
+       | Some (SectionPDE p fl) \<Rightarrow>
+          Some (Entrysection (perms_to_tlb_tag fl asid) (ucast (addr_val v >> 20) :: 12 word)
+                              (ucast ((addr_val p >> 20) && mask 12) :: 12 word)  (perms_to_tlb_fl fl prrr nmrr))
+       | Some (SuperSectionPDE p fl) \<Rightarrow>
+         Some (Entrysuper (perms_to_tlb_tag fl asid) (ucast (addr_val v >> 24) :: 8 word)
+                            (ucast ((addr_val p >> 24) && mask 8) :: 8 word)  (perms_to_tlb_fl fl prrr nmrr))
        | Some (PageTablePDE p) \<Rightarrow>
                (case get_pte heap p v
                  of None                     \<Rightarrow> None
                  |  Some InvalidPTE          \<Rightarrow> None
-                 |  Some (SmallPagePTE p a) \<Rightarrow> 
-                         Some (EntrySmall asid (ucast (addr_val v >> 12) :: 20 word)
-                                             (ucast ((addr_val p >> 12) && mask 20) :: 20 word) (perms_to_tlb_fl a prrr nmrr))
-                 |  Some (LargePagePTE p a) \<Rightarrow> 
-                         Some (EntryLarge asid (ucast (addr_val v >> 16) :: 16 word)
-                                             (ucast ((addr_val p >> 16) && mask 16) :: 16 word) (perms_to_tlb_fl a prrr nmrr)))"
+                 |  Some (SmallPagePTE p fl) \<Rightarrow> 
+                         Some (Entrysmall (perms_to_tlb_tag fl asid) (ucast (addr_val v >> 12) :: 20 word)
+                                             (ucast ((addr_val p >> 12) && mask 20) :: 20 word) (perms_to_tlb_fl fl prrr nmrr))
+                 |  Some (LargePagePTE p fl) \<Rightarrow> 
+                         Some (Entrylarge (perms_to_tlb_tag fl asid) (ucast (addr_val v >> 16) :: 16 word)
+                                             (ucast ((addr_val p >> 16) && mask 16) :: 16 word) (perms_to_tlb_fl fl prrr nmrr)))"
 
 
 
-
+(*
 record AdrDes = phy_ad :: paddr
                 memattrs :: MemoryAttributes 
 
@@ -141,28 +144,19 @@ definition
             \<lparr>phy_ad = base r+ (vaddr_offset pg_size vp_val),
              memattrs = MemAtt (((ucast (arm_p_TEX perms) :: 5 word) << 2) && ((ucast (arm_p_C perms) :: 5 word) << 1) && (ucast (arm_p_B perms) :: 5 word))  (arm_p_S perms) prrr nmrr \<rparr>)
          (lookup_pde h pt_root vp)"
-
+*)
 
 
 (* building up new state *)
 
 
-
-
-datatype Exception =
-    ASSERT string
-  | IMPLEMENTATION_DEFINED string
-  | MMU_Exception string
-  | NoException
-  | UNPREDICTABLE string
-  | VFP_EXCEPTION string
-
-
+datatype excpt_t =   NoException  | MMUException string
+  
 record cstate =
   heap :: "paddr \<rightharpoonup> byte"
   ttbr0 :: paddr 
   asid :: asid
-  Exception :: Exception
+  excpt :: excpt_t
   prrr :: "32 word" \<comment> \<open>for memory attributes\<close>
   nmrr :: "32 word" \<comment> \<open>for memory attributes\<close>
   dacr :: "32 word" \<comment> \<open>for domain\<close>
@@ -184,16 +178,16 @@ where
 *)
 
 definition 
-  raise'exception'  :: "Exception \<Rightarrow> 'a cstate_scheme \<Rightarrow> 'r \<times> 'a cstate_scheme"
+  raise'exception'  :: "excpt_t \<Rightarrow> 'a cstate_scheme \<Rightarrow> 'r \<times> 'a cstate_scheme"
 where 
-  "raise'exception' \<equiv> \<lambda>e s. let (v, s) = (Exception s, s); (u, y) = let (b, y) = (v = NoException, s) in (if b then \<lambda>s. ((), s\<lparr>Exception := e\<rparr>) else Pair ()) y in (undefined, y)"
+  "raise'exception' \<equiv> \<lambda>e s. let (v, s) = (excpt s, s); (u, y) = let (b, y) = (v = NoException, s) in (if b then \<lambda>s. ((), s\<lparr>excpt := e\<rparr>) else Pair ()) y in (undefined, y)"
 
 
 
 (* classes proto-types *)
 (* should we take vaddr in the end of the inputs?*)
 class mmu =
-  fixes mmu_translate :: "vaddr \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow>'a cstate_scheme \<Rightarrow> (paddr \<times> MemoryAttributes) \<times> 'a cstate_scheme" 
+  fixes mmu_translate :: "vaddr \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow>'a cstate_scheme \<Rightarrow> (paddr \<times> memattribs_t) \<times> 'a cstate_scheme" 
 
 class mem_op = mmu +
   fixes mmu_read :: "vaddr \<Rightarrow> 'a cstate_scheme \<Rightarrow> bool list \<times> 'a cstate_scheme"
@@ -235,7 +229,7 @@ lemma tlbs_truncate [simp]:
 
 lemma typ_tlbs_prim_parameter [simp]:
   "asid (typ_tlbs s) = asid s \<and> ttbr0 (typ_tlbs s) =  ttbr0 s \<and> heap (typ_tlbs s) = heap s \<and>
-      Exception (typ_tlbs s) = Exception s"
+      excpt (typ_tlbs s) = excpt s"
   by (clarsimp simp: typ_tlbs_def  cstate.defs)
 
 
@@ -250,29 +244,28 @@ consts unitlb_evict :: "tlbs_set cstate_scheme \<Rightarrow> tlb_entry set"
 
 
 definition 
-  tlb_entry_to_adrdesc :: "vaddr \<Rightarrow> tlb_entry \<Rightarrow> (paddr \<times> MemoryAttributes)"
+  tlb_entry_to_adrdesc :: "vaddr \<Rightarrow> tlb_entry \<Rightarrow> (paddr \<times> memattribs_t)"
 where
   "tlb_entry_to_adrdesc v entry = ((Addr (va_to_pa (addr_val v) entry)),
-                                       MemoryAttributes(flags_entry entry))"
+                                       memattribs (flags entry))"
 
 
 definition 
-  MemType_entry :: "tlb_entry \<Rightarrow> MemType_t" 
+  memtyp_entry :: "tlb_entry \<Rightarrow> memtyp_t" 
 where
-  "MemType_entry e = MemType (MemoryAttributes (flags_entry e))"
-
-definition 
-Align' :: "'a::len0 word \<times> nat \<Rightarrow> 'a word"
-where
-  "Align' \<equiv> \<lambda>(w, n). word_of_int (int (n * (nat (uint w) div n)))"
-
-
+  "memtyp_entry e = memtyp (memattribs (flags e))"
 
 
 definition 
-CheckDomain' :: "4 word \<Rightarrow> 32 word  \<Rightarrow> 32 word \<Rightarrow> bool option"
+align :: "'a::len0 word \<times> nat \<Rightarrow> 'a word"
 where
-  "CheckDomain' dm va dcr \<equiv> 
+  "align \<equiv> \<lambda>(w, n). word_of_int (int (n * (nat (uint w) div n)))"
+
+
+definition 
+checkdomain :: "4 word \<Rightarrow> 32 word  \<Rightarrow> 32 word \<Rightarrow> bool option"
+where
+  "checkdomain dm va dcr \<equiv> 
            if word_extract (2 * (unat dm) + 1) (2 * (unat dm)) dcr = (0x0 :: 2 word) then None
            else if  word_extract (2 * (unat dm) + 1) (2 * (unat dm)) dcr = (0x1 :: 2 word) then Some True
            else if  word_extract (2 * (unat dm) + 1) (2 * (unat dm)) dcr = (0x2 :: 2 word) then None
@@ -280,16 +273,16 @@ where
 
 
 definition 
-CheckPermission' :: "Permissions \<Rightarrow> bool  \<Rightarrow> bool \<Rightarrow> bool option"
+checkpermission :: "permissions_t \<Rightarrow> bool  \<Rightarrow> bool \<Rightarrow> bool option"
 where
-  "CheckPermission' perm ispriv iswrite \<equiv> 
-             if ap (perm) = 0x0 then  Some True
-             else if ap (perm) = 0x1 then  Some (\<not>ispriv)
-             else if ap (perm) = 0x2 then  Some (\<not>ispriv & iswrite)
-             else if ap (perm) = 0x3 then  Some False
-             else if ap (perm) = 0x4 then  None
-             else if ap (perm) = 0x5 then  Some (\<not>ispriv \<or> iswrite)
-             else if ap (perm) = 0x6 then  Some iswrite
+  "checkpermission perm ispriv iswrite \<equiv> 
+             if accessperm (perm) = 0x0 then  Some True
+             else if accessperm (perm) = 0x1 then  Some (\<not>ispriv)
+             else if accessperm (perm) = 0x2 then  Some (\<not>ispriv & iswrite)
+             else if accessperm (perm) = 0x3 then  Some False
+             else if accessperm (perm) = 0x4 then  None
+             else if accessperm (perm) = 0x5 then  Some (\<not>ispriv \<or> iswrite)
+             else if accessperm (perm) = 0x6 then  Some iswrite
              else Some iswrite"
 
 
@@ -297,17 +290,17 @@ where
 
 
 definition 
-  align_dom_perm_entry_check  :: "tlb_entry \<Rightarrow> vaddr \<Rightarrow> nat \<Rightarrow> 32 word \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> 'a cstate_scheme \<Rightarrow> (paddr \<times> MemoryAttributes) \<times> 'a cstate_scheme" 
+  align_dom_perm_entry_check  :: "tlb_entry \<Rightarrow> vaddr \<Rightarrow> nat \<Rightarrow> 32 word \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> 'a cstate_scheme \<Rightarrow> (paddr \<times> memattribs_t) \<times> 'a cstate_scheme" 
 where 
-  "align_dom_perm_entry_check \<equiv> \<lambda> entry v siz dacr ispriv iswrite. if (MemType_entry entry = MemType_Device \<or> MemType_entry entry = MemType_StronglyOrdered) \<and> addr_val v \<noteq> Align' (addr_val v, siz)  
-                                         then raise'exception' (MMU_Exception ''Alignment Fault'')
+  "align_dom_perm_entry_check \<equiv> \<lambda> entry v siz dacr ispriv iswrite. if (memtyp_entry entry = MemDevice \<or> memtyp_entry entry = MemStronglyOrdered) \<and> addr_val v \<noteq> align (addr_val v, siz)  
+                                         then raise'exception' (MMUException ''Alignment Fault'')
                                          else do {
-                                                  let chkdm = CheckDomain' (domain (flags_entry entry)) (addr_val v) dacr;
-                                                  if chkdm = None then raise'exception' (MMU_Exception ''Domain Fault'')  else
+                                                  let chkdm = checkdomain (domain (flags entry)) (addr_val v) dacr;
+                                                  if chkdm = None then raise'exception' (MMUException ''Domain Fault'')  else
                                                   if chkdm = Some True then  
-                                                          do{let chkprm = CheckPermission' (Permissions (flags_entry entry)) ispriv iswrite;  \<comment> \<open>encodes abort\<close>
-                                                               if chkprm = None then raise'exception' (MMU_Exception ''Permission Fault'')
-                                                                else if  chkprm = Some True then raise'exception' (MMU_Exception ''Permission Fault'')
+                                                          do{let chkprm = checkpermission (permissions (flags entry)) ispriv iswrite;  \<comment> \<open>encodes abort\<close>
+                                                               if chkprm = None then raise'exception' (MMUException ''Permission Fault'')
+                                                                else if  chkprm = Some True then raise'exception' (MMUException ''Permission Fault'')
                                                                 else return (tlb_entry_to_adrdesc v entry)}
                                                     else return (tlb_entry_to_adrdesc v entry)}"
 
@@ -320,10 +313,6 @@ begin
   definition   
   "(mmu_translate v siz ispriv iswrite data_ins :: ('a tlb_state_scheme \<Rightarrow> _))
   = do {
-     \<comment> \<open>tlbs  <- read_state tlbs_set;
-     update_state (\<lambda>s. s\<lparr> tlbs_set :=  tlbs \<lparr> dtlb_set   := dtlb_set tlbs  -  dtlb_evict(typ_tlbs s) ,
-                                             itlb_set   := itlb_set tlbs   -  itlb_evict(typ_tlbs s) ,
-                                             unitlb_set := unitlb_set tlbs -  unitlb_evict(typ_tlbs s) \<rparr> \<rparr>); \<close>
      tlbs  <- read_state tlbs_set;
      let dtlb =  dtlb_set tlbs;
      let itlb =  itlb_set tlbs;
@@ -340,30 +329,30 @@ begin
               | Miss \<Rightarrow> (case lookup maintlb asid (addr_val v) of
                              Hit entry \<Rightarrow> align_dom_perm_entry_check entry v siz dacr ispriv iswrite
                           |  Miss \<Rightarrow> (case pt_walk asid heap ttbr0 prrr nmrr v of 
-                                            None \<Rightarrow> raise'exception' (MMU_Exception ''more info'')
+                                            None \<Rightarrow> raise'exception' (MMUException ''more info'')
                                          |  Some entry \<Rightarrow> do {
                                                  \<comment> \<open>it seems like from the manual that TLB is loaded first, alignment and  domain checking is performed afterwards\<close>
                                                  let tlb_rld = tlbs \<lparr> dtlb_set := dtlb \<union> {entry}, 
                                                                        unitlb_set := maintlb \<union> {entry} \<rparr>;
                                                  update_state (\<lambda>s. s\<lparr> tlbs_set := tlb_rld \<rparr>);
                                                  align_dom_perm_entry_check entry v siz dacr ispriv iswrite })
-                          | Incon \<Rightarrow> raise'exception' (IMPLEMENTATION_DEFINED ''set on fire''))
-              | Incon \<Rightarrow> raise'exception' (IMPLEMENTATION_DEFINED ''set on fire'') 
+                          | Incon \<Rightarrow> raise'exception' (MMUException ''set on fire''))
+              | Incon \<Rightarrow> raise'exception' (MMUException ''set on fire'') 
           else 
            case lookup itlb asid (addr_val v) of
                 Hit entry \<Rightarrow>  align_dom_perm_entry_check entry v siz dacr ispriv iswrite
               | Miss \<Rightarrow> (case lookup maintlb asid (addr_val v) of
                              Hit entry \<Rightarrow>  align_dom_perm_entry_check entry v siz dacr ispriv iswrite
                           |  Miss \<Rightarrow> (case pt_walk asid heap ttbr0 prrr nmrr v of 
-                                            None \<Rightarrow> raise'exception' (MMU_Exception ''more info'')
+                                            None \<Rightarrow> raise'exception' (MMUException ''more info'')
                                         |  Some entry \<Rightarrow> do {
                                                  \<comment> \<open>it seems like from the manual that TLB is loaded first, alignment and  domain checking is performed afterwards\<close>
                                                  let tlb_rld = tlbs \<lparr> itlb_set := itlb \<union> {entry}, 
                                                                        unitlb_set := maintlb \<union> {entry} \<rparr>;
                                                  update_state (\<lambda>s. s\<lparr> tlbs_set := tlb_rld \<rparr>);
                                                  align_dom_perm_entry_check entry v siz dacr ispriv iswrite })
-                          | Incon \<Rightarrow> raise'exception' (IMPLEMENTATION_DEFINED ''set on fire''))
-              | Incon \<Rightarrow> raise'exception' (IMPLEMENTATION_DEFINED ''set on fire'') 
+                          | Incon \<Rightarrow> raise'exception' (MMUException ''set on fire''))
+              | Incon \<Rightarrow> raise'exception' (MMUException ''set on fire'') 
    }"
 
 thm mmu_translate_tlb_state_ext_def                     
