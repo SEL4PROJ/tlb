@@ -327,7 +327,10 @@ begin
            case lookup dtlb asid (addr_val v) of
                 Hit entry \<Rightarrow>  align_dom_perm_entry_check entry v siz dacr ispriv iswrite
               | Miss \<Rightarrow> (case lookup maintlb asid (addr_val v) of
-                             Hit entry \<Rightarrow> align_dom_perm_entry_check entry v siz dacr ispriv iswrite
+                             Hit entry \<Rightarrow> do {
+                                              let tlb_rld = tlbs \<lparr> dtlb_set := dtlb \<union> {entry} \<rparr>;
+                                                 update_state (\<lambda>s. s\<lparr> tlbs_set := tlb_rld \<rparr>);
+                                                 align_dom_perm_entry_check entry v siz dacr ispriv iswrite}
                           |  Miss \<Rightarrow> (case pt_walk asid heap ttbr0 prrr nmrr v of 
                                             None \<Rightarrow> raise'exception' (MMUException ''more info'')
                                          |  Some entry \<Rightarrow> do {
@@ -342,7 +345,10 @@ begin
            case lookup itlb asid (addr_val v) of
                 Hit entry \<Rightarrow>  align_dom_perm_entry_check entry v siz dacr ispriv iswrite
               | Miss \<Rightarrow> (case lookup maintlb asid (addr_val v) of
-                             Hit entry \<Rightarrow>  align_dom_perm_entry_check entry v siz dacr ispriv iswrite
+                             Hit entry \<Rightarrow>  do {
+                                                let tlb_rld = tlbs \<lparr> itlb_set := itlb \<union> {entry} \<rparr>;
+                                                 update_state (\<lambda>s. s\<lparr> tlbs_set := tlb_rld \<rparr>);
+                                                  align_dom_perm_entry_check entry v siz dacr ispriv iswrite }
                           |  Miss \<Rightarrow> (case pt_walk asid heap ttbr0 prrr nmrr v of 
                                             None \<Rightarrow> raise'exception' (MMUException ''more info'')
                                         |  Some entry \<Rightarrow> do {

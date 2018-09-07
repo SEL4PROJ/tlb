@@ -253,7 +253,7 @@ lemma mmu_config_pair_mem1 [mmu_intros, intro!, simp]:
   apply (clarsimp simp: mem1_def)
   by (rule mmu_config_bind; clarsimp simp:  option.splits) 
 
-lemma excp_pas_lookup_cases' [mmu_intros,intro!, simp]: 
+lemma mmu_config_lookup_cases' [mmu_intros,intro!, simp]: 
   "\<lbrakk> \<forall>e. lva = ARM_Monadic.lookup_type.Hit e \<longrightarrow>  mmu_config prj (AH e); mmu_config prj AI; mmu_config prj AM \<rbrakk> \<Longrightarrow> 
           mmu_config prj  (case lva of ARM_Monadic.lookup_type.Hit e \<Rightarrow> AH e 
                           | ARM_Monadic.lookup_type.Incon \<Rightarrow> AI
@@ -603,14 +603,8 @@ lemma mmu_config_lookupTLB_main [mmu_intros, intro!, simp]:
 lemma mmu_config_TranslateAddress [mmu_intros, intro!, simp]:
   "mmu_config  id (TranslateAddress (va, ispriv, iswrite, siz, True))"
   apply (clarsimp simp:  TranslateAddress_def)
-  apply ((rule mmu_intros)+ ; clarsimp?)
-   apply ((rule mmu_intros)+ ; clarsimp?)
-    apply ((rule mmu_intros)+ ; clarsimp?)
-    apply ((rule mmu_intros)+ ; clarsimp?)
-    apply ((rule mmu_intros)+ ; clarsimp?)
-   apply ((rule mmu_intros)+ ; clarsimp?)
-  by ((rule mmu_intros)+ ; clarsimp?)
-
+  by ((rule mmu_intros)+ ; clarsimp?)+
+  
 
 
 end

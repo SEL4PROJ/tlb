@@ -428,25 +428,27 @@ AddressDescriptor TranslateAddress (address :: bits(32), privileged :: bool, isw
   microDataTLB_evict();
   mainTLB_evict();
   -- the current asid
-  var asid = CP15.CONTEXTIDR.ASID;
+  --var asid = CP15.CONTEXTIDR.ASID;
 
   if data_ins == true then 
-   match lookupTLB_Data_micro (asid, address)
+   match lookupTLB_Data_micro (CP15.CONTEXTIDR.ASID, address)
    {
 	  case Miss => 
-         match lookupTLB_main (asid, address)
+         match lookupTLB_main (CP15.CONTEXTIDR.ASID, address)
 			    {
 				   case Miss => 
 				    {
 					   (memaddrdesc,tlb_entry)  = TranslateAddressV(address, privileged, iswrite, size);
 						 -- replacement
-             var tlb_entry1 = TLBTypeCast (tlb_entry, asid, address);
-             DataTLB(0`5) <- Some (tlb_entry1);
-             unified_mainTLB(0`8) <-  Some (tlb_entry1);
+             --var tlb_entry1 = TLBTypeCast (tlb_entry, CP15.CONTEXTIDR.ASID, address);
+             DataTLB(0`5) <- Some (TLBTypeCast (tlb_entry, CP15.CONTEXTIDR.ASID, address));
+             unified_mainTLB(0`8) <-  Some (TLBTypeCast (tlb_entry, CP15.CONTEXTIDR.ASID, address));
              return memaddrdesc
 					   }  
 				   case Hit (e) => 
-              { -- here: CheckPermission and CheckDomain, from the tlb entry (0 --ishyp, 0 --usesLD)
+              { 
+				DataTLB(0`5) <- Some (e);
+				-- here: CheckPermission and CheckDomain, from the tlb entry (0 --ishyp, 0 --usesLD)
                 when CheckDomain(domain_entry(e), address, level_entry(e), iswrite) do
                 CheckPermission(perms_entry(e), address, level_entry(e), domain_entry(e), iswrite, privileged, false, false);
                return va_to_pa (address, e)
@@ -462,23 +464,25 @@ AddressDescriptor TranslateAddress (address :: bits(32), privileged :: bool, isw
 		case Incon => #IMPLEMENTATION_DEFINED("set on fire")
 	  }
   else
-  match lookupTLB_Instr_micro (asid, address)
+  match lookupTLB_Instr_micro (CP15.CONTEXTIDR.ASID, address)
    {
 	  case Miss => 
-         match lookupTLB_main (asid, address)
+         match lookupTLB_main (CP15.CONTEXTIDR.ASID, address)
 			    {
 				   case Miss => 
 				    {
              
 					   (memaddrdesc,  tlb_entry) = TranslateAddressV(address, privileged, iswrite, size);
 						 -- replacement
-             var tlb_entry1 = TLBTypeCast (tlb_entry, asid, address);
-             InstrTLB(0`6) <- Some (tlb_entry1);
-             unified_mainTLB(0`8) <-  Some (tlb_entry1);
+             --var tlb_entry1 = TLBTypeCast (tlb_entry, CP15.CONTEXTIDR.ASID, address);
+             InstrTLB(0`6) <- Some (TLBTypeCast (tlb_entry, CP15.CONTEXTIDR.ASID, address));
+             unified_mainTLB(0`8) <-  Some (TLBTypeCast (tlb_entry, CP15.CONTEXTIDR.ASID, address));
              return memaddrdesc
 					   }  
 				   case Hit (e) => 
-              { -- here: CheckPermission and CheckDomain, from the tlb entry (0 --ishyp, 0 --usesLD)
+              { 
+				InstrTLB(0`6) <- Some (e); 
+				-- here: CheckPermission and CheckDomain, from the tlb entry (0 --ishyp, 0 --usesLD)
                 when CheckDomain(domain_entry(e), address, level_entry(e), iswrite) do
                 CheckPermission(perms_entry(e), address, level_entry(e), domain_entry(e), iswrite, privileged, false, false);
                return va_to_pa (address, e)
