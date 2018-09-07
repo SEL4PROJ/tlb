@@ -1,66 +1,16 @@
 theory MMU_Translate_Concrete
 imports  L3_LIB.L3_Hoare_Logic
          MMU_Configuration
-         "~/verification/l4v/lib/Apply_Trace" 
 begin
 
 notation (output) ARM_Monadic.lookup_type.Miss  ("Miss")
 notation (output) ARM_Monadic.lookup_type.Incon ("Incon")
 notation (output) ARM_Monadic.lookup_type.Hit   ("Hit")
 
-named_theorems wp_case
-
-lemma l3_valid_case_split [wp_case]:
-  "\<lbrakk> \<And>a.  x = a \<Longrightarrow>  l3_valid P  (f a) Q'\<rbrakk> \<Longrightarrow> 
-     l3_valid P  (case x of a \<Rightarrow> f a) Q'"
-  by (clarsimp simp:)
-
-
-lemma l3_valid_case_split' :
-  "\<lbrakk> \<And>a' b' c' d' e' f' g' h'.  (a,b,c,d,e,fd,g,h) = (a',b',c',d',e',f',g', h') \<Longrightarrow> 
-                                 l3_valid P  (f a' b' c' d' e' f' g' h') Q'\<rbrakk> \<Longrightarrow> 
-     l3_valid P  (case (a,b,c,d,e,fd,g,h) of (a',b',c',d',e',f',g', h') \<Rightarrow> f a' b' c' d' e' f' g' h') Q'"
-  by (clarsimp simp:)
-
-lemma l3_valid_case_split'' :
-  "\<lbrakk> \<And>a' b' c' d'.  (a,b,c,d) = (a',b',c',d') \<Longrightarrow>
-                                 l3_valid P  (f a' b' c' d') Q'\<rbrakk> \<Longrightarrow> 
-     l3_valid P  (case (a,b,c,d) of (a',b',c',d') \<Rightarrow> f a' b' c' d') Q'"
-  by (clarsimp simp:)
-
-
-lemma 
-  "\<lbrakk> \<And>e. lva = Hit e \<Longrightarrow>  l3_valid P (AH e) Q';
-         lva = Incon \<Longrightarrow>  l3_valid P AI Q';
-         lva = Miss  \<Longrightarrow>  l3_valid P AM Q'\<rbrakk> \<Longrightarrow> 
-          l3_valid P (case lva of Hit e \<Rightarrow> AH e 
-                         | Incon \<Rightarrow> AI
-                         | Miss \<Rightarrow> AM) Q'"
-  by (cases lva; clarsimp)
-
-
-lemma l3_valid_lookup_cases [wp,intro!, simp]:
-  "\<lbrakk> \<And>lva e. lva = Hit e \<Longrightarrow>  l3_valid (P lva e) (fh lva e) (Y lva);
-    \<And>lva. lva = Incon \<Longrightarrow>  l3_valid (Q' lva) (fi lva) (Y lva);
-    \<And>lva. lva = Miss  \<Longrightarrow>  l3_valid (R' lva) (fm lva) (Y lva) \<rbrakk> \<Longrightarrow> 
-          l3_valid (\<lambda>s. (\<forall>e.  lva = Hit e \<longrightarrow>  P lva e s) \<and>
-                             (lva = Incon \<longrightarrow>  Q' lva  s)  \<and>
-                             (lva = Miss  \<longrightarrow>  R' lva  s))
-                     (case lva of Hit e \<Rightarrow> fh lva e 
-                        |   Incon \<Rightarrow> fi lva
-                        |   Miss \<Rightarrow> fm lva) (Y lva)"
-  apply(simp add: l3_valid_def split_def)
-  by(case_tac lva, simp_all)
-
-
 lemma l3_valid_raise'exception[wp, intro!, simp]:
-  "l3_valid (\<lambda>s. \<forall>r. if exception s = NoException 
-                      then  P r (s \<lparr>exception := e \<rparr>)
-                      else  P r s )  (raise'exception e) P"
-  apply (clarsimp simp: raise'exception_def)
-  apply (rule wp_pre)
-  by ((rule wp)+ , simp)
- 
+  "l3_valid (\<lambda>s. \<forall>r. P r (if exception s = NoException then s \<lparr>exception := e \<rparr> else s))
+           (raise'exception e) P"
+  by (wpsimp simp: raise'exception_def)
 
 lemma is_it:
   "l3_valid (\<lambda>s. \<forall>r. P r 
@@ -149,7 +99,55 @@ lemma is_it:
 
 lemma undefined_False[wp]:
   "l3_valid (\<lambda>_. False) HOL.undefined Q'"
+  by (simp add: l3_valid_def)
+
+lemma if_chain[simp]:
+  "(if P then f else if Q' then f else g) = (if P \<or> Q' then f else g)"
+  by auto
+
+lemma word_2_cases[simp]:
+  "(w::2 word) = 0 \<or> w = 1 \<or> w = 2 \<or> w = 3"
+  by word_bitwise auto
+
+lemma word_3_cases[simp]:
+  "(w::3 word) = 0 \<or>
+   w = 1 \<or>
+   w = 2 \<or>
+   w = 3 \<or>
+   w = 4 \<or>
+   w = 5 \<or>
+   w = 6 \<or>
+   w = 7"
+  by word_bitwise auto
+
+lemma TranslateAddressV_wp[wp]:
+  "\<lbrace>\<lambda>s. MMU_config_assert_isa s \<and>
+        (\<exists>t mematr t'. tlb_rel s (typ_tlb t) \<and>
+           mmu_translate (Addr va) siz ispriv iswrite True t = ((pa', mematr), t'))\<rbrace>
+  TranslateAddressV (va, ispriv, iswrite, siz)
+  \<lbrace>\<lambda>rg s. \<forall>x. (\<exists>xa. rg = (x, xa)) \<longrightarrow> pa' = Addr (paddress x)\<rbrace>"
   sorry
+
+term for_loop
+
+lemma for_loop_wp0:
+  "\<lbrakk> \<And>i. \<lbrakk> start \<le> i; i \<le> end \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f i \<lbrace>\<lambda>_. P\<rbrace>; start \<le> end \<rbrakk> \<Longrightarrow>
+  \<lbrace>P\<rbrace> for_loop (start, end, f) \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (induct "(start,end,f)" arbitrary: start rule: for_loop.induct)
+  apply (subst for_loop.simps)
+  apply clarsimp
+  apply wpsimp
+   apply force
+  apply assumption
+  done
+
+thm l3_valid_weak_pre[no_vars]
+
+lemma l3_valid_post:
+  "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>; \<And>r s. Q' r s \<Longrightarrow> Q'' r s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q''\<rbrace>"
+  by (auto simp: l3_valid_def)
+
+lemmas for_loop_wp = for_loop_wp0[THEN l3_valid_post]
 
 lemma refine_paddr:
   "l3_valid
@@ -160,13 +158,27 @@ lemma refine_paddr:
           mmu_translate (Addr va) siz ispriv iswrite True t = ((pa', mematr), t'))
      (TranslateAddress (va, ispriv, iswrite, siz, True)) 
           (\<lambda>r s. pa' = Addr (paddress r))"
-  apply (rule wp_pre) 
+  supply if_cong[cong] if_split[split del]
    apply (clarsimp simp: TranslateAddress_def)
-   apply ((rule wp)+; clarsimp?)
-              apply (clarsimp simp: CheckPermission_def)
-              apply (safe)
-                 apply ((rule wp)+; clarsimp?)
-                    
+  apply (wpsimp simp: CheckDomain_def CheckPermission_def write'DataTLB_def
+                      write'unified_mainTLB_def)
+  apply (simp add: lookupTLB_main_def ds_id_def)
+  apply wpsimp
+  apply (simp add: entry_list_main_def mainTLBEntries_def)
+  apply (wpsimp simp: unified_mainTLB_def)
+   apply (case_tac aa; clarsimp)
+   apply (rule conjI; clarsimp)
+   apply fastforce
+  apply (clarsimp split: if_splits)
+  apply (rule conjI)
+   defer
+  apply fastforce
+  apply (clarsimp split: if_splits)
+  apply (case_tac list; clarsimp)
+  
+
+  
+
                (*  
                 apply (rule wp_pre) 
                  apply ((rule wp)+; clarsimp?)
