@@ -7,9 +7,6 @@ begin
 
 
 
-declare return_def [simp add]
-
-
 definition 
   MMU_config_assert_isa :: "state \<Rightarrow> bool"
 where
@@ -59,7 +56,7 @@ where
   "excp_typcast (ASSERT string)                  = MMUException string"
 | "excp_typcast (IMPLEMENTATION_DEFINED string)  = MMUException string"
 | "excp_typcast (MMU_Exception string)           = MMUException string"
-| "excp_typcast  NoException                     = MMU_Translate_Refine.NoException "
+| "excp_typcast  NoException                     = NoExcp "
 | "excp_typcast (UNPREDICTABLE string)           = MMUException string"
 | "excp_typcast (VFP_EXCEPTION string)           = MMUException string"
 
@@ -178,8 +175,11 @@ where
         (\<forall> s s' a. f s = (a,s') \<longrightarrow>
                  MMU_config_assert_isa (prj s) \<longrightarrow> MMU_config_assert_isa (prj s') )"
 
-named_theorems mmu_intros
+context 
+  notes return_def[simp]
+begin
 
+named_theorems mmu_intros
 
 lemma mmu_config_bind [mmu_intros, intro!, simp]:
   "\<lbrakk>  \<And>x. mmu_config prj (g x); mmu_config prj f \<rbrakk> \<Longrightarrow> mmu_config prj (bind f g)"
@@ -251,7 +251,7 @@ lemma mmu_config_pair_raise_excp' [mmu_intros, intro!, simp]:
 lemma mmu_config_pair_mem1 [mmu_intros, intro!, simp]:
   "mmu_config id (mem1 p)"
   apply (clarsimp simp: mem1_def)
-  by (rule mmu_config_bind; clarsimp simp:  option.splits) 
+  by (rule mmu_config_bind ; clarsimp simp:  option.splits) 
 
 lemma mmu_config_lookup_cases' [mmu_intros,intro!, simp]: 
   "\<lbrakk> \<forall>e. lva = ARM_Monadic.lookup_type.Hit e \<longrightarrow>  mmu_config prj (AH e); mmu_config prj AI; mmu_config prj AM \<rbrakk> \<Longrightarrow> 
@@ -604,7 +604,7 @@ lemma mmu_config_TranslateAddress [mmu_intros, intro!, simp]:
   "mmu_config  id (TranslateAddress (va, ispriv, iswrite, siz, True))"
   apply (clarsimp simp:  TranslateAddress_def)
   by ((rule mmu_intros)+ ; clarsimp?)+
-  
-
+ 
+end
 
 end

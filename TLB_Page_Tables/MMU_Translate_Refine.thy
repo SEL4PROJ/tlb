@@ -150,7 +150,7 @@ definition
 (* building up new state *)
 
 
-datatype excpt_t =   NoException  | MMUException string
+datatype excpt_t =   NoExcp  | MMUException string
   
 record cstate =
   heap :: "paddr \<rightharpoonup> byte"
@@ -170,7 +170,7 @@ where
   "raise'exception' \<equiv> \<lambda>e. do {
                         v \<leftarrow> read_state Exception;
                         _ \<leftarrow> do {
-                            b \<leftarrow> return (v = NoException);
+                            b \<leftarrow> return (v = NoExcp);
                             if b then update_state (Exception_update (\<lambda>_. e)) else return ()
                           };
                         return HOL.undefined
@@ -180,7 +180,7 @@ where
 definition 
   raise'exception'  :: "excpt_t \<Rightarrow> 'a cstate_scheme \<Rightarrow> 'r \<times> 'a cstate_scheme"
 where 
-  "raise'exception' \<equiv> \<lambda>e s. let (v, s) = (excpt s, s); (u, y) = let (b, y) = (v = NoException, s) in (if b then \<lambda>s. ((), s\<lparr>excpt := e\<rparr>) else Pair ()) y in (undefined, y)"
+  "raise'exception' \<equiv> \<lambda>e s. let (v, s) = (excpt s, s); (u, y) = let (b, y) = (v = NoExcp, s) in (if b then \<lambda>s. ((), s\<lparr>excpt := e\<rparr>) else Pair ()) y in (undefined, y)"
 
 
 
@@ -306,7 +306,47 @@ where
 
 
 
+instantiation tlb_state_ext :: (type) mmu   
+begin
+  definition   
+  "(mmu_translate v siz ispriv iswrite data_ins :: ('a tlb_state_scheme \<Rightarrow> _))
+  = do {
+     tlbs  <- read_state tlbs_set;
+     let dtlb =  dtlb_set tlbs;
+     let itlb =  itlb_set tlbs;
+     let maintlb =  unitlb_set tlbs;
+     heap   <- read_state heap;
+     asid  <- read_state asid;
+     ttbr0 <- read_state ttbr0;
+     prrr  <- read_state prrr;
+     nmrr  <- read_state nmrr;
+     dacr <- read_state dacr;
+     let lookup_first_stage = (if data_ins then lookup dtlb asid (addr_val v) else lookup itlb asid (addr_val v));
+     case lookup_first_stage of
+          Hit entry \<Rightarrow>  align_dom_perm_entry_check entry v siz dacr ispriv iswrite
+        | Miss \<Rightarrow> (case lookup maintlb asid (addr_val v) of
+                             Hit entry \<Rightarrow> do {
+                                                 let tlb_rld = (if data_ins then tlbs \<lparr> dtlb_set := dtlb \<union> {entry} \<rparr> else tlbs \<lparr> itlb_set := itlb \<union> {entry} \<rparr> );
+                                                 update_state (\<lambda>s. s\<lparr> tlbs_set := tlb_rld \<rparr>);
+                                                 align_dom_perm_entry_check entry v siz dacr ispriv iswrite}
+                          |  Miss \<Rightarrow> (case pt_walk asid heap ttbr0 prrr nmrr v of 
+                                            None \<Rightarrow> raise'exception' (MMUException ''more info'')
+                                         |  Some entry \<Rightarrow> do {
+                                                 \<comment> \<open>it seems like from the manual that TLB is loaded first, alignment and  domain checking is performed afterwards\<close>
+                                                 let tlb_rld = (if data_ins then tlbs \<lparr> dtlb_set := dtlb \<union> {entry}, unitlb_set := maintlb \<union> {entry} \<rparr>
+                                                                            else tlbs \<lparr> itlb_set := itlb \<union> {entry}, unitlb_set := maintlb \<union> {entry} \<rparr> );
+                                                 update_state (\<lambda>s. s\<lparr> tlbs_set := tlb_rld \<rparr>);
+                                                 align_dom_perm_entry_check entry v siz dacr ispriv iswrite })
+                          | Incon \<Rightarrow> raise'exception' (MMUException ''set on fire''))
+        | Incon \<Rightarrow> raise'exception' (MMUException ''set on fire'') 
+   }"
 
+thm mmu_translate_tlb_state_ext_def                     
+  instance ..
+end
+
+
+(*
 
 instantiation tlb_state_ext :: (type) mmu   
 begin
@@ -365,5 +405,8 @@ thm mmu_translate_tlb_state_ext_def
   instance ..
 end
 
+*)
+
+thm mmu_translate_tlb_state_ext_def
 
 end

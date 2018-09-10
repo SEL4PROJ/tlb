@@ -12,91 +12,6 @@ lemma l3_valid_raise'exception[wp, intro!, simp]:
            (raise'exception e) P"
   by (wpsimp simp: raise'exception_def)
 
-lemma is_it:
-  "l3_valid (\<lambda>s. \<forall>r. P r 
-               (s \<lparr> exception := exception(snd (CheckPermission (a, b, c, d, e, f, g, h) s)) \<rparr>)) 
-     (CheckPermission (a, b, c, d, e, f, g, h)) 
-        P"
-  apply (clarsimp simp: l3_valid_def CheckPermission_def)
-  apply safe
-     apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def)
-     apply (clarsimp split: if_split_asm )
-             apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def update_state_def)
-             apply (clarsimp split: if_split_asm )
-                    apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def update_state_def)
-                    apply (clarsimp simp: raise'exception_def trim_state_def extend_state_def read_state_def bind_def update_state_def
-      split: if_split_asm )+
-             apply (clarsimp simp: word_bit_field_insert_def word_modify_def bitstring_modify_def)
-             apply word_bitwise
-             apply force
-            apply (clarsimp simp: raise'exception_def trim_state_def extend_state_def read_state_def bind_def update_state_def
-      split: if_split_asm )+
-     apply word_bitwise
-     apply force
-    apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def)
-    apply (clarsimp split: if_split_asm )
-          apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def update_state_def)
-          apply (clarsimp split: if_split_asm )
-               apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def update_state_def)
-               apply (clarsimp simp: raise'exception_def trim_state_def extend_state_def read_state_def bind_def update_state_def
-      split: if_split_asm )+
-          apply (clarsimp simp: word_bit_field_insert_def word_modify_def bitstring_modify_def)
-          apply word_bitwise
-          apply force
-         apply (clarsimp simp: raise'exception_def trim_state_def extend_state_def read_state_def bind_def update_state_def
-      split: if_split_asm )+
-    apply word_bitwise
-    apply force
-   apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def)
-   apply (clarsimp split: if_split_asm )
-        apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def update_state_def)
-        apply (clarsimp split: if_split_asm )
-            apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def update_state_def)
-            apply (clarsimp simp: raise'exception_def trim_state_def extend_state_def read_state_def bind_def update_state_def
-      split: if_split_asm )+
-        apply (clarsimp simp: word_bit_field_insert_def word_modify_def bitstring_modify_def)
-        apply word_bitwise
-        apply force
-       apply (clarsimp simp: raise'exception_def trim_state_def extend_state_def read_state_def bind_def update_state_def
-      split: if_split_asm )+
-   apply word_bitwise
-   apply force
-  apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def)
-  apply (clarsimp split: if_split_asm )
-     apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def update_state_def)
-     apply (clarsimp split: if_split_asm )
-       apply (clarsimp simp: trim_state_def extend_state_def read_state_def bind_def update_state_def)
-       apply (clarsimp simp: raise'exception_def trim_state_def extend_state_def read_state_def bind_def update_state_def
-      split: if_split_asm )+
-     apply (clarsimp simp: word_bit_field_insert_def word_modify_def bitstring_modify_def)
-     apply word_bitwise
-     apply force
-    apply (clarsimp simp: raise'exception_def trim_state_def extend_state_def read_state_def bind_def update_state_def
-      split: if_split_asm )+
-  apply word_bitwise
-  by force
-
-(*
-  apply (rule wp_pre)
-  apply (clarsimp simp: CheckPermission_def)
-  apply safe
-  apply (rule wp)+
-  apply (word_bitwise)
-  apply force
-   apply (rule wp)+
-  apply (word_bitwise)
-  apply force
-   apply (rule wp)+
-   apply (rule wp_pre)
-     apply (rule wp)
-
-    apply (case_tac "AFE (VSCTLR (CP15 (snd s)))"; clarsimp)
-     apply (case_tac "word_bit_field_insert 0 0 (1::1 word) (a:: 3 word) = (0:: 3 word)"; clarsimp)
-    apply (clarsimp split: if_split_asm)
-    apply (case_tac "word_bit_field_insert 0 0 (1::1 word) (a:: 3 word) = (1:: 3 word)"; clarsimp)
-    apply (clarsimp split: if_split_asm)
-*)
-
 lemma undefined_False[wp]:
   "l3_valid (\<lambda>_. False) HOL.undefined Q'"
   by (simp add: l3_valid_def)
@@ -120,35 +35,227 @@ lemma word_3_cases[simp]:
    w = 7"
   by word_bitwise auto
 
-lemma TranslateAddressV_wp[wp]:
-  "\<lbrace>\<lambda>s. MMU_config_assert_isa s \<and>
-        (\<exists>t mematr t'. tlb_rel s (typ_tlb t) \<and>
-           mmu_translate (Addr va) siz ispriv iswrite True t = ((pa', mematr), t'))\<rbrace>
-  TranslateAddressV (va, ispriv, iswrite, siz)
+
+definition
+  "pre_cond s t va  \<equiv> 
+          MMU_config_assert_isa s \<and>
+          tlb_rel s (typ_tlb t) \<and>
+          dtlb_consistent (typ_tlb t) (Addr va) \<and>
+          unitlb_consistent (typ_tlb t) (Addr va) "
+
+
+(* keeping the pre_cond as it is for the time being *)
+(*
+lemma TranslateAddressV_wp:
+  "\<lbrace>\<lambda>s. pre_cond s t t' va sz ip iw pa' mat \<rbrace>
+         TranslateAddressV (va, ip, iw, sz)
   \<lbrace>\<lambda>rg s. \<forall>x. (\<exists>xa. rg = (x, xa)) \<longrightarrow> pa' = Addr (paddress x)\<rbrace>"
   sorry
 
-term for_loop
+*)
 
-lemma for_loop_wp0:
-  "\<lbrakk> \<And>i. \<lbrakk> start \<le> i; i \<le> end \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f i \<lbrace>\<lambda>_. P\<rbrace>; start \<le> end \<rbrakk> \<Longrightarrow>
-  \<lbrace>P\<rbrace> for_loop (start, end, f) \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (induct "(start,end,f)" arbitrary: start rule: for_loop.induct)
+(* wp_comb requires validity of A in order to proceed *)
+
+lemma TranslateAddress_exception_mmu_translate [wp]:
+  "\<lbrace>\<lambda>s. \<exists>t pa' mematr . MMU_config_assert_isa s \<and>
+                 tlb_rel s (typ_tlb t) \<and>
+                 dtlb_consistent (typ_tlb t) (Addr va) \<and>
+                 unitlb_consistent (typ_tlb t) (Addr va) \<and>
+                 mmu_translate  (Addr va) siz ispriv iswrite True (t :: 'a::mmu tlb_state_scheme) = ((pa', mematr), t')\<rbrace>
+       (TranslateAddress (va , ispriv, iswrite, siz, True))
+                 \<lbrace>\<lambda>_ s'. exception s' \<noteq> NoException \<longrightarrow> excpt t' \<noteq> NoExcp\<rbrace>"
+sorry
+
+lemma l3_valid_TranslateAddress_MMU_config:
+  "\<lbrace>\<lambda>s. MMU_config_assert_isa s\<rbrace> TranslateAddress (va, ispriv, iswrite, siz, True) 
+       \<lbrace>\<lambda>_ s. MMU_config_assert_isa s\<rbrace>"
+  apply (clarsimp simp: l3_valid_def)
+  by ((insert mmu_config_TranslateAddress [of va ispriv iswrite siz]) [1],
+        force simp: mmu_config_def)
+
+
+lemmas l3_valid_TranslateAddress_MMU_config' [wp] = 
+              l3_valid_TranslateAddress_MMU_config [THEN l3_valid_redunt_post_imp]
+
+
+(*  tlb consistency is needed here *)
+(*
+lemma TranslateAddressV_pt_walk [wp]:
+  "\<lbrace>\<lambda>s. \<exists>t. MMU_config_assert_isa s \<and> 
+        state_comp s (typ_tlb (t :: 'a tlb_state_scheme)) \<and>
+        (\<forall>entry. pt_walk (asid t) (heap t) (ttbr0 t) (prrr t) (nmrr t)  (Addr va) = Some entry \<longrightarrow>
+                 pa' = Addr (TLB.va_to_pa va entry)) \<rbrace> 
+            TranslateAddressV(va, ispriv, iswrite,siz) 
+       \<lbrace>\<lambda>rg s. \<forall>x. (\<exists>xa. rg = (x, xa)) \<longrightarrow> exception s = NoException \<longrightarrow> pa' = Addr (paddress x)\<rbrace>"
+sorry
+*)
+
+lemma TranslateAddressV_pt_walk [wp]:
+  "\<lbrace>\<lambda>s. \<exists>t. MMU_config_assert_isa s \<and>
+                 tlb_rel s (typ_tlb (t :: 'a::mmu tlb_state_scheme)) \<and>
+                 dtlb_consistent (typ_tlb t) (Addr va) \<and>
+                 unitlb_consistent (typ_tlb t) (Addr va) \<and>
+        (\<forall>entry. pt_walk (asid t) (heap t) (ttbr0 t) (prrr t) (nmrr t)  (Addr va) = Some entry \<longrightarrow>
+                 pa' = Addr (TLB.va_to_pa va entry)) \<rbrace> 
+            TranslateAddressV(va, ispriv, iswrite,siz) 
+       \<lbrace>\<lambda>rg s. \<forall>x. (\<exists>xa. rg = (x, xa)) \<longrightarrow> exception s = NoException \<longrightarrow> pa' = Addr (paddress x)\<rbrace>"
+sorry
+
+lemma CheckPermission_constant_bool_pre_post [wp]:
+  "\<lbrace>\<lambda>s. Q' \<rbrace> 
+      CheckPermission (p, va, l, d, iw, ip, f, f')
+      \<lbrace>\<lambda>rf s. A' s \<longrightarrow> Q'\<rbrace>"
+  supply if_cong[cong] if_split[split del] 
+  by (wpsimp simp: CheckPermission_def)
+
+
+lemma domain_entry_constant_bool_pre_post [wp]:
+  "\<lbrace>\<lambda>s. Q'\<rbrace> CheckDomain (de, va, l, iw) 
+         \<lbrace>\<lambda>re. if re then (\<lambda>s. Q') else  (\<lambda>s. A' s \<longrightarrow> Q')\<rbrace>"
+  supply if_cong[cong] if_split[split del] 
+  by (wpsimp simp: CheckDomain_def)
+
+
+
+lemma main_thm:
+  "\<lbrace>\<lambda>s. MMU_config_assert_isa s \<and>
+                 tlb_rel s (typ_tlb t) \<and>
+                 dtlb_consistent (typ_tlb t) (Addr va) \<and>
+                 unitlb_consistent (typ_tlb t) (Addr va) \<and>
+                 mmu_translate  (Addr va) siz ispriv iswrite True (t :: 'a::mmu tlb_state_scheme) = ((pa', mematr), t')\<rbrace>
+       (TranslateAddress (va , ispriv, iswrite, siz, True))
+        \<lbrace>\<lambda>adrdesc s'.
+           (exception s' \<noteq> NoException \<longrightarrow> excpt t' \<noteq> NoExcp) \<and>
+           (exception s' = NoException \<longrightarrow>
+              MMU_config_assert_isa s' \<and> 
+              (pa' = Addr (paddress (adrdesc)) \<and> 
+               mematr = mematr_typcast (AddressDescriptor.memattrs (adrdesc)) \<and> tlb_rel s' (typ_tlb t') \<and>
+               dtlb_consistent (typ_tlb t') (Addr va) \<and> unitlb_consistent (typ_tlb t') (Addr va))) \<rbrace>"
+  supply if_cong[cong] if_split[split del] 
+  apply wpsimp
+    apply (wpsimp simp: TranslateAddress_def write'DataTLB_def write'unified_mainTLB_def) 
+          apply (wpsimp simp: lookupTLB_main_def entry_list_main_def mainTLBEntries_def)
+          apply (rule for_loop_wp1; clarsimp?)
+           apply (wpsimp simp: unified_mainTLB_def)
+           apply (rule; clarsimp)
+           apply (clarsimp split: if_split, rule, clarsimp, case_tac a; clarsimp)
+    (* provable, if we assume tlbs consistency in the translateaddress lemma *)
+           defer 
+           apply (wpsimp simp: unified_mainTLB_def)
+           apply (rule; clarsimp)
+           apply (clarsimp split: if_split, rule, clarsimp, case_tac a; clarsimp)
+           defer
+           apply (wpsimp simp: lookupTLB_Data_micro_def)
+          apply (wpsimp simp: lookupTLB_Data_micro_def entry_list_data_micro_def 
+                              microDataTLBEntries_def)
+          apply (rule for_loop_wp1; clarsimp?)
+           apply (wpsimp simp: DataTLB_def)
+           apply (rule; clarsimp)
+           apply (clarsimp split: if_split, rule, clarsimp, case_tac a; clarsimp)
+           defer
+           apply (wpsimp simp: DataTLB_def)
+           apply (rule; clarsimp)
+           apply (clarsimp split: if_split, rule, clarsimp, case_tac a; clarsimp)
+           defer
+           apply (wpsimp simp: )
+          apply (wpsimp simp: mainTLB_evict_def write'unified_mainTLB_def mainTLBEntries_def)
+           apply (rule for_loop_wp2; wpsimp simp: unified_mainTLB_def)
+            apply (rule)
+             apply (clarsimp simp: MMU_config_assert_isa_def) 
+            defer
+            apply (rule)
+             apply (clarsimp simp: MMU_config_assert_isa_def) 
+             defer
+             apply (wpsimp simp: )
+            apply (wpsimp simp: microDataTLB_evict_def write'DataTLB_def microDataTLBEntries_def)
+           apply (rule for_loop_wp2; wpsimp simp: DataTLB_def)
+            apply (rule)
+             apply (clarsimp simp: MMU_config_assert_isa_def) 
+            defer
+             apply (rule)
+             apply (clarsimp simp: MMU_config_assert_isa_def) 
+             defer
+             apply (wpsimp simp: )
+            apply (wpsimp simp: microInstrTLB_evict_def write'InstrTLB_def microInstrTLBEntries_def)
+           apply (rule for_loop_wp2; wpsimp simp: InstrTLB_def)
+            apply (rule)
+             apply (clarsimp simp: MMU_config_assert_isa_def) 
+            defer
+             apply (rule)
+             apply (clarsimp simp: MMU_config_assert_isa_def) 
+             defer
+           apply (wpsimp simp: )
+           apply (wpsimp simp: TranslateAddress_def write'DataTLB_def write'unified_mainTLB_def)
+oops
+
+thm TranslationTableWalkSD_def[simplified]
+
+lemma refine_paddr:
+  "l3_valid
+     (\<lambda>s. pre_cond s t va)
+     (TranslateAddress (va , ispriv, iswrite, siz, True)) 
+          (\<lambda>r s. pa' = Addr (paddress r))"
+  supply (*if_cong[cong] *) if_split[split del] if_chain[simp del] word_2_cases[simp del] word_3_cases[simp del]
+  apply (clarsimp simp: TranslateAddress_def)
+  apply_trace (wpsimp simp: CheckDomain_def CheckPermission_def cong: if_cong)
+       
+        
+oops
+
+
+lemma 
+  "\<lbrakk> \<And>i. \<lbrakk> start \<le> i; i \<le> end \<rbrakk> \<Longrightarrow>
+  \<lbrace>\<lambda>s. P s \<and> (\<forall>j \<le> i. start \<le> j \<longrightarrow> Q' j s)\<rbrace> f i \<lbrace>\<lambda>_ s. P s \<and> (\<forall>j \<le> end. i \<le> j \<longrightarrow> Q' j s)\<rbrace>;
+   start \<le> end \<rbrakk> \<Longrightarrow>
+  \<lbrace>\<lambda>s. P s \<and> Q' start s\<rbrace> for_loop (start, end, f) \<lbrace>\<lambda>_ s. P s \<and> (\<forall>j \<le> end. start \<le> j \<longrightarrow> Q' j s)\<rbrace>"
+apply (induct "(start,end,f)" arbitrary: start rule: for_loop.induct)
   apply (subst for_loop.simps)
   apply clarsimp
   apply wpsimp
-   apply force
-  apply assumption
-  done
+   
+oops
 
-thm l3_valid_weak_pre[no_vars]
 
-lemma l3_valid_post:
-  "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>; \<And>r s. Q' r s \<Longrightarrow> Q'' r s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q''\<rbrace>"
-  by (auto simp: l3_valid_def)
 
-lemmas for_loop_wp = for_loop_wp0[THEN l3_valid_post]
 
+(*
+
+          apply (rule TranslateAddressV_wp [of t va sz ip iw pa' mat t'])
+         apply wpsimp
+          apply (wpsimp simp: lookupTLB_main_def entry_list_main_def mainTLBEntries_def)
+          apply (rule for_loop_wp0; clarsimp?)
+          apply wpsimp
+           apply (wpsimp simp: unified_mainTLB_def )
+          apply (rule)+
+            apply (case_tac "fst s", clarsimp)
+            apply clarsimp
+           apply (case_tac "fst s";clarsimp)
+          apply (rule)+
+          apply (clarsimp split: if_split)
+          apply (rule)+
+           apply (case_tac aa; clarsimp)
+      (*    apply (rule l3_valid_conj_asum_false)
+           apply (wpsimp simp: lookupTLB_main_def entry_list_main_def mainTLBEntries_def)
+     apply (rule for_loop_wp0; clarsimp)
+      apply (wpsimp simp: unified_mainTLB_def)
+     apply (clarsimp simp: MatchingEntry_def)
+     apply (case_tac x; clarsimp split: if_split)
+      apply safe
+      apply (case_tac aa; clarsimp) *)
+
+         
+      (*    apply (wpsimp simp: TranslateAddressV_def)
+                    apply (wpsimp simp:  CheckPermission_def CurrentModeIsHyp_def BadMode_def  HaveSecurityExt_def HaveVirtExt_def
+                                          ArchVersion_def CheckDomain_def)+
+                 apply (clarsimp simp: TranslationTableWalkSD_def)
+     apply (wpsimp simp: Let_def)
+     apply (clarsimp simp: TLBResult_def)
+         apply (wpsimp)          
+   *)
+
+
+oops
+(*
 lemma refine_paddr:
   "l3_valid
      (\<lambda>s. MMU_config_assert_isa s \<and>
@@ -166,7 +273,15 @@ lemma refine_paddr:
   apply wpsimp
   apply (simp add: entry_list_main_def mainTLBEntries_def)
   apply (wpsimp simp: unified_mainTLB_def)
-   apply (case_tac aa; clarsimp)
+   apply (rule for_loop_wp0; wpsimp)
+   apply (case_tac aa, clarsimp)
+   apply (rule conjI; clarsimp)
+    apply force
+     apply (clarsimp split: if_splits)
+     apply clarsimp
+   apply simp
+   apply clarsimp
+   apply (case_tac a; clarsimp)
    apply (rule conjI; clarsimp)
    apply fastforce
   apply (clarsimp split: if_splits)
@@ -175,7 +290,7 @@ lemma refine_paddr:
   apply fastforce
   apply (clarsimp split: if_splits)
   apply (case_tac list; clarsimp)
-  
+  *)
 
   
 
@@ -201,11 +316,13 @@ lemma main_thm:
                   unitlb_consistent (typ_tlb t) (Addr va) \<and>
                 mmu_translate  (Addr va) siz ispriv iswrite True (t :: 'a tlb_state_scheme) = ((pa', mematr), t'))
        (TranslateAddress (va , ispriv, iswrite, siz, True))
-        (\<lambda>adrdesc s'. 
+        (\<lambda>adrdesc s'.
+           (exception_in s' \<longrightarrow> exception_in t') \<and>
+           (\<not>exception_in s' \<longrightarrow>
            MMU_config_assert_isa s' \<and> 
            (pa' = Addr (paddress (adrdesc)) \<and> 
            mematr = mematr_typcast (AddressDescriptor.memattrs (adrdesc)) \<and> tlb_rel s' (typ_tlb t') \<and>
-           dtlb_consistent (typ_tlb t') (Addr va) \<and> unitlb_consistent (typ_tlb t') (Addr va)))"
+           dtlb_consistent (typ_tlb t') (Addr va) \<and> unitlb_consistent (typ_tlb t') (Addr va))))"
   apply (rule l3_valid_conj_post)
    apply (rule_tac P = "MMU_config_assert_isa"  in  wp_pre; clarsimp simp: l3_valid_def)
    apply ((insert mmu_config_TranslateAddress [of va ispriv iswrite siz]) [1], force simp: mmu_config_def)
@@ -447,4 +564,48 @@ oops
 
 *)
 
+
+
+(*lemma
+  " \<And>rc re a b.
+       \<lbrace>P398 rc re a
+         b\<rbrace> for_loop
+             (0, 1,
+              \<lambda>i. do {
+                   c \<leftarrow> trim_state (unified_mainTLB (word_of_int (int i)));
+                   case c of None \<Rightarrow> Pair ()
+                   | Some e \<Rightarrow>
+                       if MatchingEntry (a, b, e) then do {
+        v \<leftarrow> read_state fst;
+        v \<leftarrow> do {
+            v \<leftarrow> Pair (e, v);
+            Pair (case v of (a, b) \<Rightarrow> a # b)
+          };
+        update_state (\<lambda>s. (v, snd s))
+      }
+                       else Pair ()
+                 }) \<lbrace>\<lambda>r s. (\<forall>x. (case fst s of [] \<Rightarrow> ARM_Monadic.lookup_type.Miss
+                                 | [e1] \<Rightarrow> ARM_Monadic.lookup_type.Hit e1
+                                 | e1 # aa # lista \<Rightarrow> ARM_Monadic.lookup_type.Incon) =
+                                ARM_Monadic.lookup_type.Hit x \<longrightarrow>
+                                pa' = Addr (paddress (ARM_Monadic.va_to_pa (va, x)))) \<and>
+                           ((case fst s of [] \<Rightarrow> ARM_Monadic.lookup_type.Miss
+                             | [e1] \<Rightarrow> ARM_Monadic.lookup_type.Hit e1
+                             | e1 # aa # lista \<Rightarrow> ARM_Monadic.lookup_type.Incon) =
+                            ARM_Monadic.lookup_type.Incon \<longrightarrow>
+                            (\<forall>r. pa' = Addr (paddress r))) \<and>
+                           ((case fst s of [] \<Rightarrow> ARM_Monadic.lookup_type.Miss
+                             | [e1] \<Rightarrow> ARM_Monadic.lookup_type.Hit e1
+                             | e1 # aa # lista \<Rightarrow> ARM_Monadic.lookup_type.Incon) =
+                            ARM_Monadic.lookup_type.Miss \<longrightarrow>
+                            pre_cond (snd s) t t' va sz ip iw pa' mat)\<rbrace>"
+  apply (clarsimp simp: for_loop.simps)
+  apply (wpsimp simp: unified_mainTLB_def)
+  apply (case_tac aa ; clarsimp)
+  apply safe
+  oops
+
+*)
+
+*)
 end

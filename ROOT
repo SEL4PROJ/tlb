@@ -56,6 +56,7 @@ session MMU_CASE = ARM_REF +
     "Invalidation_Operations/Invalid_Ops"
 *)
 
+
 session LOGIC =  PTABLE +
    theories
    "Logic/Safe_Set" 
