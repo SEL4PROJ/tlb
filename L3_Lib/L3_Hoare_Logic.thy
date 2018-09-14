@@ -6,7 +6,8 @@ imports L3_Lib
   "~/verification/l4v/lib/Monad_WP/wp/WPFix"
   "~/verification/l4v/lib/Monad_WP/Strengthen"
   "~/verification/l4v/lib/Simp_No_Conditional"
-     
+
+
 begin
 
 (* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)
@@ -143,10 +144,10 @@ lemma for_loop_wp2:
   "\<lbrakk> \<And>i. \<lbrakk> start \<ge> i; i > end \<rbrakk> \<Longrightarrow> \<lbrace>Q i\<rbrace> f i \<lbrace>\<lambda>_. Q (i-1)\<rbrace>;
      \<lbrace>Q end\<rbrace> f end \<lbrace>\<lambda>_. Q end\<rbrace>; start \<ge> end \<rbrakk> \<Longrightarrow>
   \<lbrace>Q start\<rbrace> for_loop (start, end, f) \<lbrace>\<lambda>_. Q end\<rbrace>"
-  apply (induct "(start,end,f)" arbitrary: start rule: for_loop.induct)
+  apply (induct "(start,end,f)" arbitrary: "end" start rule: for_loop.induct)
   apply (subst for_loop.simps)
   apply clarsimp
-  sorry
+  by (wpsimp, force+) 
   
 
 lemma l3_valid_conj_asum_false:
@@ -155,7 +156,7 @@ lemma l3_valid_conj_asum_false:
   by force
 
 (* keeping it in wp_split for the time being, have to ask Gerwin *)
-lemma l3_valid_imp_conj_post [wp_split]:
+lemma l3_valid_imp_conj_post [wp_comb]:
  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. A s \<longrightarrow> Q r s\<rbrace>;  \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>r s. A s \<longrightarrow> R r s\<rbrace> \<rbrakk> \<Longrightarrow> 
         \<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>r s. A s \<longrightarrow> Q r s \<and> R r s\<rbrace>"
   by (simp add: l3_valid_def)
@@ -163,5 +164,20 @@ lemma l3_valid_imp_conj_post [wp_split]:
 lemma l3_valid_redunt_post_imp:
  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. A s \<longrightarrow> Q r s\<rbrace>"
   by (simp add: l3_valid_def)
+
+
+
+lemma for_loop_wp0':
+  "\<lbrakk> \<And>i. \<lbrakk> start \<ge> i; i \<ge> end \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f i \<lbrace>\<lambda>_. P\<rbrace>; start \<ge> end \<rbrakk> \<Longrightarrow>
+  \<lbrace>P\<rbrace> for_loop (start, end, f) \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (induct "(start,end,f)" arbitrary: "end" start rule: for_loop.induct)
+  apply (subst for_loop.simps)
+  apply clarsimp
+  apply wpsimp
+   apply force
+  apply force
+  apply assumption
+  done
+
 
 end

@@ -8,14 +8,11 @@ nat N_large = 16
 nat N_small = 12
 
 
-construct tag_t {
-	 Asid :: bits (8)
-     Global }
-	 
+
 	 
 record EntrySuper_t
 {
-  tag    :: tag_t
+  tag    :: bits(8) option
   vadSup  :: bits(8)
   padSup  :: bits(8)
   -- NS      :: bits(1) 
@@ -30,7 +27,7 @@ record EntrySuper_t
 
 record EntrySection_t
 {
-  tag    :: tag_t
+  tag    :: bits(8) option
   vadSec  :: bits(12)
   padSec  :: bits(12)
   -- NS      :: bits(1) 
@@ -45,7 +42,7 @@ record EntrySection_t
 
 record EntryLarge_t
 {
-  tag    :: tag_t
+  tag    :: bits(8) option
   vadLr  :: bits(16)
   padLr  :: bits(16)
   -- NS      :: bits(1) 
@@ -60,7 +57,7 @@ record EntryLarge_t
 
 record EntrySmall_t
 {
-  tag    :: tag_t
+  tag    :: bits(8) option
   vadSm  :: bits(20)
   padSm  :: bits(20)
   -- NS      :: bits(1) 
@@ -95,8 +92,8 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
       {
        var e1 :: EntrySmall_t;
        if e.nG == '0' 
-	     then e1.tag  <- Global 
-	     else e1.tag   <- Asid (a);
+	     then e1.tag  <- None 
+	     else e1.tag   <- Some (a);
        e1.vadSm          <- va<31:12>;
        e1.padSm          <- e.addrdesc.paddress<31:12>;
        -- e1.NS             <- e.addrdesc.paddress.NS;
@@ -113,8 +110,8 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
       {
        var e1:: EntryLarge_t;
        if e.nG == '0' 
-	     then e1.tag  <- Global 
-	     else e1.tag   <- Asid (a);
+	     then e1.tag  <- None 
+	     else e1.tag   <- Some (a);
        e1.vadLr          <- va<31:16>;
        e1.padLr          <- e.addrdesc.paddress<31:16>;
        -- e1.NS             <- e.addrdesc.paddress.NS;
@@ -131,8 +128,8 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
       {
        var e1:: EntrySection_t;
        if e.nG == '0' 
-	     then e1.tag  <- Global 
-	     else e1.tag   <- Asid (a);
+	     then e1.tag  <- None 
+	     else e1.tag   <- Some (a);
        e1.vadSec          <- va<31:20>;
        e1.padSec          <- e.addrdesc.paddress<31:20>;
        -- e1.NS              <- e.addrdesc.paddress.NS;
@@ -149,8 +146,8 @@ TLBEntry TLBTypeCast (e :: TLBRecord, a :: bits(8), va :: bits(32) ) =
       {
        var e1:: EntrySuper_t;
        if e.nG == '0' 
-	     then e1.tag  <- Global 
-	     else e1.tag   <- Asid (a);
+	     then e1.tag  <- None 
+	     else e1.tag   <- Some (a);
        e1.vadSup          <- va<31:24>;
        e1.padSup          <- e.addrdesc.paddress<31:24>;
        -- e1.NS             <- e.addrdesc.paddress.NS;
@@ -212,14 +209,14 @@ component unified_mainTLB (i::bits(8)) :: TLBEntry option
 bool MatchingEntry (a:: bits(8), vad::bits(32), e::TLBEntry) =
   match e 
    {
-    case EntrySmall   (e1)  => if e1.tag == Global then e1.vadSm  == vad<31:12> 
-								else (e1.tag == Asid (a) and e1.vadSm  == vad<31:12>) 
-    case EntryLarge   (e1)  => if e1.tag == Global then e1.vadLr  == vad<31:16> 
-	                            else (e1.tag == Asid (a) and e1.vadLr  == vad<31:16>) 
-    case EntrySection (e1)  => if e1.tag == Global then e1.vadSec == vad<31:20> 
-	                            else (e1.tag == Asid (a) and e1.vadSec == vad<31:20>) 
-    case EntrySuper   (e1)  => if e1.tag == Global then e1.vadSup == vad<31:24> 
-	                            else (e1.tag == Asid (a) and e1.vadSup == vad<31:24>) 
+    case EntrySmall   (e1)  => if e1.tag == None then e1.vadSm  == vad<31:12> 
+								else (e1.tag == Some (a) and e1.vadSm  == vad<31:12>) 
+    case EntryLarge   (e1)  => if e1.tag == None then e1.vadLr  == vad<31:16> 
+	                            else (e1.tag == Some (a) and e1.vadLr  == vad<31:16>) 
+    case EntrySection (e1)  => if e1.tag == None then e1.vadSec == vad<31:20> 
+	                            else (e1.tag == Some (a) and e1.vadSec == vad<31:20>) 
+    case EntrySuper   (e1)  => if e1.tag == None then e1.vadSup == vad<31:24> 
+	                            else (e1.tag == Some (a) and e1.vadSup == vad<31:24>) 
    } 
    
 --   -- this is same as fully associative lookup
@@ -301,9 +298,9 @@ lookup_type lookupTLB_main (a::bits(8), vad::bits(32)) =
  -- FIFO, for fix five locations
 unit microInstrTLB_evict () = 
  {  
-  InstrTLB([microInstrTLBEntries - 1]:: bits(6)) <- None;
+  --InstrTLB([microInstrTLBEntries - 1]:: bits(6)) <- None;
   
-  for i in (microInstrTLBEntries - 1) .. 0 do 
+  for i in (microInstrTLBEntries - 2) .. 0 do 
            InstrTLB([i + 1]:: bits(6)) <- InstrTLB([i]:: bits(6));
   
   InstrTLB([0::nat]:: bits(6)) <- None
@@ -327,9 +324,9 @@ unit microInstrTLB_evict () =
  -- FIFO, for fix five locations
 unit microDataTLB_evict () = 
  {  
-     DataTLB([microDataTLBEntries - 1]:: bits(5)) <- None;
+     --DataTLB([microDataTLBEntries - 1]:: bits(5)) <- None;
   
-     for i in (microDataTLBEntries - 1) .. 0 do 
+     for i in (microDataTLBEntries - 2) .. 0 do 
               DataTLB([i + 1]:: bits(5)) <- DataTLB([i]:: bits(5));
   
      DataTLB([0::nat]:: bits(5)) <- None
@@ -339,11 +336,11 @@ unit microDataTLB_evict () =
 --   for i in 0 .. Length (indx_lst) - 1 do unified_mainTLB(Element (i,indx_lst)) <- None
 
  -- FIFO, for fix five locations
-unit mainTLB_evict ()= 
+unit mainTLB_evict () = 
  {   
-     unified_mainTLB([mainTLBEntries - 1]:: bits(8)) <- None;
+     -- unified_mainTLB([mainTLBEntries - 1]:: bits(8)) <- None;
   
-     for i in (mainTLBEntries - 1) .. 0 do 
+     for i in (mainTLBEntries - 2) .. 0 do 
               unified_mainTLB([i + 1]:: bits(8)) <- unified_mainTLB([i]:: bits(8));
   
      unified_mainTLB([0::nat]:: bits(8)) <- None
@@ -412,7 +409,7 @@ Permissions perms_entry (e:: TLBEntry) =
    case EntrySuper   (e1) => e1.perms  
    }
 
-tag_t tag_entry (e:: TLBEntry) =
+bits(8) option tag_entry (e:: TLBEntry) =
   match e
   {
    case EntrySmall   (e1) => e1.tag 

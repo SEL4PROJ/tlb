@@ -76,13 +76,13 @@ where
 
 
 
-fun
+(*fun
   tagtypcast :: "tag_t \<Rightarrow> 8 word option"
 where
-  "tagtypcast Global = None"
-| "tagtypcast (Asid a) = Some a"
+  "tagtypcast None = None"
+| "tagtypcast (Some a) = Some a"
 
-
+*)
 
 definition
   perm_typcast :: "Permissions \<Rightarrow> permissions_t"
@@ -116,11 +116,10 @@ where
 fun
   tlbtypcast :: "TLBEntry \<Rightarrow> tlb_entry"
 where
-  "tlbtypcast (EntryLarge elr)   = Entrylarge   (tagtypcast (EntryLarge_t.tag elr))  
-   (vadLr elr)  (padLr elr)  (flagtypcast (EntryLarge elr))"
-| "tlbtypcast (EntrySection ese) = Entrysection (tagtypcast (EntrySection_t.tag ese)) (vadSec ese) (padSec ese) (flagtypcast(EntrySection ese))"
-| "tlbtypcast (EntrySmall esm)   = Entrysmall   (tagtypcast (EntrySmall_t.tag esm))   (vadSm esm)  (padSm esm)  (flagtypcast(EntrySmall esm))"
-| "tlbtypcast (EntrySuper esp)   = Entrysuper   (tagtypcast (EntrySuper_t.tag esp))   (vadSup esp) (padSup esp) (flagtypcast(EntrySuper esp))"
+  "tlbtypcast (EntryLarge elr)   = Entrylarge   (EntryLarge_t.tag elr)   (vadLr elr)  (padLr elr)  (flagtypcast (EntryLarge elr))"
+| "tlbtypcast (EntrySection ese) = Entrysection (EntrySection_t.tag ese) (vadSec ese) (padSec ese) (flagtypcast(EntrySection ese))"
+| "tlbtypcast (EntrySmall esm)   = Entrysmall   (EntrySmall_t.tag esm)   (vadSm esm)  (padSm esm)  (flagtypcast(EntrySmall esm))"
+| "tlbtypcast (EntrySuper esp)   = Entrysuper   (EntrySuper_t.tag esp)   (vadSup esp) (padSup esp) (flagtypcast(EntrySuper esp))"
 
 
 definition
@@ -136,8 +135,8 @@ where
 
 definition
   "consistent0 m a rt prr nmr tlb va \<equiv>
-     lookup tlb a (addr_val va) = TLB.Hit (the (pt_walk a m rt prr nmr va)) \<or>
-     lookup tlb a (addr_val va) = TLB.Miss"
+     (lookup tlb a (addr_val va) = TLB.Hit (the (pt_walk a m rt prr nmr va)) \<and> pt_walk a m rt prr nmr va \<noteq> None)  \<or>
+      lookup tlb a (addr_val va) = TLB.Miss"
 
 
 abbreviation

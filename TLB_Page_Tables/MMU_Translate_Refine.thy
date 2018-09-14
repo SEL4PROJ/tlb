@@ -409,4 +409,24 @@ end
 
 thm mmu_translate_tlb_state_ext_def
 
+definition 
+  align_check  :: "tlb_entry \<Rightarrow> vaddr \<Rightarrow> nat  \<Rightarrow>  'a cstate_scheme \<Rightarrow> (paddr \<times> memattribs_t) \<times> 'a cstate_scheme" 
+where 
+  "align_check \<equiv> \<lambda> entry v siz . 
+               if (memtyp_entry entry = MemDevice \<or> memtyp_entry entry = MemStronglyOrdered) \<and> 
+                             addr_val v \<noteq> align (addr_val v, siz)  
+                                         then raise'exception' (MMUException ''Alignment Fault'')
+                                         else return (tlb_entry_to_adrdesc v entry)"
+
+
+definition 
+  pt_walk_alignement_check :: " vaddr \<Rightarrow> nat  \<Rightarrow>  'a cstate_scheme \<Rightarrow> (paddr \<times> memattribs_t) \<times> 'a cstate_scheme"
+where
+  "pt_walk_alignement_check va siz s \<equiv>
+       case pt_walk (asid s) (heap s) (ttbr0 s) (prrr s) (nmrr s)  va of 
+                                            None \<Rightarrow> raise'exception' (MMUException ''more info'') s
+                                         |  Some entry \<Rightarrow> align_check entry va siz s"
+
+
+term raise'exception'
 end
