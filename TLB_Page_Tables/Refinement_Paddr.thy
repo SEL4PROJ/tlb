@@ -489,6 +489,186 @@ lemma [simp]:
   "MMU_config_assert_isa (s\<lparr>micro_InstrTLB := a, micro_DataTLB := b, micro_DataTLB := c\<rparr>) = MMU_config_assert_isa s "
   by (simp only: MMU_config_assert_isa_def, case_tac s, force)
 
+lemma filter_single_elem:
+  "filter P lst = [x] \<Longrightarrow> P x \<and> (\<forall>y\<in>set lst. y\<noteq>x \<longrightarrow> \<not>P y)"
+  by (smt Cons_eq_filterD filter_empty_conv filter_set member_filter set_ConsD)
+
+lemma filter_elem_member:
+  "filter P lst = [x] \<Longrightarrow> x\<in>set lst"
+  by (metis filter_set list.set_intros(1) member_filter)
+
+lemma filter_elem_pass:
+  "filter P lst = [x] \<Longrightarrow> P x"
+  by (meson filter_eq_ConsD)
+
+lemma five_word_lt_32:
+  "nat (uint (a::5 word)) < 32"
+  apply (cases a, clarsimp simp: of_nat_def)
+  apply word_bitwise 
+  apply (clarsimp simp: )
+  sorry
+
+lemma eight_word_lt_256:
+  "nat (uint (a::8 word)) < 256"
+  apply (cases a, clarsimp simp: of_nat_def)
+  apply word_bitwise 
+  apply (clarsimp simp: )
+  sorry
+
+lemma entry_range_tags_MatchingEntry_rel:
+  "(None, va) \<in> entry_range_tags (tlbtypcast x) \<Longrightarrow> MatchingEntry (ASID (CONTEXTIDR (CP15 s)), va, x)"
+  apply (clarsimp simp: entry_range_tags_def entry_range_def MatchingEntry_def)
+  apply (cases x; clarsimp)
+  sorry
+
+
+lemma entry_range_tags_MatchingEntry_rel':
+  "(Some (ASID (CONTEXTIDR (CP15 s))), va) \<in> entry_range_tags (tlbtypcast x) \<Longrightarrow> MatchingEntry (ASID (CONTEXTIDR (CP15 s)), va, x)"
+  apply (clarsimp simp: entry_range_tags_def entry_range_def MatchingEntry_def)
+  apply (cases x; clarsimp)
+  apply safe
+  sorry
+
+
+lemma data_TLB_matching_entries_lookup_equal:
+  "\<lbrakk>data_TLB_matching_entries 32 va s = [entry]\<rbrakk>  \<Longrightarrow>
+    lookup (tlbtypcast ` ran (micro_DataTLB s)) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit (tlbtypcast entry)"
+  apply (subgoal_tac "entry_set (tlbtypcast ` ran (micro_DataTLB s)) (ASID (CONTEXTIDR (CP15 s))) va = {tlbtypcast entry}")
+   apply (clarsimp simp: lookup_def)
+  apply (clarsimp simp: entry_set_def Compr_image_eq)
+  apply (subgoal_tac " {E \<in> ran (micro_DataTLB s). \<exists>a'. (a', va) \<in> entry_range_tags (tlbtypcast E) \<and> (a' = None \<or> a' = Some (ASID (CONTEXTIDR (CP15 s))))} = {entry}")
+   apply force
+  apply (safe ; clarsimp simp: data_TLB_matching_entries_def data_TLB_entries_def comp_def ran_def)
+     apply (drule filter_single_elem, clarsimp)
+     apply (case_tac "x = entry"; clarsimp)
+     apply (drule_tac x = "Some x" in spec)
+     apply (clarsimp)
+     apply (subgoal_tac "Some x \<in> (\<lambda>x. micro_DataTLB s (word_of_int (int x))) ` {0..<32}")
+      prefer 2
+      apply (rule_tac x = "unat a" in image_eqI)
+       apply (clarsimp simp: unat_def)
+      apply (clarsimp simp: unat_def five_word_lt_32) 
+     apply (force simp: entry_range_tags_MatchingEntry_rel)
+    apply (drule filter_single_elem, clarsimp)
+    apply (case_tac "x = entry"; clarsimp)
+    apply (drule_tac x = "Some x" in spec)
+    apply (clarsimp)
+    apply (subgoal_tac "Some x \<in> (\<lambda>x. micro_DataTLB s (word_of_int (int x))) ` {0..<32}")
+     prefer 2
+     apply (rule_tac x = "unat a" in image_eqI)
+      apply (clarsimp simp: unat_def)
+     apply (clarsimp simp: unat_def five_word_lt_32)
+    apply clarsimp 
+    apply (force simp: entry_range_tags_MatchingEntry_rel')
+   apply (drule filter_elem_member)
+   apply force
+  apply (drule filter_elem_pass)   
+  apply (clarsimp simp: MatchingEntry_def)
+  apply (cases entry; clarsimp)
+     apply (rule_tac x = "EntryLarge_t.tag x1" in exI, clarsimp simp: entry_range_tags_def entry_range_def split: if_split_asm)
+      apply (rule imageI)
+      defer
+      apply (rule imageI)
+      defer
+      apply (rule_tac x = "EntrySection_t.tag x2" in exI, clarsimp simp: entry_range_tags_def entry_range_def split: if_split_asm)
+       apply (rule imageI)
+       defer
+       apply (rule imageI)
+       defer
+       apply (rule_tac x = "EntrySmall_t.tag x3" in exI, clarsimp simp: entry_range_tags_def entry_range_def split: if_split_asm)
+        apply (rule imageI)
+        defer
+        apply (rule imageI)
+        defer
+        apply (rule_tac x = "EntrySuper_t.tag x4" in exI, clarsimp simp: entry_range_tags_def entry_range_def split: if_split_asm)
+         apply (rule imageI)
+         defer
+         apply (rule imageI)
+         defer
+   
+  sorry
+
+lemma [simp]:
+  "main_TLB_matching_entries 256 va (s\<lparr>micro_InstrTLB := from_list_to_tlb_map (inst_tlb_eviction 63 (micro_InstrTLB s)), main_TLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a\<rparr>) =
+      main_TLB_matching_entries 256 va (s\<lparr> main_TLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a\<rparr>)  "
+  by (clarsimp simp: main_TLB_matching_entries_def main_TLB_entries_def)
+  
+  
+lemma main_TLB_matching_entries_lookup_equal:
+  "\<lbrakk>main_TLB_matching_entries 256 va s = [entry]\<rbrakk>  \<Longrightarrow>
+    lookup (tlbtypcast ` ran (main_TLB s)) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit (tlbtypcast entry)"
+  apply (subgoal_tac "entry_set (tlbtypcast ` ran (main_TLB s)) (ASID (CONTEXTIDR (CP15 s))) va = {tlbtypcast entry}")
+   apply (clarsimp simp: lookup_def)
+  apply (clarsimp simp: entry_set_def Compr_image_eq)
+  apply (subgoal_tac " {E \<in> ran (main_TLB s). \<exists>a'. (a', va) \<in> entry_range_tags (tlbtypcast E) \<and> (a' = None \<or> a' = Some (ASID (CONTEXTIDR (CP15 s))))} = {entry}")
+   apply force
+  apply (safe ; clarsimp simp: main_TLB_matching_entries_def main_TLB_entries_def comp_def ran_def)
+     apply (drule filter_single_elem, clarsimp)
+     apply (case_tac "x = entry"; clarsimp)
+     apply (drule_tac x = "Some x" in spec)
+     apply (clarsimp)
+     apply (subgoal_tac "Some x \<in> (\<lambda>x. main_TLB s (word_of_int (int x))) ` {0..<256}")
+      prefer 2
+      apply (rule_tac x = "unat a" in image_eqI)
+       apply (clarsimp simp: unat_def)
+      apply (clarsimp simp: unat_def eight_word_lt_256) 
+     apply (force simp: entry_range_tags_MatchingEntry_rel)
+    apply (drule filter_single_elem, clarsimp)
+    apply (case_tac "x = entry"; clarsimp)
+    apply (drule_tac x = "Some x" in spec)
+    apply (clarsimp)
+    apply (subgoal_tac "Some x \<in> (\<lambda>x. main_TLB s (word_of_int (int x))) ` {0..<256}")
+     prefer 2
+     apply (rule_tac x = "unat a" in image_eqI)
+      apply (clarsimp simp: unat_def)
+     apply (clarsimp simp: unat_def eight_word_lt_256)
+    apply clarsimp 
+    apply (force simp: entry_range_tags_MatchingEntry_rel')
+   apply (drule filter_elem_member)
+   apply force
+  apply (drule filter_elem_pass)   
+  apply (clarsimp simp: MatchingEntry_def)
+  apply (cases entry; clarsimp)
+     apply (rule_tac x = "EntryLarge_t.tag x1" in exI, clarsimp simp: entry_range_tags_def entry_range_def split: if_split_asm)
+      apply (rule imageI)
+      defer
+      apply (rule imageI)
+      defer
+      apply (rule_tac x = "EntrySection_t.tag x2" in exI, clarsimp simp: entry_range_tags_def entry_range_def split: if_split_asm)
+       apply (rule imageI)
+       defer
+       apply (rule imageI)
+       defer
+       apply (rule_tac x = "EntrySmall_t.tag x3" in exI, clarsimp simp: entry_range_tags_def entry_range_def split: if_split_asm)
+        apply (rule imageI)
+        defer
+        apply (rule imageI)
+        defer
+        apply (rule_tac x = "EntrySuper_t.tag x4" in exI, clarsimp simp: entry_range_tags_def entry_range_def split: if_split_asm)
+         apply (rule imageI)
+         defer
+         apply (rule imageI)
+         defer
+
+  sorry
+
+
+lemma tlb_rel_evicted_hit_main_tlb:
+  "\<lbrakk>tlb_rel s (typ_tlb t); unitlb_consistent (typ_tlb t) (Addr va);
+        lookup (tlbtypcast ` ran (\<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a)) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit (tlbtypcast x)\<rbrakk>
+       \<Longrightarrow> lookup (tlbtypcast ` ran (main_TLB s)) (ASID (CONTEXTIDR (CP15 s))) va =  TLB.lookup_type.Hit (tlbtypcast x)"
+ 
+  sorry
+
+lemma tlb_rel_consistent_lookup_hit_main_tlb:
+  "\<lbrakk>tlb_rel s (typ_tlb (t :: 'a tlb_state_scheme)); unitlb_consistent (typ_tlb t) (Addr va);
+        lookup (tlbtypcast ` ran (main_TLB s)) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit x\<rbrakk>
+       \<Longrightarrow> lookup (unitlb_set (tlbs_set t)) (asid t) va = TLB.lookup_type.Hit x"
+  apply (drule tlb_relD, clarsimp simp: typ_tlb_def cstate.defs)
+  apply (clarsimp simp: consistent0_def ran_def)
+  by (metis Hits_le TLB.lookup_type.simps(5) leq_Miss option.sel tlb_mono)
+
+
 
 
 lemma mmu_translate_refinement_pa [wp]:
@@ -1085,52 +1265,129 @@ lemma mmu_translate_refinement_pa [wp]:
    apply (case_tac list; clarsimp)
    apply (rename_tac entry)
    apply (subgoal_tac "lookup (tlbtypcast ` ran (micro_DataTLB  (s\<lparr>micro_DataTLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (data_tlb_eviction 31 (micro_DataTLB s)) a\<rparr>))) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit (tlbtypcast entry) ")
-    apply clarsimp
-    apply (thin_tac "data_TLB_matching_entries 32 va  (s\<lparr>micro_DataTLB :=  \<lambda>a. if a = 0 then None else from_list_to_tlb_map (data_tlb_eviction 31 (micro_DataTLB s)) a\<rparr>) = [entry]")
-    apply (subgoal_tac "lookup (tlbtypcast ` ran (micro_DataTLB s)) (ASID (CONTEXTIDR (CP15 s))) va =  TLB.lookup_type.Hit (tlbtypcast entry)")
-     apply (thin_tac "lookup (tlbtypcast ` ran (\<lambda>a. if a = 0 then None else from_list_to_tlb_map (data_tlb_eviction 31 (micro_DataTLB s)) a)) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit (tlbtypcast entry)")
-     prefer 2
-     apply (clarsimp simp: tlb_rel_evicted_hit)
-    apply (subgoal_tac "lookup (dtlb_set (tlbs_set t)) (asid t) va = TLB.lookup_type.Hit (tlbtypcast entry)")
-     prefer 2
-     apply (clarsimp simp: tlb_rel_consistent_lookup_hit)
-    apply (clarsimp simp: mmu_translate_tlb_state_ext_def read_state_def Let_def bind_def)
-  apply (clarsimp split: if_split)
-
-
-
-    apply (subgoal_tac "reg'DACR (DACR (CP15 s)) = dacr t")
-   (*  apply (subgoal_tac "nat (uint (domain_entry entry)) =  unat (flags_t.domain (flags (tlbtypcast entry)))")
-      apply (subgoal_tac "ap (perms_entry entry) = accessperm (permissions (flags (tlbtypcast entry)))") *)
-       apply rule+
-         apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-         apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-        apply rule+
-        apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-        apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-         apply rule+
-          apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-          apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-         apply rule+
-         apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-         apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-        apply rule+
-        apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-        apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-         apply rule+
-         apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-         apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-        apply rule+
-        apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-        apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-        apply rule+
-        apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-         apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-        apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-
-
-            
+    prefer 2
+    apply (drule data_TLB_matching_entries_lookup_equal) 
+    apply (case_tac s, clarsimp)
+   apply clarsimp
+   apply (thin_tac "data_TLB_matching_entries 32 va  (s\<lparr>micro_DataTLB :=  \<lambda>a. if a = 0 then None else from_list_to_tlb_map (data_tlb_eviction 31 (micro_DataTLB s)) a\<rparr>) = [entry]")
+   apply (subgoal_tac "lookup (tlbtypcast ` ran (micro_DataTLB s)) (ASID (CONTEXTIDR (CP15 s))) va =  TLB.lookup_type.Hit (tlbtypcast entry)")
+    apply (thin_tac "lookup (tlbtypcast ` ran (\<lambda>a. if a = 0 then None else from_list_to_tlb_map (data_tlb_eviction 31 (micro_DataTLB s)) a)) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit (tlbtypcast entry)")
+    prefer 2
+    apply (clarsimp simp: tlb_rel_evicted_hit)
+   apply (subgoal_tac "lookup (dtlb_set (tlbs_set t)) (asid t) va = TLB.lookup_type.Hit (tlbtypcast entry)")
+    prefer 2
+    apply (clarsimp simp: tlb_rel_consistent_lookup_hit)
+   apply (clarsimp simp: mmu_translate_tlb_state_ext_def read_state_def Let_def bind_def)
+   apply (clarsimp split: if_split)
+   apply (subgoal_tac "reg'DACR (DACR (CP15 s)) = dacr t")
+    apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+     apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+    apply rule+
+       apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+      apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+     apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+    apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+     apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+    apply rule+
+     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+    apply rule+
+    apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+    apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+   apply (clarsimp simp: tlb_rel_def state_comp_def typ_tlb_def cstate.defs)
+  apply (case_tac "data_TLB_matching_entries 32 va (s\<lparr>micro_DataTLB :=  \<lambda>a. if a = 0 then None else from_list_to_tlb_map (data_tlb_eviction 31 (micro_DataTLB s)) a\<rparr>)"; clarsimp)
+   prefer 2
+   apply (case_tac list; clarsimp)
+  apply rule+
+   apply (case_tac "main_TLB_matching_entries 256 va (s\<lparr>main_TLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a\<rparr>)"; clarsimp)
+   apply (case_tac list; clarsimp)
+   apply (rename_tac entry)
+   apply (subgoal_tac "lookup (tlbtypcast ` ran (main_TLB (s\<lparr>main_TLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a\<rparr>))) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit (tlbtypcast entry) ")
+    prefer 2 
+    apply (drule main_TLB_matching_entries_lookup_equal) 
+    apply (case_tac s, clarsimp)
+   apply clarsimp
+   apply (thin_tac "main_TLB_matching_entries 256 va (s\<lparr>main_TLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a\<rparr>) = [entry]")
+   apply (subgoal_tac "lookup (tlbtypcast ` ran (main_TLB s)) (ASID (CONTEXTIDR (CP15 s))) va =  TLB.lookup_type.Hit (tlbtypcast entry)")
+    apply (thin_tac "lookup (tlbtypcast ` ran (\<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a)) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit (tlbtypcast entry)")
+    prefer 2
+    apply (clarsimp simp: tlb_rel_evicted_hit_main_tlb)
+   apply (subgoal_tac "lookup (unitlb_set (tlbs_set t)) (asid t) va = TLB.lookup_type.Hit (tlbtypcast entry)")
+    prefer 2
+    apply (clarsimp simp: tlb_rel_consistent_lookup_hit_main_tlb)
+   apply (clarsimp simp: mmu_translate_tlb_state_ext_def read_state_def Let_def bind_def)
+   apply (clarsimp split: if_split)
+   apply (subgoal_tac "reg'DACR (DACR (CP15 s)) = dacr t")
+    apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+     apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+    apply rule+
+       apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+      apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+     apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+    apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+     apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+    apply rule+
+     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+    apply rule+
+    apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+    apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+   apply (clarsimp simp: tlb_rel_def state_comp_def typ_tlb_def cstate.defs)
+  
+  
+  
+  
+  
+  
+  
+  
   oops
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  oops
+
+
+
+
 
 declare [[show_types]]
 
