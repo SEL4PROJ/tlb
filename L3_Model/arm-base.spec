@@ -2620,13 +2620,7 @@ unit DataAbort (vaddress :: bits(32), ipaddress ::  bits(40), domain :: bits(4),
 unit CheckPermission (perms :: Permissions, mva :: bits(32), level :: int, domain :: bits(4), iswrite :: bool, 
                       ispriv :: bool, taketohypmode :: bool, LDFSRformat :: bool) =
  {
-  -- variable for the DataAbort function with fixed values
---  var secondstageabort = false; 
---  var ipavalid = false; 
---  var s2fs1walk = false;
---  var ipa :: bits(40);
---  ipa <- UNKNOWN;
---  var abort :: bool;
+
   var ap_perms = perms.ap;
   when CP15.VSCTLR.AFE do ap_perms<0> <- true;
   match ap_perms
@@ -2640,7 +2634,7 @@ unit CheckPermission (perms :: Permissions, mva :: bits(32), level :: int, domai
    case '110' => if iswrite then #MMU_Exception ("permission fault") else nothing
    case '111' => if iswrite then #MMU_Exception ("permission fault") else nothing
   }
- -- when abort do #MMU_Exception ("permission fault")
+ 
  }
 
 
@@ -3111,7 +3105,7 @@ int UInt (w::bits(N)) = [[w]::nat]
 
 -- original function
 -- RemappedTEXDecode()
- MemoryAttributes RemappedTEXDecode (texcb :: bits(5), S :: bits(1) ) = 
+ MemoryAttributes RemappedTEXDecode1 (texcb :: bits(5), S :: bits(1) ) = 
   {
    var memattrs :: MemoryAttributes;
    var hintsattrs :: bits(4);
@@ -3172,40 +3166,39 @@ int UInt (w::bits(N)) = [[w]::nat]
 
 -- our version
 
---MemoryAttributes RemappedTEXDecode (texcb :: bits(5), S :: bits(1) ) = 
--- {
---  var memattrs :: MemoryAttributes;
---  var hintsattrs :: bits(4);
---  var region = [(texcb<2:0>)] :: nat; -- texcb<4:3> are ignored in this mapping scheme 
---  if region == 6 then
---        #MMU_Exception "Implementation_defined settings not supported" -- memattrs <- UNKNOWN  IMPLEMENTATION_DEFINED --setting of memattrs; 
---  else
---   {
---     match CP15.&PRRR<(2*region+1):2*region> 
---      {
---       case  '00' =>  #MMU_Exception "MemType_StronglyOrdered settings not supported"
+MemoryAttributes RemappedTEXDecode (texcb :: bits(5), S :: bits(1) ) = 
+ {
+  var memattrs :: MemoryAttributes;
+  var region = [(texcb<2:0>)] :: nat; -- texcb<4:3> are ignored in this mapping scheme 
+  if region == 6 then
+        #MMU_Exception "Implementation_defined settings not supported" -- memattrs <- UNKNOWN  IMPLEMENTATION_DEFINED setting of memattrs; 
+  else
+   {
+     match CP15.&PRRR<(2*region+1):2*region> 
+      {
+       case  '00' =>  #MMU_Exception "MemType_StronglyOrdered settings not supported"
         
---       case '01' => #MMU_Exception "MemType_Device settings not supported"
+       case '01' => #MMU_Exception "MemType_Device settings not supported"
         
---       case  '10' =>
---        {
---          memattrs.MemType <- MemType_Normal;
---          var hintattrs = ConvertAttrsHints(CP15.&NMRR<(2*region+1):2*region>); 
---          memattrs.innerattrs <- hintsattrs<1:0>;
---          memattrs.innerhints <- hintsattrs<3:2>;
---          hintattrs <- ConvertAttrsHints(CP15.&NMRR<(2*region+17):(2*region+16)>); 
---          memattrs.outerattrs <- hintsattrs<1:0>;
---          memattrs.outerhints <- hintsattrs<3:2>;
---          var s_bit = if ([S]:: bool) then CP15.PRRR.NS0 else CP15.PRRR.NS1;
---          memattrs.shareable <- s_bit;
---          memattrs.outershareable <- s_bit and !(CP15.&PRRR<region+24>)
---          }
---       case '11' =>  #MMU_Exception "reserved settings not supported" -- reserved
+       case  '10' =>
+        {
+          memattrs.MemType <- MemType_Normal;
+          var hintattrs = ConvertAttrsHints(CP15.&NMRR<(2*region+1):2*region>); 
+          memattrs.innerattrs <- hintattrs<1:0>;
+          memattrs.innerhints <- hintattrs<3:2>;
+          hintattrs <- ConvertAttrsHints(CP15.&NMRR<(2*region+17):(2*region+16)>); 
+          memattrs.outerattrs <- hintattrs<1:0>;
+          memattrs.outerhints <- hintattrs<3:2>;
+          var s_bit = if ([S]:: bool) then CP15.PRRR.NS0 else CP15.PRRR.NS1;
+          memattrs.shareable <- s_bit;
+          memattrs.outershareable <- s_bit and !(CP15.&PRRR<region+24>)
+          }
+       case '11' =>  #MMU_Exception "reserved settings not supported" -- reserved
 
---       }
---    };
---  return memattrs
---}
+      }
+    };
+  return memattrs
+}
 
 
 
@@ -3332,10 +3325,7 @@ AddressDescriptor * bits(32)
 }
 
 
-unit writing_access_flag 
-   (l2desc:: bits (32), l2descaddr2 :: AddressDescriptor, mva :: bits (32), IA :: bits (40), domain :: bits(4), level :: int, 
-                iswrite :: bool, dabtype :: DAbort, taketohypmode :: bool, secondstageabort :: bool, 
-                ipavalid :: bool, LDFSRformat :: bool, s2fs1walk :: bool) =
+unit writing_access_flag  (l2desc:: bits (32), l2descaddr2 :: AddressDescriptor) =
     when CP15.VSCTLR.AFE and !l2desc<4> do
            {   
             if !CP15.VSCTLR.HA  then
@@ -3347,7 +3337,17 @@ unit writing_access_flag
               else  mem(l2descaddr2,4)<4> <- true
              }
 
-
+ unit writing_access_flag_first_level  (l1desc:: bits (32), l1descaddr2 :: AddressDescriptor) =
+     when CP15.VSCTLR.AFE and !l1desc<10> do {   
+		  if !CP15.VSCTLR.HA  then
+	      #MMU_Exception "DAbort_AccessFlag exception"
+			 
+		 else -- Hardware-managed Access flag must be set in memory 
+			 if CP15.VSCTLR.EE  then  mem(l1descaddr2,4)<18> <- true  
+			 	 else  mem(l1descaddr2,4)<10> <- true
+			 }
+			 
+			 
 
 TLBRecord TLBResult (texcb :: bits (5), S:: bits(1), ap :: bits(3), xn :: bits(1), pxn :: bits(1), 
        nG :: bits (1), domain :: bits (4), level :: int, blocksize :: nat, size :: nat,
@@ -3383,6 +3383,26 @@ TLBRecord TLBResult (texcb :: bits (5), S:: bits(1), ap :: bits(3), xn :: bits(1
   return (result)
 }
 
+
+
+
+MemoryAttributes TLBRMemAtrbts (texcb :: bits (5), S:: bits(1)) = 
+{
+  var mematr;
+ -- Decode the TEX, C, B and S bits to produce the TLBRecord's memory attributes 
+    mematr <- RemappedTEXDecode(texcb, S);
+
+  --transient bits are not supported in this format 
+  mematr.innertransient <- false; 
+  mematr.outertransient <- false;
+
+ -- check for alignment issues if memory type is SO or Device 
+ -- when (mematr.MemType == MemType_Device or mematr.MemType == MemType_StronglyOrdered) do 
+ --    when mva != Align(mva, size) do #MMU_Exception "Alignment Fault" ;
+
+  return (mematr)
+}
+
 -- TranslationTableWalkSD()
 -- Returns a result of a translation table walk using
 -- the Short-descriptor format for TLBRecord
@@ -3416,7 +3436,6 @@ TLBRecord TranslationTableWalkSD (mva :: bits(32), is_write :: bool, size  :: na
       case 1 => -- Large page or Small page  
          {
           domain = l1desc<8:5> ;
-          level = 2;
           pxn = [l1desc<2>] :: bits(1);
           --NS <- [l1desc<3>] :: bits(1) ;
             
@@ -3432,28 +3451,43 @@ TLBRecord TranslationTableWalkSD (mva :: bits(32), is_write :: bool, size  :: na
           nG  = [l2desc<11>] :: bits(1);
 
 
-          writing_access_flag (l2desc, l2descaddr2, mva, UNKNOWN, domain, level, is_write, DAbort_AccessFlag, false, 
-                                 false, false, false, false );
+          writing_access_flag (l2desc, l2descaddr2);
 
             if !l2desc<1> then -- Large page 
              {
-              texcb = l2desc<14:12> : [l2desc<3>] :: bits(1) : [l2desc<2>] :: bits(1);
-              xn    = [l2desc<15>] :: bits(1);
-              blocksize = 64;
-              physicaladdressi = l2desc<31:16> : mva<15:0>;
-			  return  (TLBResult (texcb, S, ap , xn , pxn , 
-			                       nG , domain , level , blocksize , size,
-			                       physicaladdressi , mva ))
+	           texcb = l2desc<14:12> : [l2desc<3>] :: bits(1) : [l2desc<2>] :: bits(1);
+			   var result :: TLBRecord;
+	  		   result.addrdesc.memattrs <- TLBRMemAtrbts (texcb, S);
+			   -- check for alignment issues if memory type is SO or Device 
+			    when (result.addrdesc.memattrs.MemType == MemType_Device or result.addrdesc.memattrs.MemType == MemType_StronglyOrdered) do 
+			       when mva != Align(mva, size) do #MMU_Exception "Alignment Fault" ;
+	  		   result.perms.ap <- ap;
+	  		   result.perms.xn <- [l2desc<15>] :: bits(1);
+	  		   result.perms.pxn <- pxn;
+	  		   result.nG <- nG;
+	  		   result.domain <- l1desc<8:5>;
+	  		   result.level <- 2;
+	  		   result.blocksize <- 64;
+	  		   result.addrdesc.paddress <- l2desc<31:16> : mva<15:0>;
+	  		   return (result)
               } 
             else -- Small page
              {
               texcb = l2desc<8:6> : [l2desc<3>] :: bits(1) : [l2desc<2>] :: bits(1);
-              xn = [l2desc<0>]:: bits(1);
-              blocksize = 4;
-              physicaladdressi = l2desc<31:12> : mva<11:0>;
-			  return  (TLBResult (texcb, S, ap , xn , pxn , 
-			                       nG , domain , level , blocksize , size,
-			                       physicaladdressi , mva ))
+		      var result :: TLBRecord;
+  		      result.addrdesc.memattrs <- TLBRMemAtrbts (texcb, S);
+		   -- check for alignment issues if memory type is SO or Device 
+		    when (result.addrdesc.memattrs.MemType == MemType_Device or result.addrdesc.memattrs.MemType == MemType_StronglyOrdered) do 
+		       when mva != Align(mva, size) do #MMU_Exception "Alignment Fault" ;
+  		      result.perms.ap <- ap;
+  		      result.perms.xn <- [l2desc<0>]:: bits(1);
+  		      result.perms.pxn <- pxn;
+  		      result.nG <- nG;
+  		      result.domain <- l1desc<8:5>;
+  		      result.level <- 2;
+  		      result.blocksize <- 4;
+  		      result.addrdesc.paddress <- l2desc<31:12> : mva<11:0>;
+  		      return (result)
              }
          }
       case 2 => -- Section or Supersection 
@@ -3464,31 +3498,42 @@ TLBRecord TranslationTableWalkSD (mva :: bits(32), is_write :: bool, size  :: na
         xn = [l1desc<4>] :: bits(1); 
         pxn = [l1desc<0>] :: bits(1); 
         nG  = [l1desc<17>] :: bits(1); 
-        level = 1;
-        when CP15.VSCTLR.AFE  and !l1desc<10> do
-         {   
-          if !CP15.VSCTLR.HA  then
-          #MMU_Exception "DAbort_AccessFlag exception"
-          else -- Hardware-managed Access flag must be set in memory 
-            if CP15.VSCTLR.EE  then  mem(l1descaddr2,4)<18> <- true  else  mem(l1descaddr2,4)<10> <- true
-           };
+		
+        writing_access_flag_first_level (l1desc, l1descaddr2);
+											
          if !l1desc<18> then -- Section
           { 
-           domain = l1desc<8:5>;
-           blocksize = 1024; 
-           physicaladdressi = l1desc<31:20> : mva<19:0>;
-		  return (TLBResult (texcb, S, ap , xn , pxn , 
-		                       nG , domain , level , blocksize , size,
-		                       physicaladdressi , mva ))
+           var result :: TLBRecord;
+		   result.addrdesc.memattrs <- TLBRMemAtrbts (texcb, S);
+		   -- check for alignment issues if memory type is SO or Device 
+		    when (result.addrdesc.memattrs.MemType == MemType_Device or result.addrdesc.memattrs.MemType == MemType_StronglyOrdered) do 
+		       when mva != Align(mva, size) do #MMU_Exception "Alignment Fault" ;
+		   result.perms.ap <- ap;
+		   result.perms.xn <- xn;
+		   result.perms.pxn <- pxn;
+		   result.nG <- nG;
+		   result.domain <- l1desc<8:5>;
+		   result.level <- 1;
+		   result.blocksize <- 1024;
+		   result.addrdesc.paddress <- l1desc<31:20> : mva<19:0>;
+		   return (result)
            }
          else -- Supersection 
           { 
-           domain = '0000';
-           blocksize = 16384; 
-           physicaladdressi = l1desc<31:24> : mva<23:0>;
-		  return (TLBResult (texcb, S, ap , xn , pxn , 
-		                       nG , domain , level , blocksize , size,
-		                       physicaladdressi , mva ))
+           var result :: TLBRecord;
+   		   result.addrdesc.memattrs <- TLBRMemAtrbts (texcb, S);
+		   -- check for alignment issues if memory type is SO or Device 
+		    when (result.addrdesc.memattrs.MemType == MemType_Device or result.addrdesc.memattrs.MemType == MemType_StronglyOrdered) do 
+		       when mva != Align(mva, size) do #MMU_Exception "Alignment Fault" ;
+   		   result.perms.ap <- ap;
+   		   result.perms.xn <- xn;
+   		   result.perms.pxn <- pxn;
+   		   result.nG <- nG;
+   		   result.domain <- '0000';
+   		   result.level <- 1;
+   		   result.blocksize <- 16384;
+   		   result.addrdesc.paddress <- l1desc<31:24> : mva<23:0>;
+   		   return (result)
             }
          }
         case 3  =>    -- Fault, Reserved 

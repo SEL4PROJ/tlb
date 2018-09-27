@@ -290,9 +290,9 @@ where
 
 
 definition 
-  align_dom_perm_entry_check  :: "tlb_entry \<Rightarrow> vaddr \<Rightarrow> nat \<Rightarrow> 32 word \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> 'a cstate_scheme \<Rightarrow> (paddr \<times> memattribs_t) \<times> 'a cstate_scheme" 
+  align_dom_perm_entry_check'  :: "tlb_entry \<Rightarrow> vaddr \<Rightarrow> nat \<Rightarrow> 32 word \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> 'a cstate_scheme \<Rightarrow> (paddr \<times> memattribs_t) \<times> 'a cstate_scheme" 
 where 
-  "align_dom_perm_entry_check \<equiv> \<lambda> entry v siz dacr ispriv iswrite. if (memtyp_entry entry = MemDevice \<or> memtyp_entry entry = MemStronglyOrdered) \<and> addr_val v \<noteq> align (addr_val v, siz)  
+  "align_dom_perm_entry_check' \<equiv> \<lambda> entry v siz dacr ispriv iswrite. if (memtyp_entry entry = MemDevice \<or> memtyp_entry entry = MemStronglyOrdered) \<and> addr_val v \<noteq> align (addr_val v, siz)  
                                          then raise'exception' (MMUException ''Alignment Fault'')
                                          else do {
                                                   let chkdm = checkdomain (domain (flags entry)) (addr_val v) dacr;
@@ -305,7 +305,18 @@ where
                                                     else return (tlb_entry_to_adrdesc v entry)}"
 
 
-
+definition 
+  dom_perm_entry_check  :: "tlb_entry \<Rightarrow> vaddr  \<Rightarrow> 32 word \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> 'a cstate_scheme \<Rightarrow> (paddr \<times> memattribs_t) \<times> 'a cstate_scheme" 
+where 
+  "dom_perm_entry_check \<equiv> \<lambda> entry v dacr ispriv iswrite.  do {
+                                                  let chkdm = checkdomain (domain (flags entry)) (addr_val v) dacr;
+                                                  if chkdm = None then raise'exception' (MMUException ''Domain Fault'')  else
+                                                  if chkdm = Some True then  
+                                                          do {let chkprm = checkpermission (permissions (flags entry)) ispriv iswrite;  \<comment> \<open>encodes abort\<close>
+                                                               if chkprm = None then raise'exception' (MMUException ''Permission Fault'')
+                                                                else if  chkprm = Some True then raise'exception' (MMUException ''Permission Fault'')
+                                                                else return (tlb_entry_to_adrdesc v entry)}
+                                                    else return (tlb_entry_to_adrdesc v entry)}"
 instantiation tlb_state_ext :: (type) mmu   
 begin
   definition   
@@ -323,20 +334,22 @@ begin
      dacr <- read_state dacr;
      let lookup_first_stage = (if data_ins then lookup dtlb asid (addr_val v) else lookup itlb asid (addr_val v));
      case lookup_first_stage of
-          Hit entry \<Rightarrow>  align_dom_perm_entry_check entry v siz dacr ispriv iswrite
+          Hit entry \<Rightarrow>  dom_perm_entry_check entry v dacr ispriv iswrite
         | Miss \<Rightarrow> (case lookup maintlb asid (addr_val v) of
                              Hit entry \<Rightarrow> do {
                                                  let tlb_rld = (if data_ins then tlbs \<lparr> dtlb_set := dtlb \<union> {entry} \<rparr> else tlbs \<lparr> itlb_set := itlb \<union> {entry} \<rparr> );
                                                  update_state (\<lambda>s. s\<lparr> tlbs_set := tlb_rld \<rparr>);
-                                                 align_dom_perm_entry_check entry v siz dacr ispriv iswrite}
+                                                 dom_perm_entry_check entry v dacr ispriv iswrite}
                           |  Miss \<Rightarrow> (case pt_walk asid heap ttbr0 prrr nmrr v of 
                                             None \<Rightarrow> raise'exception' (MMUException ''more info'')
                                          |  Some entry \<Rightarrow> do {
-                                                 \<comment> \<open>it seems like from the manual that TLB is loaded first, alignment and  domain checking is performed afterwards\<close>
+                                                if (memtyp_entry entry = MemDevice \<or> memtyp_entry entry = MemStronglyOrdered) \<and> addr_val v \<noteq> align (addr_val v, siz)  
+                                                  then raise'exception' (MMUException ''Alignment Fault'')
+                                                    else do {
                                                  let tlb_rld = (if data_ins then tlbs \<lparr> dtlb_set := dtlb \<union> {entry}, unitlb_set := maintlb \<union> {entry} \<rparr>
                                                                             else tlbs \<lparr> itlb_set := itlb \<union> {entry}, unitlb_set := maintlb \<union> {entry} \<rparr> );
                                                  update_state (\<lambda>s. s\<lparr> tlbs_set := tlb_rld \<rparr>);
-                                                 align_dom_perm_entry_check entry v siz dacr ispriv iswrite })
+                                                 dom_perm_entry_check entry v dacr ispriv iswrite }  })
                           | Incon \<Rightarrow> raise'exception' (MMUException ''set on fire''))
         | Incon \<Rightarrow> raise'exception' (MMUException ''set on fire'') 
    }"

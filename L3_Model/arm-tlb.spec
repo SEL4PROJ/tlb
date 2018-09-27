@@ -300,8 +300,8 @@ unit microInstrTLB_evict () =
  {  
   --InstrTLB([microInstrTLBEntries - 1]:: bits(6)) <- None;
   
-  for i in (microInstrTLBEntries - 2) .. 0 do 
-           InstrTLB([i + 1]:: bits(6)) <- InstrTLB([i]:: bits(6));
+  for i in 0 .. (microInstrTLBEntries - 2) do 
+           InstrTLB([microInstrTLBEntries - 1 - i]:: bits(6)) <- InstrTLB([microInstrTLBEntries - 2 -i]:: bits(6));
   
   InstrTLB([0::nat]:: bits(6)) <- None
  }
@@ -326,8 +326,8 @@ unit microDataTLB_evict () =
  {  
      --DataTLB([microDataTLBEntries - 1]:: bits(5)) <- None;
   
-     for i in (microDataTLBEntries - 2) .. 0 do 
-              DataTLB([i + 1]:: bits(5)) <- DataTLB([i]:: bits(5));
+     for i in 0 .. (microDataTLBEntries - 2) do 
+              DataTLB([microDataTLBEntries - 1 - i]:: bits(5)) <- DataTLB([microDataTLBEntries - 2 - i]:: bits(5));
   
      DataTLB([0::nat]:: bits(5)) <- None
  }
@@ -340,8 +340,8 @@ unit mainTLB_evict () =
  {   
      -- unified_mainTLB([mainTLBEntries - 1]:: bits(8)) <- None;
   
-     for i in (mainTLBEntries - 2) .. 0 do 
-              unified_mainTLB([i + 1]:: bits(8)) <- unified_mainTLB([i]:: bits(8));
+     for i in 0 .. (mainTLBEntries - 2) do 
+              unified_mainTLB([mainTLBEntries - 1  - i]:: bits(8)) <- unified_mainTLB([mainTLBEntries - 2 - i]:: bits(8));
   
      unified_mainTLB([0::nat]:: bits(8)) <- None
 	 

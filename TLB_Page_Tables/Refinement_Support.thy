@@ -292,26 +292,6 @@ lemma MMU_config_assert_isa_tlb_update' [simp]:
   " MMU_config_assert_isa (s\<lparr>main_TLB := tlb'\<rparr>) \<Longrightarrow> MMU_config_assert_isa (s\<lparr>main_TLB := tlb\<rparr>)"
   by (clarsimp simp: MMU_config_assert_isa_def)
 
-lemma well_formed_state:
-  "\<lbrakk>\<lbrace>\<lambda>s. MMU_config_assert_isa s\<rbrace> f \<lbrace>\<lambda>_ s. MMU_config_assert_isa s\<rbrace> ; 
-             \<lbrace>\<lambda>s. P s\<rbrace> f  \<lbrace>\<lambda>r s. MMU_config_assert_isa s \<and> Q' r s\<rbrace> \<rbrakk> \<Longrightarrow> 
-                      \<lbrace>\<lambda>s. P s\<rbrace> f \<lbrace>\<lambda>r s. Q' r s\<rbrace>"
-  by (clarsimp simp: l3_valid_def)
-
-
-lemma CheckPermission_config_assert_isa [simp]:
-  "\<lbrace>MMU_config_assert_isa\<rbrace> CheckPermission (p, va, l, d, iw, ip, f', f'') \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
-  supply if_cong[cong] if_split[split del] 
-  sorry
-
-lemma CheckDomain_config_assert_isa[simp]:
-  "\<lbrace>MMU_config_assert_isa\<rbrace> CheckDomain (d, va, l, iw) \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
-  sorry
-
-lemma [simp]:
-  "\<lbrace>MMU_config_assert_isa\<rbrace> CurrentModeIsHyp () \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
-  sorry
-
 
 lemma  [simp]:
   "MMU_config_assert_isa (if exception s = NoException then s\<lparr>exception := e\<rparr> else s) = MMU_config_assert_isa s"
@@ -426,27 +406,147 @@ lemma [simp]:
   apply (simp only: MMU_config_assert_isa_def)
   by force
 
-lemma translation_mmu_config[simp]:
-  "\<lbrace>MMU_config_assert_isa\<rbrace> TranslationTableWalkSD (va, a, b) \<lbrace>\<lambda>r s. MMU_config_assert_isa s\<rbrace>"
-  sorry
-
-lemma [simp]:
- "\<lbrace>MMU_config_assert_isa\<rbrace> TranslateAddressVS1Off va \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
-  sorry
-
-lemma [simp]:
-  "\<lbrace>MMU_config_assert_isa\<rbrace> TLBResult (a, b, c, d, e, f, g, h, i, j, k, l) \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
-  sorry
-
-
-lemma [simp]:
-  "\<lbrace>MMU_config_assert_isa\<rbrace> FCSETranslate va \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
-  sorry
-
 
 lemma [simp]:
   "e \<noteq> NoException \<Longrightarrow> exception (if exception s = NoException then s \<lparr>exception := e\<rparr> else s) = NoException = False"
   by (clarsimp)
 
+lemma tlb_rel_none_update_preserved:
+  "\<lbrakk>tlb_rel s (typ_tlb t)\<rbrakk> \<Longrightarrow> 
+       tlb_rel (s\<lparr>micro_InstrTLB := (micro_InstrTLB s)(0 := None), micro_DataTLB := \<lambda>a. if a = 0 then None else micro_DataTLB s a, main_TLB := \<lambda>a. if a = 0 then None else main_TLB s a\<rparr>) (typ_tlb t)"
+  apply(unfold tlb_rel_def)
+  apply (rule, simp add: state_comp_def)
+  apply rule
+   apply (rule_tac B = "tlbtypcast ` ran (micro_DataTLB s)" in  subset_trans; simp add: ran_def)
+   apply force
+  apply rule
+   apply (rule_tac B = "tlbtypcast ` ran (micro_InstrTLB s)" in  subset_trans; simp add: ran_def)
+   apply force
+  apply (rule_tac B = "tlbtypcast ` ran (main_TLB s)" in  subset_trans; simp add: ran_def)
+  by force
+
+
+lemma word_2_cases'[simp]:
+  "\<lbrakk>(w::2 word) = 3 ; w = 2; w = 1; w = 0 \<rbrakk> \<Longrightarrow> False"
+  by word_bitwise auto
+
+
+lemma
+  "MemType (AddressDescriptor.memattrs
+      (addrdesc  (s\<lparr>addrdesc  := p\<rparr> ))) = MemType (AddressDescriptor.memattrs p)"
+  by clarsimp
+
+
+
+lemma [simp]:
+  "word_extract 31 25 (va :: 32 word) = (0 :: 7 word) \<Longrightarrow> 
+        word_cat 0 ((word_extract 24 0 va) :: 25 word) = va"
+  apply (clarsimp simp:  word_extract_def word_bits_def mask_def word_of_int_def) 
+  apply word_bitwise
+  by force
+
+
+
+lemma [simp]:
+  "reg'DACR (DACR (CP15 (if exception (snd s) = NoException then snd s\<lparr>exception := e\<rparr> else snd s))) =   
+                          reg'DACR (DACR (CP15 (snd s)))"
+  by clarsimp
+
+lemma [simp]:
+  "MEM (if exception s = NoException then s\<lparr>exception := e\<rparr> else s) p  = 
+     MEM s p"
+  by clarsimp
+
+
+
+
+lemma well_formed_state:
+  " \<lbrace>\<lambda>s. P s\<rbrace> f  \<lbrace>\<lambda>r s. MMU_config_assert_isa s \<and> Q' r s\<rbrace> \<Longrightarrow> 
+                      \<lbrace>\<lambda>s. P s\<rbrace> f \<lbrace>\<lambda>r s. Q' r s\<rbrace>"
+  by (clarsimp simp: l3_valid_def)
+
+lemma CheckPermission_config_assert_isa:
+  "\<lbrace>MMU_config_assert_isa\<rbrace> CheckPermission (p, va, l, d, iw, ip, f', f'') \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  supply if_cong[cong] if_split[split del] 
+  sorry
+
+
+lemma CurrentModeIsHyp_config_assert_isa:
+  "\<lbrace>MMU_config_assert_isa\<rbrace> CurrentModeIsHyp () \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  sorry
+
+lemma 
+ "\<lbrace>MMU_config_assert_isa\<rbrace> TranslateAddressVS1Off va \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  sorry
+
+lemma 
+  "\<lbrace>MMU_config_assert_isa\<rbrace> TLBResult (a, b, c, d, e, f, g, h, i, j, k, l) \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  sorry
+
+
+lemma 
+  "\<lbrace>MMU_config_assert_isa\<rbrace> FCSETranslate va \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  sorry
+
+
+lemma CheckDomain_config_assert_isa:
+  "\<lbrace>MMU_config_assert_isa\<rbrace> CheckDomain (d, va, l, iw) \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  sorry
+
+
+lemma 
+  "\<lbrace>MMU_config_assert_isa\<rbrace> writing_access_flag (a, b) \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  sorry
+
+lemma
+  "\<lbrace>MMU_config_assert_isa\<rbrace> writing_access_flag_first_level (a, b) \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  sorry
+
+lemma 
+  "\<lbrace>MMU_config_assert_isa\<rbrace> SecondStageTranslate (ri, r) \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  sorry
+
+lemma 
+  "\<lbrace>MMU_config_assert_isa\<rbrace> HaveSecurityExt () \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  sorry
+
+lemma 
+  "\<lbrace>MMU_config_assert_isa \<rbrace>  IsSecure ()  \<lbrace>\<lambda>_. MMU_config_assert_isa \<rbrace>"
+  sorry
+
+lemma 
+  "\<lbrace>MMU_config_assert_isa\<rbrace> HaveVirtExt () \<lbrace>\<lambda>_. MMU_config_assert_isa\<rbrace>"
+  sorry
+
+lemma
+  "\<lbrace>MMU_config_assert_isa \<rbrace>  HaveMPExt ()  \<lbrace>\<lambda>_. MMU_config_assert_isa \<rbrace>"
+  sorry
+
+lemma 
+  "\<lbrace>MMU_config_assert_isa \<rbrace>  mem (p, n)  \<lbrace>\<lambda>_. MMU_config_assert_isa \<rbrace>"
+  sorry
+
+lemma 
+  "\<lbrace>MMU_config_assert_isa \<rbrace>  translation_root va  \<lbrace>\<lambda>_. MMU_config_assert_isa \<rbrace>"
+  sorry
+
+lemma translation_mmu_config:
+  "\<lbrace>MMU_config_assert_isa\<rbrace> TranslationTableWalkSD (va, a, b) \<lbrace>\<lambda>r s. MMU_config_assert_isa s\<rbrace>"
+  sorry
+
+
+lemma tlb_rel_consistent_lookup_hit:
+  "\<lbrakk>tlb_rel s (typ_tlb (t :: 'a tlb_state_scheme)); dtlb_consistent (typ_tlb t) (Addr va);
+        lookup (tlbtypcast ` ran (micro_DataTLB s)) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit x\<rbrakk>
+       \<Longrightarrow> lookup (dtlb_set (tlbs_set t)) (asid t) va = TLB.lookup_type.Hit x"
+  apply (drule tlb_relD, clarsimp simp: typ_tlb_def cstate.defs)
+  apply (clarsimp simp: consistent0_def ran_def)
+  by (metis Hits_le TLB.lookup_type.simps(5) leq_Miss option.sel tlb_mono)
+
+
+lemma  lookup_leq_hit_incon:
+  "\<lbrakk>lookup t a v \<le> lookup t' a v;  lookup t a v = TLB.lookup_type.Hit x\<rbrakk>
+       \<Longrightarrow>  lookup t' a v = TLB.lookup_type.Incon \<or> lookup t' a v = TLB.lookup_type.Hit x"
+  using less_eq_lookup_type by auto
 
 end
