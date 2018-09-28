@@ -1,5 +1,5 @@
 theory Refinement_Paddr
-imports  Refinement_Support
+  imports  Refinement_Support
 
 begin
 
@@ -139,7 +139,7 @@ lemma HaveSecurityExt_wp [wp]:
  supply if_cong[cong] if_split[split del] 
   by (wpsimp simp:  HaveSecurityExt_def  cong: conj_cong)
 
-lemma translation_root_wp [wp]:
+lemma translation_root_wp:
   "\<lbrace>\<lambda>s. MMU_config_assert_isa s \<and> P 0 False (reg'TTBR0 (TTBR0 (CP15 s))) s\<rbrace> 
        translation_root va \<lbrace>\<lambda>(n, disabled, ttbr) s . P n disabled ttbr s\<rbrace>"
  supply if_cong[cong] if_split[split del] 
@@ -669,7 +669,43 @@ lemma tlb_rel_consistent_lookup_hit_main_tlb:
   by (metis Hits_le TLB.lookup_type.simps(5) leq_Miss option.sel tlb_mono)
 
 
+lemma  identical_first_level:
+  " \<lbrakk> tlb_rel s (typ_tlb t); 
+        MEM s (word_cat (word_extract (31::nat) (14::nat) (reg'TTBR0 (TTBR0 (CP15 s)))) (word_cat (word_extract (31::nat) 20 va) (0::2 word)) + 3) = Some x;
+        MEM s (word_cat (word_extract (31::nat) (14::nat) (reg'TTBR0 (TTBR0 (CP15 s)))) (word_cat (word_extract (31::nat) 20 va) (0::2 word)) + 2) = Some xa;
+        MEM s (word_cat (word_extract (31::nat) (14::nat) (reg'TTBR0 (TTBR0 (CP15 s)))) (word_cat (word_extract (31::nat) 20 va) (0::2 word)) + 1) = Some xb;
+        MEM s (word_cat (word_extract (31::nat) (14::nat) (reg'TTBR0 (TTBR0 (CP15 s)))) (word_cat (word_extract (31::nat) 20 va) (0::2 word))) = Some xc\<rbrakk> \<Longrightarrow> 
+          load_machine_word (heap t) (Addr ((addr_val (ttbr0 t) && mask 18 << 14) + (vaddr_pd_index va << 2))) = Some (from_bytes [x, xa ,xb ,xc])"
+  apply (clarsimp simp: load_machine_word_def load_value_def )
+  supply [[show_types]]
+  sorry
 
+
+lemma word_extract_from_bytes_first_level:
+  " \<lbrakk> word_extract (Suc 0) 0 (( of_bl (bitstring_field 31 0 (to_bl x @ to_bl xa @ to_bl xb @ to_bl xc))) :: 32 word) = (2::2 word);
+        \<not> of_bl (bitstring_field 31 0 (to_bl x @ to_bl xa @ to_bl xb @ to_bl xc)) !! 18 \<rbrakk> \<Longrightarrow> 
+      from_bytes [x, xa, xb, xc] && (3::32 word) = (2::32 word) \<and> \<not> ((from_bytes [x, xa, xb, xc]) :: 32 word) !! 18"
+  apply (clarsimp simp: word_extract_def word_bits_def of_bl_def to_bl_def bl_to_bin_def word_of_int_def bl_to_bin_aux_def bin_to_bl_aux_def bitstring_field_def bitstring_shiftr_def mask_def
+                        fixwidth_def Let_def split: if_split_asm)
+  apply word_bitwise 
+  sorry
+
+
+lemma word_extract_from_bytes_first_level':
+  " \<lbrakk> word_extract (Suc 0) 0 (( of_bl (bitstring_field 31 0 (to_bl x @ to_bl xa @ to_bl xb @ to_bl xc))) :: 32 word) = (2::2 word);
+         of_bl (bitstring_field 31 0 (to_bl x @ to_bl xa @ to_bl xb @ to_bl xc)) !! 18 \<rbrakk> \<Longrightarrow> 
+      from_bytes [x, xa, xb, xc] && (3::32 word) = (2::32 word) \<and> ((from_bytes [x, xa, xb, xc]) :: 32 word) !! 18"
+  apply (clarsimp simp: word_extract_def word_bits_def of_bl_def to_bl_def bl_to_bin_def word_of_int_def bl_to_bin_aux_def bin_to_bl_aux_def bitstring_field_def bitstring_shiftr_def mask_def
+                        fixwidth_def Let_def split: if_split_asm)
+  apply word_bitwise 
+  sorry
+
+(*definition 
+
+  "valid_no_esxcp p f q = P f (expep_no \<longrightarrow> Q r s)  "
+
+
+*)
 
 lemma mmu_translate_refinement_pa [wp]:
   "\<lbrace>\<lambda>s. \<exists>t mematr . MMU_config_assert_isa s \<and>
@@ -681,15 +717,13 @@ lemma mmu_translate_refinement_pa [wp]:
    \<lbrace>\<lambda>r s. exception s = NoException \<longrightarrow> pa' = Addr (paddress r)\<rbrace>"
   supply if_cong[cong] if_split[split del] translation_mmu_config [wp del]
   apply (wpsimp simp: TranslateAddress_def if_distribR  cong: conj_cong)
-            apply (rule vcg_imp')
-            apply (rule check')
+            apply (rule vcg_imp', rule check')
            apply wpsimp
           apply (clarsimp simp:  if_distribR  cong: conj_cong)  
           apply (wpsimp simp: CheckDomain_def)
          apply wpsimp
         apply wpsimp
-               apply (rule vcg_imp')
-               apply (rule check')
+               apply (rule vcg_imp', rule check')
               apply wpsimp
              apply (clarsimp simp: if_distribR  cong: conj_cong)  
              apply (wpsimp simp: CheckDomain_def)
@@ -704,8 +738,7 @@ lemma mmu_translate_refinement_pa [wp]:
            apply wpsimp
           apply wpsimp 
           apply (wpsimp simp: TranslateAddressV_def)
-                   apply (rule vcg_imp')
-                   apply (rule check')
+                   apply (rule vcg_imp', rule check')
                   apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
                   apply wpsimp
                  apply wpsimp 
@@ -720,32 +753,168 @@ lemma mmu_translate_refinement_pa [wp]:
               prefer 2
               apply (rule false_imp_post)
              apply (clarsimp simp: TranslationTableWalkSD_def Let_def)
-             apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-              apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-               apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
+             apply (repeat 4 "(wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")
                  apply (wp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                   apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                    apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                     apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                      apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                      apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                       apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                        apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                         apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                          apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                           apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                            apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                             apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                            apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                           apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                          apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                         apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                        apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                       apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
-                        apply (rule well_formed_state)
-                        apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
-                        apply (wpsimp simp: TLBRMemAtrbts_def)
+                   apply (repeat 11 "(wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")
+                      apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)+
+                      apply (rule well_formed_state)
+                      apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
+                      apply (wpsimp simp: TLBRMemAtrbts_def)
+                      prefer 2
+                      apply (rule false_imp_post)
+                      apply (clarsimp simp: DefaultTEXDecode_def if_distribR  Let_def cong: conj_cong)
+                      apply (repeat 225 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 379 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 200 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 100 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 85 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply wp_once
+                      apply (repeat 17 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (wpsimp simp: TLBRMemAtrbts_def)
+                      prefer 2
+                      apply (rule false_imp_post)
+                      apply (clarsimp simp: DefaultTEXDecode_def if_distribR  Let_def cong: conj_cong)
+                      apply (repeat 225 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 379 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 200 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 73 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                  apply (wpsimp simp: level2_desc_address_and_desc_def if_distribR  Let_def BigEndianReverse_def mem_def cong: conj_cong)
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply wpsimp
+                      apply wpsimp
+                      apply wpsimp
+                      apply wpsimp
+                      apply (wpsimp simp:  if_distribR  Let_def cong: conj_cong)  
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply wpsimp
+                      apply (rule false_imp_post)
+                      apply wpsimp
+                      apply wpsimp
+                      apply (clarsimp simp: if_distribR  cong: conj_cong)
+                      apply wpsimp
+                     apply wpsimp
+                    apply wpsimp
+                   apply wpsimp
+                  apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
+                 apply (repeat 10 "(wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 6 "(wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (wpsimp simp: TLBRMemAtrbts_def)
+                      prefer 2
+                      apply (rule false_imp_post)
+                      apply (clarsimp simp: DefaultTEXDecode_def if_distribR  Let_def cong: conj_cong)
+                      apply (repeat 225 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 379 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 200 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 100 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 20 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")                     
+                      apply wpsimp
+                      apply (repeat 16 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")
+                     apply (wpsimp simp: TLBRMemAtrbts_def)
+                      prefer 2
+                      apply (rule false_imp_post)
+                      apply (clarsimp simp: DefaultTEXDecode_def if_distribR  Let_def cong: conj_cong)
+                      apply (repeat 225 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 379 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 200 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (repeat 73 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+  apply (clarsimp simp: level1_desc_address_and_desc_def if_distribR  Let_def BigEndianReverse_def mem_def cong: conj_cong)  (*  wpsimp stuck here*)
+ apply (repeat 34 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (rule false_imp_post)
+ apply (repeat 21 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
+                      apply wpsimp
+                      apply wpsimp
+                      apply (rule false_imp_post)
+                      apply (wpsimp simp: if_distribR Let_def cong: conj_cong)
+                      apply (wpsimp simp: if_distribR Let_def cong: conj_cong)
+                      apply (wpsimp simp: if_distribR Let_def cong: conj_cong)
+                      apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
+                      apply wpsimp
+                      apply (wpsimp simp: if_distribR Let_def cong: conj_cong)
+                      apply (clarsimp simp: if_distribR  cong: conj_cong) 
+                      apply wpsimp
+                      apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?) 
+                      apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?) 
+                      apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?) 
+                      apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?) 
+                      apply (wpsimp simp: if_distribR Let_def cong: conj_cong)
+                      apply (clarsimp simp: if_distribR  cong: conj_cong) 
+                      apply wpsimp
+                      apply wpsimp
+                      apply wpsimp
+                      apply wpsimp
+                     apply wpsimp
+                    apply wpsimp
+                   apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
+                   apply wpsimp
+                  apply wpsimp 
+                 apply wpsimp
+                apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
+                apply wpsimp
+               apply wp_once
+
+  thm l3_valid_raise'exception
+  find_theorems "translation_root"
+ 
+
+
+ 
+
+ (*                 
+  supply if_cong[cong] if_split[split del] translation_mmu_config [wp del]
+  apply (wpsimp simp: TranslateAddress_def if_distribR  cong: conj_cong)
+            apply (rule vcg_imp', rule check')
+           apply wpsimp
+          apply (clarsimp simp:  if_distribR  cong: conj_cong)  
+          apply (wpsimp simp: CheckDomain_def)
+         apply wpsimp
+        apply wpsimp
+               apply (rule vcg_imp', rule check')
+              apply wpsimp
+             apply (clarsimp simp: if_distribR  cong: conj_cong)  
+             apply (wpsimp simp: CheckDomain_def)
+            apply (clarsimp simp: if_distribR  cong: conj_cong)
+            apply (wpsimp simp: write'DataTLB_def)
+           apply wpsimp
+          apply wpsimp
+              apply (wpsimp simp: write'unified_mainTLB_def)
+             apply wpsimp
+            apply wpsimp
+            apply (wpsimp simp: write'DataTLB_def)
+           apply wpsimp
+          apply wpsimp 
+          apply (wpsimp simp: TranslateAddressV_def)
+                   apply (rule vcg_imp', rule check')
+                  apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
+                  apply wpsimp
+                 apply wpsimp 
+                apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
+                apply (wpsimp simp: CheckDomain_def)
+               apply wpsimp
+              apply wpsimp
+             apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
+             apply wpsimp
+            apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
+            apply wpsimp
+              prefer 2
+              apply (rule false_imp_post)
+             apply (clarsimp simp: TranslationTableWalkSD_def Let_def)
+             apply (repeat 4 "(wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")
+                 apply (wp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
+                   apply (repeat 11 "(wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")
+                      apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)+
+                      apply (rule well_formed_state)
+                      apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
+      apply (wpsimp simp: TLBRMemAtrbts_def)
                         apply (clarsimp simp: RemappedTEXDecode_def if_distribR  Let_def cong: conj_cong)
                         apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
                         apply (wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
@@ -1263,6 +1432,7 @@ lemma mmu_translate_refinement_pa [wp]:
   apply (rule conjI; clarsimp)
    apply (case_tac "data_TLB_matching_entries 32 va (s\<lparr>micro_DataTLB :=  \<lambda>a. if a = 0 then None else from_list_to_tlb_map (data_tlb_eviction 31 (micro_DataTLB s)) a\<rparr>)"; clarsimp)
    apply (case_tac list; clarsimp)
+(*  Hit in data tlb *)
    apply (rename_tac entry)
    apply (subgoal_tac "lookup (tlbtypcast ` ran (micro_DataTLB  (s\<lparr>micro_DataTLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (data_tlb_eviction 31 (micro_DataTLB s)) a\<rparr>))) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit (tlbtypcast entry) ")
     prefer 2
@@ -1313,10 +1483,13 @@ lemma mmu_translate_refinement_pa [wp]:
    prefer 2
    apply (case_tac list; clarsimp)
   apply rule+
+(*  miss in data tlb *)
    apply (case_tac "main_TLB_matching_entries 256 va (s\<lparr>main_TLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a\<rparr>)"; clarsimp)
    apply (case_tac list; clarsimp)
+(* miss in data tlb and hit in unitlb *)
    apply (rename_tac entry)
-   apply (subgoal_tac "lookup (tlbtypcast ` ran (main_TLB (s\<lparr>main_TLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a\<rparr>))) (ASID (CONTEXTIDR (CP15 s))) va = TLB.lookup_type.Hit (tlbtypcast entry) ")
+   apply (subgoal_tac "lookup (tlbtypcast ` ran (main_TLB (s\<lparr>main_TLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a\<rparr>))) (ASID (CONTEXTIDR (CP15 s))) va = 
+                               TLB.lookup_type.Hit (tlbtypcast entry) ")
     prefer 2 
     apply (drule main_TLB_matching_entries_lookup_equal) 
     apply (case_tac s, clarsimp)
@@ -1332,37 +1505,142 @@ lemma mmu_translate_refinement_pa [wp]:
    apply (clarsimp simp: mmu_translate_tlb_state_ext_def read_state_def Let_def bind_def)
    apply (clarsimp split: if_split)
    apply (subgoal_tac "reg'DACR (DACR (CP15 s)) = dacr t")
-    apply rule+
-      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+    apply (case_tac "lookup (dtlb_set (tlbs_set t)) (asid t) va" ; clarsimp)
+      prefer 2
+      apply (clarsimp simp: consistent0_def typ_tlb_def cstate.defs)
+     apply (clarsimp simp: bind_def update_state_def)
      apply rule+
-     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-     apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-    apply rule+
        apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
        apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
       apply rule+
       apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
      apply rule+
-     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-     apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-    apply rule+
+        apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+        apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+       apply rule+
+       apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+      apply rule+
       apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+       apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+      apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
      apply rule+
      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-    apply rule+
-     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+  (* hit in uni and dtlb of state t*)
+    apply (subgoal_tac "x3 = tlbtypcast entry")
+     apply clarsimp
+     apply rule+
+       apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+      apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+        apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+        apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+       apply rule+
+       apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+      apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+       apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+      apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+      apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
+       apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+     apply rule+
+     apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
      apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
-    apply rule+
-    apply (clarsimp simp: dom_perm_entry_check_def checkdomain_def Let_def checkpermission_def split: if_split_asm)
-    apply (case_tac entry; clarsimp simp: tlb_entry_to_adrdesc_def va_to_pa_def TLB.va_to_pa_def return_def)
+    apply (clarsimp simp: consistent0_def typ_tlb_def cstate.defs) 
    apply (clarsimp simp: tlb_rel_def state_comp_def typ_tlb_def cstate.defs)
-  
-  
+  apply (case_tac "main_TLB_matching_entries 256 va (s\<lparr>main_TLB := \<lambda>a. if a = 0 then None else from_list_to_tlb_map (main_tlb_eviction 255 (main_TLB s)) a\<rparr>)"; clarsimp)
+    (* miss in both tlbs *)
+   apply (simp only: if_split)
+   apply (rule+ ; clarsimp)
+     apply (rule+ ; clarsimp)
+      apply (clarsimp simp: mmu_translate_tlb_state_ext_def read_state_def Let_def bind_def)
+      apply (case_tac "lookup (dtlb_set (tlbs_set t)) (asid t) va"; clarsimp)
+        apply (case_tac " lookup (unitlb_set (tlbs_set t)) (asid t) va"; clarsimp)
+    (* abstract page table walk *)
+          apply (case_tac "pt_walk (asid t) (heap t) (ttbr0 t) (prrr t) (nmrr t) (Addr va)"; clarsimp)
+           apply (clarsimp simp: pt_walk_def get_pde_def decode_heap_pde_def split: option.splits)
+            apply (force simp: identical_first_level)
+           apply (subgoal_tac "x2 = from_bytes [x, xa ,xb ,xc]")
+            prefer 2
+            apply (force simp: identical_first_level)
+           apply (clarsimp simp: decode_pde_def Let_def)
+           apply (subgoal_tac "from_bytes [x, xa, xb, xc] && (3::32 word) = (2::32 word) \<and> \<not> ((from_bytes [x, xa, xb, xc]):: 32 word) !! 18")
+            apply (clarsimp simp: decode_pde_ssection_def decode_pde_section_def split: pde.splits)
+           apply (force simp: word_extract_from_bytes_first_level)
+(* we should fix the memory attributes to reduce the effort  *)
+          apply (case_tac "(memtyp_entry a = MemDevice \<or> memtyp_entry a = MemStronglyOrdered) \<and> va \<noteq> align (va, siz)"; clarsimp)
+  thm memtyp_entry_def
+               
+
+
+
+
+
+
+
+
+
+
+*)
+
+
+
+
+
+
+supply [[show_types]]
+  oops
+
+
+
+
+
+lemma word_extract_from_bytes_first_level':
+  " \<lbrakk> word_extract (Suc 0) 0 (( of_bl (bitstring_field 31 0 (to_bl x @ to_bl xa @ to_bl xb @ to_bl xc))) :: 32 word) = (n::2 word) \<rbrakk> \<Longrightarrow> 
+      from_bytes [x, xa, xb, xc] && (3::32 word) = (m::32 word)"
+  apply (clarsimp simp: word_extract_def word_bits_def of_bl_def to_bl_def bl_to_bin_def word_of_int_def bl_to_bin_aux_def bin_to_bl_aux_def bitstring_field_def bitstring_shiftr_def mask_def
+                        fixwidth_def Let_def split: if_split_asm)
+  sorry
+
+
+
+
+
+            defer
+ apply (clarsimp simp: load_machine_word_def load_value_def load_list_def deoption_list_def)
+            apply (case_tac " None \<in> set (load_list_basic (heap t) 4 (Addr ((addr_val (ttbr0 t) && mask 18 << 14) + (vaddr_pd_index va << 2))))"; clarsimp)
+  find_theorems  "load_list_basic"
+  term from_bytes
+  oops
+
+
+
+            apply (clarsimp simp: load_machine_word_def load_value_def word_extract_def word_bits_def word_cat_def load_list_def deoption_list_def 
+                                    split: option.splits)
+            apply (case_tac " None \<in> set (load_list_basic (heap t) 4 (Addr ((addr_val (ttbr0 t) && mask 18 << 14) + ((va >> 20) && mask 12 << 2))))"; clarsimp)
+            apply (clarsimp simp: tlb_rel_def state_comp_def typ_tlb_def cstate.defs)
   
   
   

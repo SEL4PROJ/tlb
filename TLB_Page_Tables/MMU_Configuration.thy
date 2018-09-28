@@ -21,7 +21,7 @@ where
                               \<not>reg'TTBR0 (TTBR0 (CP15 s)) !! 0 \<and>
                               \<not>VSCTLR.EE (VSCTLR(CP15 s)) \<and>
                               \<not>VSCTLR.AFE (VSCTLR(CP15 s)) \<and>  \<comment> \<open>hardware access flag is disabled\<close>
-                              VSCTLR.TRE (VSCTLR(CP15 s))"
+                              \<not>VSCTLR.TRE (VSCTLR(CP15 s))"
 
 
 fun

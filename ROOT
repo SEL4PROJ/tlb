@@ -1,5 +1,5 @@
 chapter AFP
-
+(*
 (* Library session imported from AFP *)
 session Word_Lib (AFP) in "Word_Lib" = "HOL-Word" +
   options [timeout = 300]
@@ -11,12 +11,12 @@ session Word_Lib (AFP) in "Word_Lib" = "HOL-Word" +
     Word_Lemmas_64
   document_files
     "root.tex"
-
+*)
 
 chapter TLB
 
 
-session L3_LIB = Word_Lib +
+session L3_LIB = Lib +
   theories
     "L3_Lib/L3_Lib"
     "L3_Lib/L3_Hoare_Logic"

@@ -1,14 +1,17 @@
 theory L3_Hoare_Logic
-imports L3_Lib
-  "~/verification/l4v/lib/Apply_Trace_Cmd" 
-  "~/verification/l4v/lib/Monad_WP/wp/WP"
-  "~/verification/l4v/lib/Monad_WP/wp/WPC"
-  "~/verification/l4v/lib/Monad_WP/wp/WPFix"
-  "~/verification/l4v/lib/Monad_WP/Strengthen"
-  "~/verification/l4v/lib/Simp_No_Conditional"
+imports
+  
+  L3_Lib 
+  Lib.NICTATools
+  Lib.WP
+  Lib.WPC
+  Lib.WPFix
+  Lib.Strengthen
+  Lib.Simp_No_Conditional
 
 
 begin
+
 
 (* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)
 method wpsimp uses wp wp_del simp simp_del split split_del cong =
@@ -28,6 +31,7 @@ lemma l3_valid_weak_pre[wp_pre]:
   "\<lbrakk> l3_valid P f Q; (\<And>s . P' s \<Longrightarrow> P s) \<rbrakk> \<Longrightarrow> l3_valid P' f Q"
   by (simp add: l3_valid_def)
 
+
 context strengthen_implementation begin
 
 lemma strengthen_hoare [strg]:
@@ -42,6 +46,7 @@ lemma wpfix_strengthen_hoare:
   by (cases F, auto simp: l3_valid_def)
 
 end
+
 
 lemma l3_valid_triple [wp_trip]:
   "\<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace> = triple_judgement P f (postcondition Q' (\<lambda>s f. {f s}))"

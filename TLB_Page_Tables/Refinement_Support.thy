@@ -356,7 +356,7 @@ lemma [simp]:
   by(clarsimp simp only: MMU_config_assert_isa_def)
 
 lemma [simp]:
-  "MMU_config_assert_isa s \<Longrightarrow> VSCTLR.TRE (VSCTLR(CP15 s))"
+  "MMU_config_assert_isa s \<Longrightarrow> \<not>VSCTLR.TRE (VSCTLR(CP15 s))"
   by(clarsimp simp only: MMU_config_assert_isa_def)
 
 lemma [simp]:
