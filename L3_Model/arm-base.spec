@@ -2849,7 +2849,7 @@ AddressDescriptor SecondStageTranslate (s1outaddrdesc :: AddressDescriptor, mva 
 }
 
 -- should not be used
-bool RemapRegsHaveResetValues() = false
+bool RemapRegsHaveResetValues() = true
 
 
 -- DefaultTEXDecode()
@@ -2861,21 +2861,11 @@ MemoryAttributes DefaultTEXDecode (texcb :: bits(5), S :: bits(1) ) =
   {
     case  '00000' => -- Strongly-ordered
       {
-        memattrs.MemType    <- MemType_StronglyOrdered;
-        memattrs.innerattrs <- UNKNOWN;
-        memattrs.innerhints <- UNKNOWN; 
-        memattrs.outerattrs <- UNKNOWN;
-        memattrs.outerhints <- UNKNOWN;
-        memattrs.shareable  <- true
+        #MMU_Exception "unknown not supported"
        }
     case '00001' =>  -- Shareable Device 
       {
-        memattrs.MemType    <- MemType_Device; 
-        memattrs.innerattrs <- UNKNOWN; 
-        memattrs.innerhints <- UNKNOWN; 
-        memattrs.outerattrs <- UNKNOWN; 
-        memattrs.outerhints <- UNKNOWN; 
-        memattrs.shareable  <- true
+        #MMU_Exception "unknown not supported"
        }
     case '00010' => -- Outer and Inner Write-Through, no Write-Allocate 
       {
@@ -2906,12 +2896,7 @@ MemoryAttributes DefaultTEXDecode (texcb :: bits(5), S :: bits(1) ) =
        }
     case '00110' => -- IMPLEMENTATION_DEFINED setting of memattrs
       {
-        memattrs.MemType    <- UNKNOWN;
-        memattrs.innerattrs <- UNKNOWN;
-        memattrs.innerhints <- UNKNOWN;
-        memattrs.outerattrs <- UNKNOWN; 
-        memattrs.outerhints <- UNKNOWN; 
-        memattrs.shareable  <- UNKNOWN
+        #MMU_Exception "unknown not supported"
        }
     case '00111' => -- Outer and Inner Write-Back, Write-Allocate
       {
@@ -2924,12 +2909,7 @@ MemoryAttributes DefaultTEXDecode (texcb :: bits(5), S :: bits(1) ) =
        }
     case '01000' => -- Non-shareable Device
       {
-        memattrs.MemType    <- MemType_Device;
-        memattrs.innerattrs <- UNKNOWN;
-        memattrs.innerhints <- UNKNOWN;
-        memattrs.outerattrs <- UNKNOWN; 
-        memattrs.outerhints <- UNKNOWN; 
-        memattrs.shareable  <- true
+        #MMU_Exception "unknown not supported"
        }
 
     case '10000' => -- Cacheable, <3:2> = Outer attrs, <1:0> = Inner attrs 
@@ -3388,17 +3368,19 @@ TLBRecord TLBResult (texcb :: bits (5), S:: bits(1), ap :: bits(3), xn :: bits(1
 
 MemoryAttributes TLBRMemAtrbts (texcb :: bits (5), S:: bits(1)) = 
 {
-  var mematr;
- -- Decode the TEX, C, B and S bits to produce the TLBRecord's memory attributes 
-    mematr <- RemappedTEXDecode(texcb, S);
+    var mematr;
+	-- Decode the TEX, C, B and S bits to produce the TLBRecord's memory attributes 
+     if !CP15.VSCTLR.TRE  then
+          if RemapRegsHaveResetValues() then mematr <- DefaultTEXDecode(texcb, S)
+          else  #MMU_Exception "unknown value not supported"  --IMPLEMENTATION_DEFINED setting of result.addrdesc.memattrs
+     else
+         if !CP15.VSCTLR.M  then mematr <- DefaultTEXDecode(texcb, S) 
+         else mematr <- RemappedTEXDecode(texcb, S);
 
-  --transient bits are not supported in this format 
-  mematr.innertransient <- false; 
-  mematr.outertransient <- false;
-
- -- check for alignment issues if memory type is SO or Device 
- -- when (mematr.MemType == MemType_Device or mematr.MemType == MemType_StronglyOrdered) do 
- --    when mva != Align(mva, size) do #MMU_Exception "Alignment Fault" ;
+     --transient bits are not supported in this format 
+     mematr.innertransient <- false; 
+     mematr.outertransient <- false;
+  
 
   return (mematr)
 }

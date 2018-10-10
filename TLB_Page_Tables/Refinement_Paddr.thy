@@ -706,6 +706,20 @@ lemma word_extract_from_bytes_first_level':
 
 
 *)
+thm DefaultTEXDecode_def
+
+lemma
+  "\<lbrace>\<lambda>s. MMU_config_assert_isa s\<rbrace> TLBRMemAtrbts (texcbbits, sbit) 
+                  \<lbrace>\<lambda>r s. exception s = NoException \<longrightarrow> 
+                        (MemType r = MemType_Device \<or> MemType r = MemType_StronglyOrdered) = False\<rbrace>"
+supply if_cong[cong] if_split[split del]
+  apply (wpsimp simp: TLBRMemAtrbts_def if_distribR  cong: conj_cong)
+     prefer 2
+     apply (rule false_imp_post)
+    apply (clarsimp simp: DefaultTEXDecode_def if_distribR  Let_def cong: conj_cong)
+    by (repeat 873 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")
+ 
+
 
 lemma is_it:
   " \<lbrace>\<lambda>s. MMU_config_assert_isa s \<and> (\<forall>r. if A' r
@@ -744,8 +758,56 @@ lemma is_it:
      prefer 2
      apply (rule false_imp_post)
     apply (clarsimp simp: DefaultTEXDecode_def if_distribR  Let_def cong: conj_cong)
-    by (repeat 938 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
- 
+  by (repeat 938 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+
+
+lemma enocding_tlb_mematrs:
+  " \<lbrace>\<lambda>s.  (\<forall>r s'. TLBRMemAtrbts (anew, bnew) s = (r,s') \<longrightarrow>   P r s')\<rbrace>   TLBRMemAtrbts (anew, bnew)  
+           \<lbrace>\<lambda>r s'.  P r s'\<rbrace>"
+  using l3_valid_def by force
+(*
+lemma is_it'':
+  " \<lbrace>\<lambda>s. MMU_config_assert_isa s \<and> (\<forall>r s'. TLBRMemAtrbts (anew, bnew) s = (r,s') \<longrightarrow> 
+                                   (if  (MemType r = MemType_Device \<or> MemType r = MemType_StronglyOrdered)
+                                 then B' \<longrightarrow>
+                                      C' s' \<longrightarrow>
+                                      (if D' s'  then exception s' = NoException \<longrightarrow>  E' \<and>
+                                          F'  \<longrightarrow>
+                                            G'
+                                       else H' s' \<longrightarrow>
+                                            exception s' = NoException \<longrightarrow> Q')
+                                 else C' s' \<longrightarrow>
+                                      (if D' s'  then exception s = NoException \<longrightarrow>  E' \<and>
+                                          F'  \<longrightarrow>
+                                            G'
+                                       else H' s' \<longrightarrow>
+                                            exception s = NoException \<longrightarrow> Q')))\<rbrace> 
+               TLBRMemAtrbts (anew, bnew) 
+                         \<lbrace>\<lambda>r s.
+                                MMU_config_assert_isa s \<and>
+                                (if  (MemType r = MemType_Device \<or> MemType r = MemType_StronglyOrdered)
+                                 then B' \<longrightarrow>
+                                      C' s \<longrightarrow>
+                                      (if D' s  then exception s = NoException \<longrightarrow>  E' \<and>
+                                          F'  \<longrightarrow>
+                                            G'
+                                       else H' s \<longrightarrow>
+                                            exception s = NoException \<longrightarrow> Q')
+                                 else C' s \<longrightarrow>
+                                      (if D' s  then exception s = NoException \<longrightarrow>  E' \<and>
+                                          F'  \<longrightarrow>
+                                            G'
+                                       else H' s \<longrightarrow>
+                                            exception s = NoException \<longrightarrow> Q'))\<rbrace>"
+ supply if_cong[cong] if_split[split del]
+  apply (wpsimp simp: TLBRMemAtrbts_def if_distribR  cong: conj_cong)
+     prefer 2
+     apply (rule false_imp_post)
+    apply (clarsimp simp: DefaultTEXDecode_def if_distribR  Let_def cong: conj_cong)
+  apply (repeat 938 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+
+  sorry
+*)
 
 lemma mmu_translate_refinement_pa [wp]:
   "\<lbrace>\<lambda>s. \<exists>t mematr . MMU_config_assert_isa s \<and>
@@ -796,43 +858,63 @@ lemma mmu_translate_refinement_pa [wp]:
              apply (repeat 4 "(wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")
                  apply (wp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)
                    apply (repeat 11 "(wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")
-                      apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)+
-                      apply (rule well_formed_state)
+                             apply (wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)+
+                        apply (rule enocding_tlb_mematrs)
+                     (* apply (rule well_formed_state)
                       apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)
-                      apply (rule is_it)
+                      apply (rule is_it) *)
                       apply (repeat 51 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
                       apply wp_once
                       apply (repeat 17 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
-                      apply (rule well_formed_state, clarsimp simp: if_distribR  Let_def cong: conj_cong)
-                      apply (rule is_it)
+                       apply (rule enocding_tlb_mematrs)
+                      (*apply (rule well_formed_state, clarsimp simp: if_distribR  Let_def cong: conj_cong)
+                      apply (rule is_it)*)
                       apply (repeat 4 "(wp_once|wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
-                  apply (wpsimp simp: level2_desc_address_and_desc_def if_distribR  Let_def BigEndianReverse_def mem_def cong: conj_cong)
-                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
-                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
-                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
-                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
-                      apply wpsimp
-                      apply wpsimp
-                      apply wpsimp
-                      apply wpsimp
-                      apply (wpsimp simp:  if_distribR  Let_def cong: conj_cong)  
-                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
-                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
-                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
-                      apply (wpsimp simp: mem1_def  if_distribR  Let_def cong: conj_cong)  apply clarsimp
-                      apply wpsimp
-                      apply (rule false_imp_post)
-                      apply (repeat 7 "(wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
-                 apply (repeat 52 "(wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+apply (rule well_formed_state)
+ apply (clarsimp simp: level2_desc_address_and_desc_def if_distribR  Let_def mem_def mem1_def cong: conj_cong)
+  apply (repeat 23 "(wp_once|wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+  apply (rule false_imp_post) 
+                           apply (repeat 40  "(wp_once|wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+ apply (repeat 25  "(wpc|wp_once|wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                          apply (repeat 2  "(wp_once|wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")
+                          apply (rule false_imp_post) 
+                      apply (repeat 7 "(wp_once|wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+ apply (repeat 60 "(wp_once|wpsimp, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
+                         apply wp_once 
+ apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)?
+(*  apply wp_once 
+ apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)?
+  apply wp_once 
+ apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)?
+  apply wp_once 
+ apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)?
+  apply wp_once 
+ apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)?
+  apply wp_once 
+ apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)?
+  apply wp_once 
+ apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)?
+  apply wp_once 
+ apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)?
+  apply wp_once 
+ apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)?
+  apply wp_once 
+  apply (clarsimp simp: if_distribR  Let_def cong: conj_cong)?
+*)
+                      
+ 
+               (*  apply (repeat 52 "(wp_once, (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
                       apply wp_once
                       apply (repeat 17 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
-                      apply (rule well_formed_state, clarsimp simp: if_distribR  Let_def cong: conj_cong)
-                      apply (rule is_it)
+                      apply (rule enocding_tlb_mematrs)
+                      (*apply (rule well_formed_state, clarsimp simp: if_distribR  Let_def cong: conj_cong)
+                      apply (rule is_it)*)
                      apply (repeat 51 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
                       apply wp_once
                       apply (repeat 17 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)")
-                     apply (rule well_formed_state, clarsimp simp: if_distribR  Let_def cong: conj_cong)
-                     apply (rule is_it)
+                      apply (rule enocding_tlb_mematrs)
+                      (* apply (rule well_formed_state, clarsimp simp: if_distribR  Let_def cong: conj_cong)
+                     apply (rule is_it)*)
                     apply (repeat 5 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
                 apply (clarsimp simp: level1_desc_address_and_desc_def if_distribR  Let_def BigEndianReverse_def mem_def cong: conj_cong)  (*  wpsimp stuck here*)
                 apply (repeat 34 "((wp_once|wpsimp), (clarsimp simp: if_distribR  Let_def cong: conj_cong)?)") 
@@ -888,8 +970,10 @@ lemma mmu_translate_refinement_pa [wp]:
     apply (rule to_do1, clarsimp)
    apply (wpsimp simp: microInstrTLB_evict_def microInstrTLBEntries_def write'InstrTLB_def InstrTLB_def)
    apply (rule to_do2)
+
+*)
     (*  proof coming out of the wp *)
-  apply (clarsimp simp: if_distribR Let_def cong: conj_cong)
+(*  apply (clarsimp simp: if_distribR Let_def cong: conj_cong)
   apply (rule conjI; clarsimp)
    apply (case_tac "data_TLB_matching_entries 32 va (s\<lparr>micro_DataTLB :=  \<lambda>a. if a = 0 then None else from_list_to_tlb_map (data_tlb_eviction 31 (micro_DataTLB s)) a\<rparr>)"; clarsimp)
    apply (case_tac list; clarsimp)
@@ -1053,7 +1137,7 @@ lemma mmu_translate_refinement_pa [wp]:
     (* we should fix the memory attributes to reduce the effort  *)
          apply (case_tac "(memtyp_entry a = MemDevice \<or> memtyp_entry a = MemStronglyOrdered) \<and> va \<noteq> align (va, siz)"; clarsimp)
   thm memtyp_entry_def
-
+*)
  (*                 
   supply if_cong[cong] if_split[split del] translation_mmu_config [wp del]
   apply (wpsimp simp: TranslateAddress_def if_distribR  cong: conj_cong)
