@@ -1,6 +1,5 @@
 chapter AFP
-(*
-(* Library session imported from AFP *)
+
 session Word_Lib (AFP) in "Word_Lib" = "HOL-Word" +
   options [timeout = 300]
   theories [document = false]
@@ -11,57 +10,39 @@ session Word_Lib (AFP) in "Word_Lib" = "HOL-Word" +
     Word_Lemmas_64
   document_files
     "root.tex"
-*)
 
 chapter TLB
 
-
-session L3_LIB = Lib +
+   
+session L3_LIBJ = Word_Lib +
   theories
-    "L3_Lib/L3_Lib"
-    "L3_Lib/L3_Hoare_Logic"
-	"Page_Tables/PageTable_seL4"
-	
-	
-	
-session PTABLE = Word_Lib +
+    "L3_Library/L3_Lib"
+
+   
+session PTABLE_TLBJ = L3_LIBJ +
   theories
     "Page_Tables/PageTable_seL4"
+
 	
-	
-(* MMU_ARM *)
-session MMU_ARM = L3_LIB +
+
+session TLBJ = PTABLE_TLBJ +
   theories
-    "MMU_ARM/ARM_Monadic"
+    "TLB_No_ASID/Simp_Lemmas"
+    "TLB_No_ASID/ARM_Monadic"
+
+
+session TLB_ASID_REFJ = TLBJ +
+  theories
+    "TLB_ASID/Simp_Lemmas_ASIDs"
+
+
+session TLB_PDC_REFJ = TLB_ASID_REFJ +
+  theories
+    "TLB_PDC/Paper_Defs_machine_Inter"
+    "Logic/Page_Table_Ops"
     
-
-
-     
-(*
-(* Refinement *)
-session ARM_REF = MMU_ARM +
+(*session CASE_STUDYJJ = TLB_ASID_REFJ +
   theories
-    "MMU_ARMv7_Refinement/MMU_ARMv7_Ref"
-    "MMU_ARMv7_Refinement_No_Fault/ARMv7_Update_ASID_Ref"
-    "MMU_ARMv7_Refinement_No_Fault/ARMv7_Flush_Ref"
-    "MMU_ARMv7A_Refinement/MMU_ARMv7A_Ref"
-        
+    "Case_Study/Page_Table_Ops"
 
-
-(* Case studies/examples on top of the model *)
-session MMU_CASE = ARM_REF +
-  theories
-    "Ins_Cycle/Ins_Cycle"
-    "Ins_Cycle/Ins_Cycle1"
-    "Invalidation_Operations/Invalid_Ops"
 *)
-
-
-session LOGIC =  PTABLE +
-   theories
-   "Logic/Safe_Set" 
-
-
-session CASE_STUDY =  LOGIC +
-   theories
-   "Case_Study/Page_Table_Ops"

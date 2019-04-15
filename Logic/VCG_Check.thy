@@ -31,14 +31,9 @@ lemma [simp]:
 
 
 lemma [simp]:
-  "aval e s = Some v \<Longrightarrow> aval e (s\<lparr>incon_set := {}, ptable_snapshot := \<lambda>a v. Miss\<rparr>) = Some v "
+  "aval e s = Some v \<Longrightarrow> aval e (s\<lparr>incon_set := {}, ptable_snapshot := \<lambda>a. ({}, \<lambda>v. Fault) \<rparr>) = Some v "
   by (induct e arbitrary: v; clarsimp split: option.splits; fastforce)
 
-
-lemma flush_TLB_mem_write:
-  "\<Turnstile> \<lbrace> \<lambda>s. aval lval s = Some vp \<and> aval rval s = Some v \<and> Addr vp \<in> incon_set s \<and>  mode s = Kernel \<and> 
-      ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some pp \<rbrace>  Flush flushTLB ;; lval ::= rval \<lbrace>\<lambda>s. heap s pp = Some v \<rbrace>"
-  by vcgm
 
 
 

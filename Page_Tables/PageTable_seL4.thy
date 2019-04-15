@@ -48,20 +48,14 @@ text \<open>Supported page types\<close>
 
 datatype page_type =
    ArmSmallPage
- | ArmLargePage
  | ArmSection
- | ArmSuperSection
 
 
 primrec
   page_bits :: "page_type \<Rightarrow> nat"
 where
  "page_bits ArmSmallPage    = 12" |
- "page_bits ArmLargePage    = 16" |
- "page_bits ArmSection      = 20" |
- "page_bits ArmSuperSection = 24"
-
-
+ "page_bits ArmSection      = 20" 
 
 definition
   page_size :: "page_type \<Rightarrow> nat" where
@@ -79,10 +73,6 @@ definition
 
 lemma "map (\<lambda>p. vaddr_offset p 0xFEDCBAAA) [ArmSmallPage, ArmSection] = [0xAAA, 0xCBAAA]"
   by (clarsimp simp: vaddr_offset_def mask_def)
-
-lemma "map (\<lambda>p. vaddr_offset p 0xFEDCBAAA) [ArmSmallPage, ArmLargePage, ArmSection, ArmSuperSection] = [0xAAA, 0xBAAA, 0xCBAAA, 0xDCBAAA]"
-  by (clarsimp simp: vaddr_offset_def mask_def)
-
 
 text \<open>Get the non-offset part of an address for a given page size\<close>
 definition
@@ -107,13 +97,9 @@ record arm_perm_bits =
     arm_p_TEX :: "3 word"
     arm_p_S   :: "1 word"
     arm_p_XN  :: "1 word"
-    arm_p_PXN  :: "1 word"  (* added *)
     arm_p_C   :: "1 word"
     arm_p_B   :: "1 word"
     arm_p_nG  :: "1 word"
-    arm_p_domain  :: "4 word" 
-    arm_p_level :: int
-    \<comment> \<open>arm_p_blocksize ::  nat\<close>
 
 
 
@@ -122,11 +108,10 @@ section \<open>Page Directory Entry (PDE) Decoding\<close>
 datatype pde =
    InvalidPDE
  | ReservedPDE
- (* "the paddr is address of a page table" *)
+ \<comment> \<open>the paddr is address of a page table\<close> 
  | PageTablePDE paddr
- (* "the paddr is base address of section *)
+  \<comment> \<open>the paddr is base address of section\<close>
  | SectionPDE paddr arm_perm_bits
- | SuperSectionPDE paddr arm_perm_bits
 
 
 definition
@@ -137,44 +122,18 @@ definition
        arm_p_TEX = ucast ((w >> 12) AND 0x7),
        arm_p_S   = ucast ((w >> 16) AND 0x1),
        arm_p_XN  = ucast ((w >> 4) AND 0x1),
-       arm_p_PXN  = ucast (w  AND 0x1),
        arm_p_C   = ucast ((w >> 3) AND 0x1),
        arm_p_B   = ucast ((w >> 2) AND 0x1),
-       arm_p_nG  = ucast ((w >> 17) AND 0x1),
-       arm_p_domain = ucast ((w >> 5) AND 0xF),
-       arm_p_level = 1
-       \<comment> \<open>arm_p_blocksize = 1024\<close> \<rparr>"
-
-
-definition
-  perm_bits_pde_supsections :: "machine_word \<Rightarrow> arm_perm_bits" where
-  "perm_bits_pde_supsections w \<equiv> 
-     \<lparr> arm_p_APX = ucast ((w >> 15) AND 0x1),
-       arm_p_AP  = ucast ((w >> 10) AND 0x3),
-       arm_p_TEX = ucast ((w >> 12) AND 0x7),
-       arm_p_S   = ucast ((w >> 16) AND 0x1),
-       arm_p_XN  = ucast ((w >> 4) AND 0x1),
-       arm_p_PXN  = ucast (w  AND 0x1),
-       arm_p_C   = ucast ((w >> 3) AND 0x1),
-       arm_p_B   = ucast ((w >> 2) AND 0x1),
-       arm_p_nG  = ucast ((w >> 17) AND 0x1),
-       arm_p_domain = 0,
-       arm_p_level = 1
-       \<comment> \<open>arm_p_blocksize = 16384\<close> \<rparr>"
-
+       arm_p_nG  = ucast ((w >> 17) AND 0x1) \<rparr>"
 
 definition
   "decode_pde_section w \<equiv> SectionPDE (Addr (addr_base ArmSection w))
                                      (perm_bits_pde_sections w)"
 
-definition
-  "decode_pde_ssection w \<equiv> SuperSectionPDE (Addr (addr_base ArmSuperSection w))
-                                           (perm_bits_pde_supsections w)"
 
 definition
   pt_base_mask :: machine_word where
   "pt_base_mask \<equiv> NOT (mask 9)" (* FIXME TODO: check *again* that this is right *)
-
 definition
   "decode_pde_pt w \<equiv> PageTablePDE (Addr (w AND pt_base_mask))"
 
@@ -186,8 +145,7 @@ definition
   "decode_pde w \<equiv> let pde_type = w AND 0x3
             in
               if pde_type = 1 then (decode_pde_pt w)
-              else if pde_type = 2 & \<not>(w !! 18) then (decode_pde_section w)
-              else if pde_type = 2 &  (w !! 18) then (decode_pde_ssection w)
+              else if pde_type = 2 then decode_pde_section w
               else if pde_type = 3 then ReservedPDE
               else InvalidPDE"
 
@@ -203,10 +161,8 @@ section \<open>Page Table Entry (PTE) Decoding\<close>
 
 datatype pte =
    InvalidPTE
-   (* "the paddr is the page base address" *)
- | LargePagePTE paddr arm_perm_bits
+  \<comment> \<open>the paddr is the page base address\<close>
  | SmallPagePTE paddr arm_perm_bits
-
 
 definition
   perm_bits_pte_small :: "machine_word \<Rightarrow> arm_perm_bits" where
@@ -216,53 +172,29 @@ definition
        arm_p_TEX = ucast ((w >> 6) AND 0x7),
        arm_p_S   = ucast ((w >> 10) AND 0x1),
        arm_p_XN  = ucast (w AND 0x1),
-       arm_p_PXN  = ucast ((w >> 2) AND 0x1),
        arm_p_C   = ucast ((w >> 3) AND 0x1),
        arm_p_B   = ucast ((w >> 2) AND 0x1),
-       arm_p_nG  = ucast ((w >> 11) AND 0x1),
-       arm_p_domain = ucast ((w >> 5) AND 0xF),
-       arm_p_level = 2
-       \<comment> \<open>arm_p_blocksize = 4\<close> \<rparr>"
+       arm_p_nG  = ucast ((w >> 11) AND 0x1) \<rparr>"
 
 definition
   "decode_pte_small w \<equiv> SmallPagePTE (Addr (addr_base ArmSmallPage w))
                                      (perm_bits_pte_small w)"
 
-definition
-  perm_bits_pte_large :: "machine_word \<Rightarrow> arm_perm_bits" where
-  "perm_bits_pte_large w =
-     \<lparr> arm_p_APX = ucast ((w >> 9) AND 0x1),
-       arm_p_AP  = ucast ((w >> 4) AND 0x3),
-       arm_p_TEX = ucast ((w >> 12) AND 0x7),
-       arm_p_S   = ucast ((w >> 10) AND 0x1),
-       arm_p_XN  = ucast ((w >> 15) AND 0x1),
-       arm_p_PXN  = ucast ((w >> 2) AND 0x1),
-       arm_p_C   = ucast ((w >> 3) AND 0x1),
-       arm_p_B   = ucast ((w >> 2) AND 0x1),
-       arm_p_nG  = ucast ((w >> 11) AND 0x1),
-       arm_p_domain = ucast ((w >> 5) AND 0xF),
-       arm_p_level = 2
-       \<comment> \<open>arm_p_blocksize = 64\<close> \<rparr>"
+
 
 definition
   large_base_mask :: "32 word" where
   "large_base_mask \<equiv> NOT (mask 16)"
 
-definition
-  "decode_pte_large w \<equiv> LargePagePTE (Addr (addr_base ArmLargePage w))
-                                     (perm_bits_pte_large w)"
 
 lemma (* sanity check *)
   "large_base_mask \<equiv> 0xFFFF0000" by (simp add: large_base_mask_def mask_def)
 
 definition
   decode_pte :: "machine_word \<Rightarrow> pte" where
-  "decode_pte w \<equiv> if w AND 3 = 0 then InvalidPTE
-                  else if w !! 1 then decode_pte_small w
-                  else decode_pte_large w"
-
-
-
+  "decode_pte w \<equiv> if w AND 3 = 0 
+            then InvalidPTE
+            else decode_pte_small w"
 
 (* update form Hira: changed Option.map to map_option *)
 definition
@@ -302,7 +234,7 @@ definition
      let 
        pd_idx_offset = ((vaddr_pd_index (addr_val vp)) << 2)
      in
-       decode_heap_pde h (Addr (addr_val root && (mask 18:: 32 word) << 14)   r+ pd_idx_offset)"
+       decode_heap_pde h (root r+ pd_idx_offset)"
 
 text \<open>
   Decode the correct page table entry from a page table at some
@@ -329,10 +261,8 @@ definition
    case_option None
     (\<lambda>pte. case pte 
              of InvalidPTE \<Rightarrow> None
-              | SmallPagePTE base perms \<Rightarrow> Some (base, ArmSmallPage, perms)
-              | LargePagePTE base perms \<Rightarrow> Some (base, ArmLargePage, perms))
+              | SmallPagePTE base perms \<Rightarrow> Some (base, ArmSmallPage, perms))
     (get_pte h pt_base vp)"
-
 
 definition
   lookup_pde :: "heap \<Rightarrow> paddr \<Rightarrow> vaddr \<rightharpoonup> (paddr \<times> page_type \<times> arm_perm_bits)"
@@ -342,11 +272,9 @@ definition
     (\<lambda>pde. case pde 
             of InvalidPDE \<Rightarrow> None
              | ReservedPDE \<Rightarrow> None
-             | SuperSectionPDE base perms \<Rightarrow> Some (base, ArmSuperSection, perms)
              | SectionPDE base perms \<Rightarrow> Some (base, ArmSection, perms)
              | PageTablePDE pt_base \<Rightarrow> lookup_pte h pt_base vp)
     (get_pde h root vp)"
-
 
 
 subsection \<open>Get Page\<close>
@@ -405,12 +333,15 @@ definition
        vp_val = addr_val vp ;
        pd_idx_offset = ((vaddr_pd_index vp_val) << 2) ;
        pt_idx_offset = ((vaddr_pt_index vp_val) << 2) ;
-       pd_touched = set (addr_seq (Addr (addr_val root && (mask 18:: 32 word) << 14)  r+ pd_idx_offset) 4) ;
+       pd_touched = set (addr_seq (root r+ pd_idx_offset) 4) ;
        pt_touched = (\<lambda>pt_base. set (addr_seq (pt_base r+ pt_idx_offset) 4))
      in
-      (case decode_pde (the (load_machine_word h (Addr (addr_val root && (mask 18:: 32 word) << 14)  r+ pd_idx_offset)))
-            of  PageTablePDE pt_base \<Rightarrow> pd_touched \<union> pt_touched pt_base
-                 | _ \<Rightarrow> pd_touched)"
+      (case decode_heap_pde h (root r+ pd_idx_offset)
+         of Some pde \<Rightarrow> 
+              (case pde 
+                 of PageTablePDE pt_base \<Rightarrow> pd_touched \<union> pt_touched pt_base
+                  | _ \<Rightarrow> pd_touched)
+          | None \<Rightarrow> {})"
 
 
 section \<open>Properties, Instantiation to pagetable Locale\<close>
@@ -536,7 +467,7 @@ text \<open>Heap monotonicity of ptable_trace works a bit differently as it just
 (*XXX: fold into not_in_trace_not_in_pde?*)
 lemma lift_valid_pde_valid:
   "\<lbrakk> ptable_lift h r vp = Some p \<rbrakk> 
-   \<Longrightarrow> decode_heap_pde h (Addr (addr_val r && (mask 18:: 32 word) << 14) r+ (vaddr_pd_index (addr_val vp) << 2)) \<noteq> None"
+   \<Longrightarrow> decode_heap_pde h (r r+ (vaddr_pd_index (addr_val vp) << 2)) \<noteq> None"
   unfolding ptable_lift_def lookup_pde_def Let_def get_pde_def
   by (auto split: option.splits)
 
@@ -544,12 +475,11 @@ lemma ptable_trace_heap_mono_simp:
   "\<lbrakk> ptable_lift h r vp = Some p ; h \<bottom> h' \<rbrakk>
    \<Longrightarrow> ptable_trace (h ++ h') r vp = ptable_trace h r vp"
   unfolding ptable_trace_def Let_def
-  apply (case_tac "decode_heap_pde h (Addr (addr_val r && (mask 18:: 32 word) << 14) r+ (vaddr_pd_index (addr_val vp) << 2))")
+  apply (case_tac "decode_heap_pde h (r r+ (vaddr_pd_index (addr_val vp) << 2))")
    apply (drule lift_valid_pde_valid, blast)
-  apply (frule_tac h' =  h' in decode_pde_heap_mono_simp, simp, simp add: decode_heap_pde_def)
-  by auto
-
-
+  apply (subst decode_pde_heap_mono_simp, assumption+)
+  apply simp
+  done
 (*XXX: any set-like monotonicity properties can be derived from this*)
 
 
@@ -598,7 +528,7 @@ lemma lookup_pde_frame_mono_option:
   unfolding frame_mono_option_def lookup_pde_def load_machine_word_def 
             load_value_def Let_def get_pde_def
   apply (intro allI impI, elim conjE)
-  apply (case_tac "decode_heap_pde h (Addr (addr_val r && (mask 18:: 32 word) << 14) r+ (vaddr_pd_index (addr_val vp) << 2))")
+  apply (case_tac "decode_heap_pde h (r r+ (vaddr_pd_index (addr_val vp) << 2))")
    apply simp
   apply simp
   apply (drule (1) decode_pde_heap_mono)
@@ -631,9 +561,6 @@ lemma get_page_frame_mono_option:
 
 lemmas get_page_frame_mono = frame_mono_optionE[OF get_page_frame_mono_option]
 
-(* we have to fix the trace *)
-
-
 
 subsection \<open>Preservation of trace and lift During Updates Outside a Trace\<close>
 
@@ -649,28 +576,16 @@ lemma decode_pte_update_eq:
   unfolding decode_pte_def decode_heap_pte_def load_machine_word_def
   by (simp add: load_value_update_eq)
 
-
-(*lemma  not_in_trace_not_in_pde:
-  "\<lbrakk>p \<notin> ptable_trace h r vp ; ptable_lift h r vp = Some p \<rbrakk> \<Longrightarrow> 
-      p \<notin> set (addr_seq (Addr (addr_val r && (mask 18:: 32 word) << 14)  r+ (vaddr_pd_index (addr_val vp) << 2)) 4)"
-  apply (subgoal_tac "\<exists>pde. 
-         decode_heap_pde h (Addr (addr_val r && (mask 18:: 32 word) << 14)  r+ (vaddr_pd_index (addr_val vp) << 2)) = Some pde")
-   prefer 2
-   apply (fastforce dest: lift_valid_pde_valid)
-  apply (clarsimp simp: ptable_trace_def Let_def decode_heap_pde_def)
-  by (case_tac "decode_pde z"; clarsimp)
-*)
-
 lemma not_in_trace_not_in_pde:
   assumes trace: "p \<notin> ptable_trace h r vp"
   assumes lift: "ptable_lift h r vp = Some p"
-  shows "p \<notin> set (addr_seq (Addr (addr_val r && (mask 18:: 32 word) << 14)  r+ (vaddr_pd_index (addr_val vp) << 2)) 4)"
+  shows "p \<notin> set (addr_seq (r r+ (vaddr_pd_index (addr_val vp) << 2)) 4)"
 proof -
   from lift 
   obtain pde where 
-    "decode_heap_pde h (Addr (addr_val r && (mask 18:: 32 word) << 14)  r+ (vaddr_pd_index (addr_val vp) << 2)) = Some pde "
+    "decode_heap_pde h (r r+ (vaddr_pd_index (addr_val vp) << 2)) = Some pde "
     by (auto dest: lift_valid_pde_valid)
-  thus ?thesis using trace unfolding ptable_trace_def Let_def decode_heap_pde_def
+  thus ?thesis using trace unfolding ptable_trace_def Let_def
     by (cases pde, auto)
 qed
 
@@ -679,8 +594,8 @@ lemma ptable_trace_preserved':
   "\<lbrakk> p \<notin> ptable_trace h r vp ; ptable_lift h r vp = Some p \<rbrakk> 
   \<Longrightarrow> ptable_trace (h(p \<mapsto> v)) r vp = ptable_trace h r vp"
   apply (frule (1) not_in_trace_not_in_pde)
-  apply (unfold ptable_trace_def ptable_lift_def Let_def lookup_pde_def )
-  apply (simp add: decode_pde_update_eq load_machine_word_def load_value_update_eq)
+  apply (unfold ptable_trace_def ptable_lift_def Let_def lookup_pde_def)
+  apply (simp add: decode_pde_update_eq)
   done
 
 (*XXX:name modified to not conflict with instantiation of locale*)
@@ -688,26 +603,16 @@ lemma ptable_lift_preserved':
   "\<lbrakk> p \<notin> ptable_trace h r vp ; ptable_lift h r vp = Some p \<rbrakk>
     \<Longrightarrow> ptable_lift (h(p \<mapsto> v)) r vp = Some p"
   apply (frule (1) not_in_trace_not_in_pde)
-  apply (unfold ptable_trace_def ptable_lift_def lookup_pde_def lookup_pte_def Let_def get_pde_def )
+  apply (unfold ptable_trace_def ptable_lift_def lookup_pde_def lookup_pte_def Let_def)
   apply clarsimp
-  apply (case_tac "decode_heap_pde h (Addr (addr_val r && mask 18 << 14) r+ (vaddr_pd_index (addr_val vp) << 2))")
+  apply (case_tac "decode_heap_pde h (r r+ (vaddr_pd_index (addr_val vp) << 2))")
    apply (simp add: get_pde_def)
   apply (rule_tac x=a and y=aa in exI2)
   apply clarsimp
   apply (rename_tac pde)
-  apply (rule_tac x=b in exI)
-  apply (case_tac pde; clarsimp)
-    apply (subgoal_tac 
-      "decode_heap_pde (h(a r+ vaddr_offset aa (addr_val vp) \<mapsto> v)) (Addr ((addr_val r && mask 18 << 14) + (vaddr_pd_index (addr_val vp) << 2))) =
-                Some (PageTablePDE x3)")
-     apply clarsimp
-     apply (clarsimp simp: get_pte_def)
-     apply (subgoal_tac " decode_heap_pte (h(a r+ vaddr_offset aa (addr_val vp) \<mapsto> v)) (x3 r+ (vaddr_pt_index (addr_val vp) << 2)) =
-         decode_heap_pte h (x3 r+ (vaddr_pt_index (addr_val vp) << 2)) ")
-      apply clarsimp 
-     apply (rule decode_pte_update_eq)
-     apply (clarsimp simp: decode_heap_pde_def)
-    apply (clarsimp simp:    decode_pde_update_eq )+
+  apply (case_tac pde)
+      apply (clarsimp simp: get_pde_def get_pte_def Let_def 
+                            decode_pde_update_eq decode_pte_update_eq)+
   done
   (*XXX: shorter, but still ugly proof*)
 
