@@ -1,7 +1,5 @@
-[![Build Status](https://travis-ci.org/SEL4PROJ/tlb.svg?branch=jar19)](https://travis-ci.org/SEL4PROJ/tlb)
+[![Build Status](https://travis-ci.org/SEL4PROJ/tlb.svg?branch=master)](https://travis-ci.org/SEL4PROJ/tlb)
 
-
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1246932.svg)](https://doi.org/10.5281/zenodo.1246932)
 
 This folder contains .thy files for the project
 
