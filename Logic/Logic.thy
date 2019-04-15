@@ -61,6 +61,8 @@ fun bval :: "bexp \<Rightarrow> p_state \<rightharpoonup> bool"  ( "\<lbrakk>_\<
     (case (bval b s) of Some v \<Rightarrow> Some (\<not>v) | _ \<Rightarrow> None )"
 
 
+
+
 (*  big step semantics *)
 
 inductive
@@ -76,7 +78,8 @@ where
   Assign:          "\<lbrakk>aval lval s = Some vp ; aval rval s = Some v ; Addr vp \<notin> incon_set s;
                          ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some pp \<rbrakk>  \<Longrightarrow>
                           (lval ::= rval , s) \<Rightarrow> Some (s \<lparr> heap := heap s (pp \<mapsto> v) ,
-                            incon_set := incon_set s \<union>  ptable_comp (asid s) (heap s)  (heap s (pp \<mapsto> v)) (root s) (root s) \<rparr>)"
+                            incon_set := incon_set s \<union>  incon_comp (asid s) (asid s) (heap s)  (heap s (pp \<mapsto> v)) (root s) (root s),
+                            global_set := global_set s \<union> (\<Union>x\<in>global_entries (ran (pt_walk (asid s) (heap s(pp \<mapsto> v)) (root s))). range_of x) \<rparr>)"
 |
   Seq:             "\<lbrakk>(c1,s1) \<Rightarrow> Some s2;  (c2,s2) \<Rightarrow> s3 \<rbrakk> \<Longrightarrow> (c1;;c2, s1) \<Rightarrow> s3"
 |
@@ -96,19 +99,20 @@ where
 |
   WhileFail2:      "bval b s = None \<Longrightarrow> (WHILE b DO c , s) \<Rightarrow> None"
 |                                                                                   
-  Flush:           "mode s = Kernel \<Longrightarrow> (Flush f, s) \<Rightarrow>  Some (s \<lparr>incon_set := flush_effect f  (incon_set s) (asid s) , 
+  Flush:           "mode s = Kernel \<Longrightarrow> (Flush f, s) \<Rightarrow>  Some (s \<lparr>incon_set := flush_effect_iset f (incon_set s) (global_set s) (asid s) , 
+                                                                 global_set := flush_effect_glb f (global_set s) (asid s)  (heap s)  (root s),
                                                                   ptable_snapshot := flush_effect_snp f  (ptable_snapshot s) (asid s)\<rparr>)"
 |
   FlushFail:       "mode s = User \<Longrightarrow> (Flush f, s) \<Rightarrow>  None"
 |
   UpdateTTBR0Fail: "mode s = User \<or> aval rt s = None \<Longrightarrow> (UpdateTTBR0 rt, s) \<Rightarrow>  None"
 |
-  UpdateTTBR0:     "mode s = Kernel \<and> aval rte s = Some rt \<Longrightarrow> (UpdateTTBR0 rte, s) \<Rightarrow>  Some (s \<lparr>root := Addr rt ,
-                            incon_set := incon_set s \<union>  ptable_comp (asid s)  (heap s) (heap s) (root s) (Addr rt) \<rparr>)"
+  UpdateTTBR0:     "\<lbrakk>mode s = Kernel ; aval rte s = Some rt\<rbrakk> \<Longrightarrow> (UpdateTTBR0 rte, s) \<Rightarrow>  Some (s \<lparr>root := Addr rt ,
+                            incon_set := incon_set s \<union>  incon_comp (asid s) (asid s) (heap s) (heap s) (root s) (Addr rt) ,
+                            global_set := global_set s \<union> (\<Union>x\<in>global_entries (ran (pt_walk (asid s) (heap s) (Addr rt))). range_of x) \<rparr>)"
 | 
-  UpdateASID:      " \<lbrakk>snp_cur  =  snapshot_update_current'2 (ptable_snapshot s) (incon_set s) (heap s) (root s) (asid s) ; 
-                        il = incon_load_incon snp_cur a (heap s)  \<union> incon_load2 snp_cur a (heap s) (root s) ; 
-                             mode s = Kernel\<rbrakk> \<Longrightarrow> 
+  UpdateASID:      " \<lbrakk>snp_cur  = cur_pt_snp' (ptable_snapshot s) (incon_set s) (heap s) (root s) (asid s) ;
+                        il       = incon_load snp_cur (incon_set s) (global_set s) a (heap s) (root s); mode s = Kernel\<rbrakk> \<Longrightarrow> 
                            (UpdateASID a , s) \<Rightarrow>  Some (s \<lparr>asid := a , incon_set :=  il , ptable_snapshot := snp_cur \<rparr>)"
 |
   UpdateASIDFail:  "mode s = User \<Longrightarrow> (UpdateASID a , s) \<Rightarrow>  None"
@@ -135,8 +139,6 @@ inductive_cases
   UpdateAE [elim!]:"(UpdateASID a , s) \<Rightarrow>  s'" and
   SetME [elim!]:   "(SetMode flg, s) \<Rightarrow>  s'" 
  
-
-
 
 definition
   hoare_valid :: "(p_state \<Rightarrow> bool) \<Rightarrow> com \<Rightarrow> (p_state \<Rightarrow> bool) \<Rightarrow> bool" ("\<Turnstile> \<lbrace>(1_)\<rbrace>/ (_)/ \<lbrace>(1_)\<rbrace>" 50) where
@@ -202,9 +204,9 @@ lemma skip_sound[vcg]:
 
 lemma  assign_sound[vcg]:
   " \<Turnstile> \<lbrace>\<lambda>s. \<exists>vp v pp. aval l s = Some vp \<and> aval r s = Some v \<and>  Addr vp \<notin> incon_set s \<and>
-   P (s \<lparr>heap := heap s (pp \<mapsto> v) , incon_set := incon_set s \<union>
-            ptable_comp (asid s)  (heap s)  (heap s (pp \<mapsto> v)) (root s) (root s)\<rparr>)
-      \<and>   ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some pp\<rbrace>  l ::= r \<lbrace>P\<rbrace>"
+   P (s \<lparr>heap := heap s (pp \<mapsto> v) , incon_set := incon_set s \<union> incon_comp (asid s) (asid s)  (heap s)  (heap s (pp \<mapsto> v)) (root s) (root s) ,
+    global_set := global_set s \<union> (\<Union>x\<in>global_entries (ran (pt_walk (asid s) (heap s(pp \<mapsto> v)) (root s))). range_of x)\<rparr>) \<and>
+               ptable_lift_m (heap s) (root s) (mode s) (Addr vp) = Some pp\<rbrace>  l ::= r \<lbrace>P\<rbrace>"
   apply (clarsimp simp: hoare_valid_def)
   apply auto
 done
@@ -244,22 +246,23 @@ lemma while_inv[vcg]:
 
 
 lemma  flush_sound[vcg]:
-  "\<Turnstile>\<lbrace>\<lambda>s. mode s = Kernel \<and> P (s \<lparr>incon_set := flush_effect f (incon_set s) (asid s), 
-                              ptable_snapshot := flush_effect_snp f (ptable_snapshot s) (asid s) \<rparr>)\<rbrace>  Flush f \<lbrace>P\<rbrace>"
+  "\<Turnstile>\<lbrace>\<lambda>s. mode s = Kernel \<and> P (s \<lparr>incon_set := flush_effect_iset f (incon_set s) (global_set s) (asid s), 
+                                 global_set := flush_effect_glb f (global_set s) (asid s)  (heap s)  (root s),
+                                 ptable_snapshot := flush_effect_snp f (ptable_snapshot s) (asid s) \<rparr>)\<rbrace>  Flush f \<lbrace>P\<rbrace>"
   apply (clarsimp simp:  hoare_valid_def)
   by auto
 
 lemma updateTTBR0_sound[vcg]:
   "\<Turnstile>\<lbrace>\<lambda>s.  mode s = Kernel \<and> (\<exists>rt. aval ttbr0 s = Some rt \<and> P (s \<lparr>root := Addr rt ,
-       incon_set := incon_set s \<union>
-            ptable_comp (asid s)  (heap s)  (heap s) (root s) (Addr rt)\<rparr>))\<rbrace>  UpdateTTBR0 ttbr0 \<lbrace>P\<rbrace>"
+       incon_set := incon_set s \<union>  incon_comp (asid s) (asid s) (heap s) (heap s) (root s) (Addr rt) ,
+       global_set := global_set s \<union> (\<Union>x\<in>global_entries (ran (pt_walk (asid s) (heap s) (Addr rt))). range_of x)\<rparr>))\<rbrace>  UpdateTTBR0 ttbr0 \<lbrace>P\<rbrace>"
   apply (clarsimp simp: hoare_valid_def)
   by auto
 
 lemma updateASID_sound[vcg]:
   "\<Turnstile>\<lbrace>\<lambda>s.  \<exists>snp_cur il. mode s = Kernel \<and> 
-             snp_cur  = snapshot_update_current'2 (ptable_snapshot s) (incon_set s) (heap s) (root s) (asid s) \<and> 
-             il       = incon_load_incon snp_cur a (heap s)  \<union> incon_load2 snp_cur a (heap s) (root s)  \<and>
+             snp_cur  = cur_pt_snp' (ptable_snapshot s) (incon_set s) (heap s) (root s) (asid s) \<and> 
+             il       = incon_load snp_cur (incon_set s) (global_set s) a (heap s) (root s) \<and>
           P (s \<lparr>asid := a , incon_set := il , ptable_snapshot := snp_cur \<rparr> )\<rbrace>  UpdateASID a \<lbrace>P\<rbrace>"
   apply (clarsimp simp: hoare_valid_def)
   by auto
@@ -269,41 +272,5 @@ lemma set_mode_sound[vcg]:
   apply (clarsimp simp: hoare_valid_def)
   by auto
 
-
-definition
-  restrict :: "vaddr set \<Rightarrow> (vaddr \<Rightarrow> lookup_type) \<Rightarrow> (vaddr \<Rightarrow> lookup_type)"
-where
-  "restrict V walk \<equiv> \<lambda>va. if va \<in> V then Incon else walk va" 
-
-definition
-  "snap_pt s = restrict {va.  va \<in> incon_set s} (lift_pt (pt_walk (asid s) (heap s) (root s)))"
-
-definition
-  "new_snp s = (ptable_snapshot s) (asid s := snap_pt s)"
-
-lemma snap_pt:
-  "snapshot_update_current2 (incon_set s) (heap s) (root s) (asid s) = snap_pt s"
-  by (rule ext) (simp add: snapshot_update_current2_def snap_pt_def restrict_def lift_pt_def)
-
-lemma snapshot_update_current'_new_snp:
-  "snapshot_update_current'2 (ptable_snapshot s) (incon_set s) (heap s) (root s) (asid s)
-  = new_snp s"
-  by (clarsimp simp: snapshot_update_current'2_def new_snp_def snap_pt)
-
-definition
-  "snp_comp a snp walk =  {v. snp a v = Incon} \<union> {va. \<exists>e. snp a va = Hit e \<and> e \<noteq> walk va}"
-
-lemma Pair_times:
-  "Pair a ` V = {a} \<times> V"
-  by auto
-
-lemma updateASID_sound':
-  "\<Turnstile>\<lbrace>\<lambda>s. mode s = Kernel \<and>
-         P (s \<lparr>asid := a, 
-               incon_set := snp_comp a (new_snp s) (pt_walk a (heap s) (root s)), 
-               ptable_snapshot := new_snp s \<rparr> )\<rbrace>  UpdateASID a \<lbrace>P\<rbrace>"
-  apply (rule weak_pre, rule updateASID_sound)
-  apply (clarsimp simp: snapshot_update_current'_new_snp incon_load2_def incon_load_incon_def snp_comp_def Pair_times)
-  done
 
 end

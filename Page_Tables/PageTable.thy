@@ -40,35 +40,35 @@ text \<open>
   version and assume the property holds. In proofs, it should be a guard. 
 \<close>
 locale pagetable =
-  -- "Obtaining the virtual map"
+  \<comment> \<open>"Obtaining the virtual map"\<close> 
   fixes ptable_lift :: "('paddr \<rightharpoonup> 'val) \<Rightarrow> 'base \<Rightarrow> 'vaddr \<rightharpoonup> 'paddr"
-  -- "Tracing vaddr lookup"
+  (* "Tracing vaddr lookup *)
   fixes ptable_trace :: "('paddr \<rightharpoonup> 'val) \<Rightarrow> 'base \<Rightarrow> 'vaddr \<Rightarrow> 'paddr set"
-  -- "Obtain page from virtual ptr"
+  (* "Obtain page from virtual ptr" *)
   fixes get_page :: "('paddr \<rightharpoonup> 'val) \<Rightarrow> 'base \<Rightarrow> 'vaddr \<Rightarrow> 'a"
 
-  -- "the frame property"
+  (* "the frame property" *)
   assumes ptable_lift_reduce:
   "\<lbrakk> ptable_lift (h\<^sub>0 ++ h\<^sub>1) r vp = Some p; h\<^sub>0 \<bottom> h\<^sub>1 \<rbrakk> 
    \<Longrightarrow> ptable_lift h\<^sub>0 r vp = Some p \<or> ptable_lift h\<^sub>0 r vp = None"
 
-  -- "monotonicity of lift in heap merge"
+  (* "monotonicity of lift in heap merge" *)
   (* FIXME: why is this not a disj_add_simp?! *)
   assumes ptable_lift_disj_add:
   "\<lbrakk> ptable_lift h\<^sub>0 r vp = Some p; h\<^sub>0 \<bottom> h\<^sub>1 \<rbrakk> 
    \<Longrightarrow> ptable_lift (h\<^sub>0 ++ h\<^sub>1) r vp = Some p"
 
-  -- "monotonicity of trace in heap merge"
+  (* "monotonicity of trace in heap merge" *)
   assumes ptable_trace_disj_add_simp:
   "\<lbrakk> ptable_lift h r vp = Some p ; h \<bottom> h' \<rbrakk> 
    \<Longrightarrow> ptable_trace (h ++ h') r vp = ptable_trace h r vp"
 
-  -- "update outside the trace does not affect lift"
+  (* "update outside the trace does not affect lift" *)
   assumes ptable_lift_preserved:
   "\<lbrakk> p \<notin> ptable_trace h r vp; ptable_lift h r vp = Some p \<rbrakk> 
    \<Longrightarrow> ptable_lift (h (p \<mapsto> v)) r vp = Some p" 
 
-  -- "update outside the trace does not affect trace"
+  (* "update outside the trace does not affect trace" *)
   assumes ptable_trace_preserved:
   "\<lbrakk>p \<notin> ptable_trace h r vp; 
     ptable_lift h r vp = Some p\<rbrakk>
