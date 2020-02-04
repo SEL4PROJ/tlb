@@ -158,7 +158,7 @@ definition
   "kernel_data s \<equiv> map (ptable_footprint s) (root_log s) @ [root_map_area]"
 
 definition
-  "kernel_data_area s \<equiv> \<Union>set (kernel_data s)"
+  "kernel_data_area s \<equiv> \<Union> (set (kernel_data s))"
 
 
 
@@ -180,14 +180,14 @@ lemma
 
 fun non_overlapping where
   "non_overlapping [] = True" |
-  "non_overlapping (x#xs) = ((x \<inter> \<Union>set xs = {}) \<and> non_overlapping xs)"
+  "non_overlapping (x#xs) = ((x \<inter> \<Union> (set xs) = {}) \<and> non_overlapping xs)"
 
 definition 
  "page_tables s  \<equiv> non_overlapping (kernel_data s) \<and> user_mappings s \<and> kernel_data_area s \<subseteq> kernel_phy_mem"
 
 
 lemma non_overlapping_append[simp]:
-  "non_overlapping (xs @ ys) = (non_overlapping xs \<and> non_overlapping ys \<and> \<Union>set xs \<inter> \<Union>set ys = {})"
+  "non_overlapping (xs @ ys) = (non_overlapping xs \<and> non_overlapping ys \<and> \<Union>(set xs) \<inter> \<Union>(set ys) = {})"
   by (induct xs) auto
 
 lemma non_overlapping_map:

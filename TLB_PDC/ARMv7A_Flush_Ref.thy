@@ -336,7 +336,7 @@ lemma  flush_with_asid_asid_sat_incon_refine:
         prefer 2
   using lookup_asid_pdc_hit_incon_minus apply blast
        apply (erule disjE)
-        apply (subgoal_tac "the(pdc_walk (ASID s) (MEM s) (TTBR0 s) xb) = the(pdc_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
+        apply (subgoal_tac "the(pdc_walk (ASID s) (MEM s) (TTBR0 s) xa) = the(pdc_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
                    \<not>is_fault (pdc_walk (ASID s) (MEM s) (TTBR0 s) v)")
          prefer 2
          apply (frule asid_pdc_lookup_range_fault_pt_walk')
@@ -363,9 +363,9 @@ lemma  flush_with_asid_asid_sat_incon_refine:
      apply (erule disjE, clarsimp simp:)
       apply (subgoal_tac "lookup'' (fst(sat_tlb s)) (ASID s) v = Hit x \<or> lookup'' (fst(sat_tlb s)) (ASID s) v = Incon")
        prefer 2
-  using lookup_asid_tlb_hit_incon_minus apply force
+  subgoal using lookup_asid_tlb_hit_incon_minus by force
       apply (erule disjE)
-       apply (subgoal_tac "the(pt_walk (ASID s) (MEM s) (TTBR0 s) xb) = the(pt_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
+       apply (subgoal_tac "the(pt_walk (ASID s) (MEM s) (TTBR0 s) xa) = the(pt_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
                    \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) v)")
         prefer 2
         apply (frule asid_tlb_lookup_range_fault_pt_walk')
@@ -571,7 +571,7 @@ lemma  flush_with_asid_asid_sat_incon_refine:
        prefer 2
  apply (subgoal_tac "ASID s = ASID t") prefer 2   apply (clarsimp simp: state.defs)
        apply (rule_tac a = a  in asid_unequal_lookup_minus_non_global_hit_hit_pdc, simp, simp)
-      apply (subgoal_tac "the (pdc_walk (ASID s) (MEM s) (TTBR0 s) xb) = the (pdc_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
+      apply (subgoal_tac "the (pdc_walk (ASID s) (MEM s) (TTBR0 s) xa) = the (pdc_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
                       \<not>is_fault (pdc_walk (ASID s) (MEM s) (TTBR0 s) v)")
        apply (clarsimp)
        apply (frule saturatd_lookup_pdc_hit_no_fault, simp, simp, simp)
@@ -598,7 +598,7 @@ lemma  flush_with_asid_asid_sat_incon_refine:
       prefer 2
  apply (subgoal_tac "ASID s = ASID t") prefer 2   apply (clarsimp simp: state.defs)
       apply (rule_tac a = a  in asid_unequal_lookup_minus_non_global_hit_hit, simp, simp)
-     apply (subgoal_tac "the (pt_walk (ASID s) (MEM s) (TTBR0 s) xb) = the (pt_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
+     apply (subgoal_tac "the (pt_walk (ASID s) (MEM s) (TTBR0 s) xa) = the (pt_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
                       \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) v)")
       apply (clarsimp)
       apply (frule saturatd_lookup_hit_no_fault, simp, simp, simp)
@@ -747,7 +747,7 @@ lemma  flush_with_asid_asid_varange_sat_incon_refine:
         apply (erule_tac P = "lookup_pdc (snd(sat_tlb s)) (ASID s) v = Hit x " in disjE)
          prefer 2
          apply blast
-        apply (subgoal_tac "the(pdc_walk (ASID s) (MEM s) (TTBR0 s) xb) = the(pdc_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
+        apply (subgoal_tac "the(pdc_walk (ASID s) (MEM s) (TTBR0 s) xa) = the(pdc_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
                    \<not>is_fault (pdc_walk (ASID s) (MEM s) (TTBR0 s) v)")
          prefer 2
          apply (frule asid_pdc_lookup_range_fault_pt_walk')
@@ -801,7 +801,7 @@ lemma  flush_with_asid_asid_varange_sat_incon_refine:
        apply (erule_tac P = "lookup'' (fst(sat_tlb s)) (ASID s) v = Hit x " in disjE)
         prefer 2
         apply blast
-       apply (subgoal_tac "the(pt_walk (ASID s) (MEM s) (TTBR0 s) xb) = the(pt_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
+       apply (subgoal_tac "the(pt_walk (ASID s) (MEM s) (TTBR0 s) xa) = the(pt_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
                    \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) v)")
         prefer 2
         apply (frule asid_tlb_lookup_range_fault_pt_walk')
@@ -974,7 +974,7 @@ lemma  flush_with_asid_asid_varange_sat_incon_refine:
        apply (subgoal_tac "tagged_pdc_entry_set (\<Union>v\<in>vset. {e \<in> snd(sat_tlb s). v \<in> range_of e \<and> asid_of_pdc e = Some a}) (ASID s) v = {}")
         apply (clarsimp simp: lookup_def)
        apply (clarsimp simp: lookup_def tagged_pdc_entry_set_def entry_set_def split: if_split_asm option.splits)
-      apply (subgoal_tac "the(pdc_walk (ASID s) (MEM s) (TTBR0 s) xb) = the(pdc_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
+      apply (subgoal_tac "the(pdc_walk (ASID s) (MEM s) (TTBR0 s) xa) = the(pdc_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
                    \<not>is_fault (pdc_walk (ASID s) (MEM s) (TTBR0 s) v)")
        prefer 2
        apply (frule asid_pdc_lookup_range_fault_pt_walk')
@@ -1004,7 +1004,7 @@ lemma  flush_with_asid_asid_varange_sat_incon_refine:
       apply (subgoal_tac "tagged_entry_set (\<Union>v\<in>vset. {e \<in> fst(sat_tlb s). v \<in> range_of e \<and> asid_of e = Some a}) (ASID s) v = {}")
        apply (clarsimp simp: lookup_def)
       apply (clarsimp simp: lookup_def tagged_entry_set_def entry_set_def split: if_split_asm option.splits)
-     apply (subgoal_tac "the(pt_walk (ASID s) (MEM s) (TTBR0 s) xb) = the(pt_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
+     apply (subgoal_tac "the(pt_walk (ASID s) (MEM s) (TTBR0 s) xa) = the(pt_walk (ASID s) (MEM s) (TTBR0 s) v) \<and> 
                    \<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) v)")
       prefer 2
       apply (frule asid_tlb_lookup_range_fault_pt_walk')

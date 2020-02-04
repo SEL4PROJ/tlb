@@ -1186,15 +1186,8 @@ lemma  lookup_pdc_walk_not_incon:
   apply (subgoal_tac "tagged_pdc_entry_set (the ` {e \<in> range (pdc_walk asid mem ttbr0). \<not> is_fault e}) asid va = {}")
    apply (clarsimp simp: lookup_def tagged_pdc_entry_set_def entry_set_def  split: if_split_asm)
   apply (clarsimp simp: entry_pdc_set_va_set tag_vadr_pdc_def)
-  apply safe 
-   apply (subgoal_tac "pdc_walk asid mem ttbr0 xa = pdc_walk asid mem ttbr0 va", simp)
-   apply (thin_tac "is_fault (pdc_walk asid mem ttbr0 va)") 
-   apply (frule_tac va = va in va_pdc_entry_set_pt_palk_same'; clarsimp)
-  apply (subgoal_tac "pdc_walk asid mem ttbr0  xa = pdc_walk asid mem ttbr0 va", simp)
-  apply (thin_tac "is_fault (pdc_walk asid mem ttbr0 va)") 
-  by (frule_tac va = va in va_pdc_entry_set_pt_palk_same'; clarsimp)
+  by (metis va_pdc_entry_set_pt_palk_same')
  
-
 lemma lookup_pdc_hit_range_pdes:
   "lookup_pdc (the ` {e \<in> range (pdc_walk a mem ttbr0). \<not> is_fault e}) a va = Hit pde \<Longrightarrow>
      pde = the (pdc_walk a mem ttbr0 va) "
@@ -1220,17 +1213,10 @@ lemma pdc_entry_set_empty_lookup_pdc:
 lemma lookup_pdc_miss_is_fault_intro:
   "is_fault (pdc_walk a m r v) \<Longrightarrow>
      lookup_pdc (the ` {e \<in> range (pdc_walk a m r). \<not> is_fault e}) a v = Miss"
- apply (rule pdc_entry_set_empty_lookup_pdc)
+  apply (rule pdc_entry_set_empty_lookup_pdc)
   apply (clarsimp simp: entry_pdc_set_va_set)
   apply (clarsimp simp: tag_vadr_pdc_def)
-  apply safe
-  apply (subgoal_tac "pdc_walk a m r xa = pdc_walk a m r v", simp)
-  apply (thin_tac "is_fault (pdc_walk a m r v)") 
-   apply (frule_tac va = v in va_pdc_entry_set_pt_palk_same'; clarsimp)
- apply (subgoal_tac "pdc_walk a m r xa = pdc_walk a m r v", simp)
-  apply (thin_tac "is_fault (pdc_walk a m r v)") 
-  by (frule_tac va = v in va_pdc_entry_set_pt_palk_same'; clarsimp)
- 
+  by (metis va_pdc_entry_set_pt_palk_same') 
   
 
 lemma  tlb_pde_union_walk [simp]:

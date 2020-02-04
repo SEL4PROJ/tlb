@@ -241,7 +241,7 @@ definition
 
 
 lemma ran_pdc_walk_simp':
-  "  Somes (\<Union>range (to_tlb pdes a m rt)) = 
+  "  Somes (\<Union>(range (to_tlb pdes a m rt))) = 
           the ` {e. (\<exists>x. e \<in> to_tlb pdes a m rt x) \<and> no_fault e}"
   apply (clarsimp simp: Somes_def is_fault_def no_fault_def)
   by force
@@ -451,8 +451,9 @@ definition
 
 lemma global_varange_rewrite:
   "global_varange asid mem ttbr0 = global_varange' asid mem ttbr0"
-  apply (clarsimp simp: global_varange_def global_varange'_def ran_def is_fault_def no_fault_def image_def global_entries_def)
-  by force
+  apply (clarsimp simp: global_varange_def global_varange'_def ran_def is_fault_def no_fault_def
+                        image_def global_entries_def)
+  by fastforce
   
   
 

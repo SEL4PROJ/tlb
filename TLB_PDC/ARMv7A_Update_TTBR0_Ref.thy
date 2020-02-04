@@ -50,12 +50,12 @@ lemma update_root_sat_incon_refine:
       apply (erule disjE)
        apply (metis (mono_tags, lifting) mem_Collect_eq pt_walk_new_fault_pt_walk_fault subset_eq)
       apply (erule disjE)
-       apply (subgoal_tac "the (pt_walk (ASID s) (MEM s) r xc) = the (pt_walk (ASID s) (MEM s) (TTBR0 s) x)")
+       apply (subgoal_tac "the (pt_walk (ASID s) (MEM s) r xb) = the (pt_walk (ASID s) (MEM s) (TTBR0 s) x)")
         apply (case_tac "\<not>is_fault (pt_walk (ASID s) (MEM s) (TTBR0 s) x)")
          apply clarsimp
-  using saturatd_lookup_hit_no_fault apply fastforce
+         using saturatd_lookup_hit_no_fault apply fastforce
         apply blast
-       apply (subgoal_tac "the (pt_walk (ASID s) (MEM s) r xc) = the (pt_walk (ASID s) (MEM s) r x)")
+       apply (subgoal_tac "the (pt_walk (ASID s) (MEM s) r xb) = the (pt_walk (ASID s) (MEM s) r x)")
         apply clarsimp
         apply (drule pt_walk_new_equal_pt_walk, simp add: is_fault_def)
        apply (frule asid_tlb_lookup_range_fault_pt_walk)
@@ -75,9 +75,9 @@ lemma update_root_sat_incon_refine:
        apply blast
       apply (clarsimp simp: pt_walk_new_fault_pde_walk_fault)
      apply (erule disjE)
-      apply (subgoal_tac "the (pdc_walk (ASID s) (MEM s) r xc) = the (pdc_walk (ASID s) (MEM s) (TTBR0 s) x)")
+      apply (subgoal_tac "the (pdc_walk (ASID s) (MEM s) r xb) = the (pdc_walk (ASID s) (MEM s) (TTBR0 s) x)")
        prefer 2
-       apply (subgoal_tac "the (pdc_walk (ASID s) (MEM s) r xc) = the (pdc_walk (ASID s) (MEM s) r x)")
+       apply (subgoal_tac "the (pdc_walk (ASID s) (MEM s) r xb) = the (pdc_walk (ASID s) (MEM s) r x)")
         apply clarsimp
         apply (drule pt_walk_new_equal_pdc_walk, simp add: is_fault_def)
        apply (frule lookup_pdc_range_fault_pt_walk)
@@ -85,12 +85,12 @@ lemma update_root_sat_incon_refine:
       apply (case_tac "\<not> is_fault (pdc_walk (ASID s) (MEM s) (TTBR0 s) x)")
   using saturatd_lookup_pdc_hit_no_fault apply fastforce
       apply blast
-     apply (subgoal_tac "the(pdc_walk (ASID s) (MEM s) r xc) = the(pdc_walk (ASID s) (MEM s) (TTBR0 s) x)" )
+     apply (subgoal_tac "the(pdc_walk (ASID s) (MEM s) r xb) = the(pdc_walk (ASID s) (MEM s) (TTBR0 s) x)" )
       apply clarsimp 
       apply (case_tac "is_fault (pdc_walk (ASID s) (MEM s) (TTBR0 s) x)")
        apply blast
   using saturatd_lookup_pdc_hit_no_fault apply fastforce
-     apply (subgoal_tac " the (pdc_walk (ASID s) (MEM s) r xc) =  the(pdc_walk (ASID s) (MEM s) r x)")
+     apply (subgoal_tac " the (pdc_walk (ASID s) (MEM s) r xb) =  the(pdc_walk (ASID s) (MEM s) r x)")
       apply clarsimp
       apply (simp add: pt_walk_partial_full_pdc_walk_eq)
      apply (frule lookup_pdc_range_fault_pt_walk)

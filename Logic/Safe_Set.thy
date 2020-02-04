@@ -170,7 +170,7 @@ lemma weak_pre_write'':
 definition
   SM_user :: "heap \<Rightarrow> paddr \<Rightarrow> vaddr set"
 where
-  "SM_user h r  \<equiv> {va. \<exists>p. ptable_lift_m h r User va = Some p \<and> p \<notin> \<Union>range (ptable_trace' h r)} "
+  "SM_user h r  \<equiv> {va. \<exists>p. ptable_lift_m h r User va = Some p \<and> p \<notin> \<Union> (range (ptable_trace' h r))} "
 
 
 lemma [simp]:
