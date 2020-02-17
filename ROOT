@@ -39,6 +39,13 @@ session TLB_PDC_REFJ = TLB_ASID_REFJ +
     "TLB_PDC/Paper_Defs_machine_Inter"
     "Logic/Page_Table_Ops"
 
+
+session TLB_COMP = TLB_ASID_REFJ +
+  theories
+    "TLB_PDC/MMU_Instants_TLB_PDC"
+    "Logic/Logic"
+
+
 (*session CASE_STUDYJJ = TLB_ASID_REFJ +
   theories
     "Case_Study/Page_Table_Ops"
